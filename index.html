@@ -744,19 +744,41 @@ const DEFAULT_APPS = [];
 
 // Neutral sample data — loaded only when the user clicks "Load example data".
 const EXAMPLE_APPS = [
-  {id:1,company:'Northwind Health',role:'Senior Product Manager',stage:'Applied',priority:'High',date:'2026-05-01',salary:'$145–175K',location:'Hybrid',notes:'Strong fit on core focus area.',fit:'8'},
-  {id:2,company:'Atlas Care',role:'Product Manager',stage:'Interview',priority:'High',date:'2026-04-18',salary:'$130–155K',location:'Remote',notes:'Warm referral from network.',fit:'9'},
-  {id:3,company:'Meridian Labs',role:'Sr. Manager, Product',stage:'Phone Screen',priority:'High',date:'2026-04-30',salary:'$120–160K',location:'Remote',notes:'Early-stage, 0-to-1 scope.',fit:'7'},
-  {id:4,company:'Cobalt Systems',role:'Director of Product',stage:'Saved',priority:'Normal',date:'',salary:'$155–185K',location:'Remote',notes:'Stretch role worth a look.',fit:'8'},
-  {id:5,company:'Greenline',role:'Senior PM – Platform',stage:'Applied',priority:'Normal',date:'2026-05-07',salary:'$140–165K',location:'Hybrid',notes:'',fit:'7'},
+  // ── Active — got a response (~20%) ────────────────────────────────────────
+  {id:1,  company:'Abbott',                  role:'Sr. PM – Cardiac Rhythm Mgmt',       stage:'Final Round',         priority:'High',   date:'2026-04-15', salary:'$145–175K', location:'Hybrid, Arden Hills MN',   notes:'CRM portfolio. Strong clinical device angle. Panel debrief this week.',       fit:'9'},
+  {id:2,  company:'Medtronic',               role:'Sr. PM – Digital Health Solutions',  stage:'Phone Screen',        priority:'High',   date:'2026-04-28', salary:'$145–175K', location:'Hybrid, Fridley MN',        notes:'Recruiter outreach via LinkedIn. Digital health + device crossover.',          fit:'8'},
+  // ── Applied — no response yet (80%) ──────────────────────────────────────
+  {id:3,  company:'Boston Scientific',       role:'PM – Downstream Marketing',          stage:'Applied',             priority:'High',   date:'2026-05-01', salary:'$140–170K', location:'Hybrid, Maple Grove MN',   notes:'Downstream PM. Commercial device scope. Referral from BSC contact pending.',  fit:'8'},
+  {id:4,  company:'Boston Scientific',       role:'Sr. PM – Cardiac Rhythm',            stage:'Applied',             priority:'Normal', date:'2026-05-06', salary:'$140–165K', location:'Hybrid, Maple Grove MN',   notes:'Second BSC role. Applied direct. Slightly different scope.',                  fit:'7'},
+  {id:5,  company:'Medtronic',               role:'PM – Connected Care Platform',       stage:'Applied',             priority:'Normal', date:'2026-05-03', salary:'$130–160K', location:'Hybrid, Mounds View MN',   notes:'Second MDT role applied while phone screen active. No response.',             fit:'7'},
+  {id:6,  company:'Abbott',                  role:'PM – Diagnostics Platform',          stage:'Applied',             priority:'Normal', date:'2026-05-08', salary:'$135–165K', location:'Hybrid, Arden Hills MN',   notes:'Applied parallel while Abbott CRM is in Final Round. No conflict.',           fit:'7'},
+  {id:7,  company:'Philips',                 role:'Sr. PM – Patient Monitoring',        stage:'Applied',             priority:'Normal', date:'2026-05-10', salary:'$145–175K', location:'Remote',                    notes:'Clinical device + digital health crossover. Remote role. No response.',        fit:'7'},
+  {id:8,  company:'Shockwave Medical (J&J)', role:'PM – Coronary Portfolio',            stage:'Applied',             priority:'Normal', date:'2026-05-14', salary:'',          location:'Remote',                    notes:'No salary posted. Intravascular lithotripsy. Interesting device scope.',       fit:'6'},
+  {id:9,  company:'Anteris Medical',         role:'Sr. PM – TAVR Portfolio',            stage:'Applied',             priority:'Normal', date:'2026-05-12', salary:'$130–160K', location:'Hybrid, Plymouth MN',       notes:'Local medtech startup. Structural heart. Early stage — long shot.',            fit:'6'},
+  // ── Coffee / networking ───────────────────────────────────────────────────
+  {id:10, company:'Inspire Medical',         role:'PM – Connected Therapy',             stage:'Coffee / Networking', priority:'Normal', date:'2026-05-09', salary:'$140–165K', location:'Hybrid, Golden Valley MN', notes:'OSA connected device platform. Intro via alumni network.',                    fit:'7'},
+  // ── Saved ─────────────────────────────────────────────────────────────────
+  {id:11, company:'Stryker',                 role:'Sr. PM – Surgical Navigation',       stage:'Saved',               priority:'Normal', date:'',           salary:'$150–180K', location:'Remote',                    notes:'Surgical robotics PM scope. Hold until Abbott round resolves.',               fit:'7'},
+  // ── Archived ─────────────────────────────────────────────────────────────
+  {id:12, company:'Edwards Lifesciences',    role:'PM – Structural Heart',              stage:'Ghosted',             priority:'Normal', date:'2026-03-20', salary:'',          location:'Remote',                    notes:'Applied 8 weeks ago. No reply. No salary range posted — red flag.',           fit:'6'},
 ];
 
 const DEFAULT_CONTACTS = [];
 
 const EXAMPLE_CONTACTS = [
-  {id:1,name:'Sam Rivera',company:'Northwind Health',role:'Recruiter',rel:'Recruiter',last:'2026-05-22',next:'2026-06-05',notes:'Intro call went well.',lastActivityType:'call',champion:true},
-  {id:2,name:'Jordan Lee',company:'Atlas Care',role:'Director, Product',rel:'Connection',last:'2026-05-15',next:'2026-06-01',nextType:'meeting',notes:'Former colleague. Offered to refer.',lastActivityType:'message',champion:true},
-  {id:3,name:'Priya Shah',company:'Meridian Labs',role:'Network',rel:'Connection',last:'2026-05-10',next:'2026-05-28',notes:'Active in the space locally.',lastActivityType:'message'},
+  // ── Champions 🏆 ───────────────────────────────────────────────────────────
+  {id:1, name:'Sarah K.',  company:'Abbott',                  role:'Sr. Recruiter – Medical Devices',  rel:'Recruiter',     last:'2026-05-20', next:'2026-06-03', nextType:'meeting', notes:'Warm intro via LinkedIn. Referred to CRM PM role. Panel debrief call set.',           lastActivityType:'call',     champion:true},
+  {id:2, name:'Marcus T.', company:'Medtronic',               role:'Sr. PM – Neuromodulation',         rel:'Connection',    last:'2026-05-14', next:'2026-05-28', nextType:'meeting', notes:'UMN alumni network intro. Offered to flag name internally for cardiac device PM.',    lastActivityType:'intro',    champion:true},
+  // ── High Priority ⭐ ────────────────────────────────────────────────────────
+  {id:3, name:'Dana R.',   company:'Boston Scientific',       role:'Downstream Mktg Manager – CRM',    rel:'Alumni',        last:'2026-05-10', next:'2026-05-27', nextType:'meeting', notes:'Carlson MBA alum at BSC Maple Grove. Warm intro call. Knows the hiring team.',       lastActivityType:'call',     star:true},
+  {id:4, name:'James W.',  company:'Abbott',                  role:'Sr. PM – Cardiac Rhythm',          rel:'Connection',    last:'2026-05-08', next:'2026-06-10', nextType:'nudge',   notes:'Met at Twin Cities MedTech Summit. Has a line to the Arden Hills hiring manager.',   lastActivityType:'inperson', star:true},
+  {id:5, name:'Chris L.',  company:'Inspire Medical',         role:'Sr. PM – Connected Therapy',       rel:'Alumni',        last:'2026-05-05', next:'2026-05-30', nextType:'meeting', notes:'UMN alum at Inspire Golden Valley. Coffee confirmed. Good read on OSA device space.', lastActivityType:'inperson', star:true},
+  // ── Warm connections ─────────────────────────────────────────────
+  {id:6, name:'Priya S.',  company:'Philips',                 role:'Sr. PM – Patient Monitoring',      rel:'Connection',    last:'2026-05-12', next:'2026-05-29', nextType:'nudge',   notes:'Connected at MedDevice Minneapolis conference. Warm — referred to Philips opening.',  lastActivityType:'message'},
+  {id:7, name:'Ben A.',    company:'Stryker',                 role:'Recruiter – Surgical & Robotics',  rel:'Recruiter',     last:'2026-05-09', next:'',                               notes:'Inbound recruiter outreach. Warm reply. Surgical navigation PM scope is a fit.',       lastActivityType:'call'},
+  // ── Cold / early outreach ────────────────────────────────────────────
+  {id:8, name:'Taylor R.', company:'Shockwave Medical (J&J)', role:'Network',                          rel:'Cold Outreach', last:'2026-04-28', next:'',                               notes:'Reached out re: coronary portfolio PM role. No reply yet.',                           lastActivityType:'message'},
+  {id:9, name:'Nadia M.',  company:'Anteris Medical',         role:'Head of Product',                  rel:'Cold Outreach', last:'2026-05-02', next:'',                               notes:'Early-stage TAVR startup. Reached out cold. No response.',                            lastActivityType:'message'},
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
@@ -3973,16 +3995,21 @@ function editProfile() { openSetupWizard(); }
 
 function loadExampleData() {
   const EXAMPLE_PROFILE = {
-    name:'Alex Morgan', titles:'Senior Product Manager / Director of Product',
-    focus:'B2B SaaS, platform, growth', yearsExp:'7+ years',
-    salaryMin:'140', salaryMax:'180', location:'Remote (US)',
-    workMode:'Remote preferred, hybrid ok', noReloc:'',
-    background:'Led 0-to-1 product launches and platform scaling at growth-stage SaaS companies. Owned roadmap, discovery, and cross-functional delivery with measurable activation and retention gains.',
-    specialties:'roadmap, discovery, experimentation, analytics, go-to-market',
-    education:'BS Computer Science; MBA',
-    idealSignals:'0-1 build, platform, growth stage, remote, $150K+, strong product culture',
-    redFlagSignals:'no comp range, 10+ years required for a senior title, vague scope, reposted >90 days, relocation required',
-    honestGaps:'Limited hands-on ML/AI infrastructure experience.', portfolioUrl:''
+    name:'Dario Naharis',
+    titles:'Senior Product Manager / Sr. Manager, Product',
+    focus:'medtech, upstream/downstream PM, cardiac devices, digital health crossover',
+    yearsExp:'6+ years',
+    salaryMin:'140', salaryMax:'180',
+    location:'Minneapolis, MN',
+    workMode:'Hybrid preferred, remote ok, in-person ok',
+    noReloc:'Minneapolis, St. Paul, Bloomington, Eden Prairie, Plymouth, Maple Grove, Fridley, Mounds View, Arden Hills, Golden Valley',
+    background:'Led upstream and downstream product initiatives spanning clinical device commercialization and 0-to-1 digital health builds. Experience with cardiac, rhythm management, and connected device portfolios. Deep familiarity with the Minneapolis medtech ecosystem and the clinical-to-commercial handoff.',
+    specialties:'upstream PM, downstream product marketing, cardiac devices, clinical commercialization, go-to-market, competitive analysis, 0-to-1 digital health, field enablement',
+    education:'MBA, Medical Industry Leadership (UMN Carlson); BS Biomedical Sciences',
+    idealSignals:'cardiac or structural heart devices, upstream/downstream PM, medtech commercialization, digital health + device crossover, $140K+, hybrid Minneapolis metro, 510(k) experience valued',
+    redFlagSignals:'no comp range posted, 10+ years required for a senior title, reposted >90 days, pure software with no clinical scope, relocation required',
+    honestGaps:'No direct 510(k) submission ownership. Limited pure enterprise SaaS PM background.',
+    portfolioUrl:''
   };
   saveProfile(EXAMPLE_PROFILE);
   state.apps     = JSON.parse(JSON.stringify(EXAMPLE_APPS));
