@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.0                                          ║
+║  JOBQUEST — Starter Edition  ·  v1.2                                          ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
@@ -766,23 +766,23 @@ const EXAMPLE_APPS = [
 const DEFAULT_CONTACTS = [];
 
 const EXAMPLE_CONTACTS = [
-  // ── Champions 🏆 ───────────────────────────────────────────────────────────
-  {id:1, name:'Sarah K.',  company:'Abbott',                  role:'Sr. Recruiter – Medical Devices',  rel:'Recruiter',     last:'2026-05-20', next:'2026-06-03', nextType:'meeting', notes:'Warm intro via LinkedIn. Referred to CRM PM role. Panel debrief call set.',           lastActivityType:'call',     champion:true},
-  {id:2, name:'Marcus T.', company:'Medtronic',               role:'Sr. PM – Neuromodulation',         rel:'Connection',    last:'2026-05-14', next:'2026-05-28', nextType:'meeting', notes:'UMN alumni network intro. Offered to flag name internally for cardiac device PM.',    lastActivityType:'intro',    champion:true},
-  // ── High Priority ⭐ ────────────────────────────────────────────────────────
-  {id:3, name:'Dana R.',   company:'Boston Scientific',       role:'Downstream Mktg Manager – CRM',    rel:'Alumni',        last:'2026-05-10', next:'2026-05-27', nextType:'meeting', notes:'Carlson MBA alum at BSC Maple Grove. Warm intro call. Knows the hiring team.',       lastActivityType:'call',     star:true},
-  {id:4, name:'James W.',  company:'Abbott',                  role:'Sr. PM – Cardiac Rhythm',          rel:'Connection',    last:'2026-05-08', next:'2026-06-10', nextType:'nudge',   notes:'Met at Twin Cities MedTech Summit. Has a line to the Arden Hills hiring manager.',   lastActivityType:'inperson', star:true},
-  {id:5, name:'Chris L.',  company:'Inspire Medical',         role:'Sr. PM – Connected Therapy',       rel:'Alumni',        last:'2026-05-05', next:'2026-05-30', nextType:'meeting', notes:'UMN alum at Inspire Golden Valley. Coffee confirmed. Good read on OSA device space.', lastActivityType:'inperson', star:true},
-  // ── Warm connections ─────────────────────────────────────────────
-  {id:6, name:'Priya S.',  company:'Philips',                 role:'Sr. PM – Patient Monitoring',      rel:'Connection',    last:'2026-05-12', next:'2026-05-29', nextType:'nudge',   notes:'Connected at MedDevice Minneapolis conference. Warm — referred to Philips opening.',  lastActivityType:'message'},
-  {id:7, name:'Ben A.',    company:'Stryker',                 role:'Recruiter – Surgical & Robotics',  rel:'Recruiter',     last:'2026-05-09', next:'',                               notes:'Inbound recruiter outreach. Warm reply. Surgical navigation PM scope is a fit.',       lastActivityType:'call'},
-  // ── Cold / early outreach ────────────────────────────────────────────
-  {id:8, name:'Taylor R.', company:'Shockwave Medical (J&J)', role:'Network',                          rel:'Cold Outreach', last:'2026-04-28', next:'',                               notes:'Reached out re: coronary portfolio PM role. No reply yet.',                           lastActivityType:'message'},
-  {id:9, name:'Nadia M.',  company:'Anteris Medical',         role:'Head of Product',                  rel:'Cold Outreach', last:'2026-05-02', next:'',                               notes:'Early-stage TAVR startup. Reached out cold. No response.',                            lastActivityType:'message'},
+  // ── Champions 🏆 — WARM (last ≤ 14 days from Jun 20 → last ≥ Jun 6) ────────
+  {id:1, name:'Sarah K.',  company:'Abbott',                  role:'Sr. Recruiter – Medical Devices',  rel:'Recruiter',     last:'2026-06-18', next:'2026-07-01', nextType:'meeting', notes:'Warm intro via LinkedIn. Referred to CRM PM role. Panel debrief call set.',           lastActivityType:'call',     champion:true},
+  {id:2, name:'Marcus T.', company:'Medtronic',               role:'Sr. PM – Neuromodulation',         rel:'Connection',    last:'2026-06-12', next:'2026-06-28', nextType:'meeting', notes:'UMN alumni network intro. Offered to flag name internally for cardiac device PM.',    lastActivityType:'intro',    champion:true},
+  // ── High Priority ⭐ — WARM ─────────────────────────────────────────────────
+  {id:3, name:'Dana R.',   company:'Boston Scientific',       role:'Downstream Mktg Manager – CRM',    rel:'Alumni',        last:'2026-06-10', next:'2026-06-27', nextType:'meeting', notes:'Carlson MBA alum at BSC Maple Grove. Warm intro call. Knows the hiring team.',       lastActivityType:'call',     star:true},
+  {id:4, name:'James W.',  company:'Abbott',                  role:'Sr. PM – Cardiac Rhythm',          rel:'Connection',    last:'2026-06-08', next:'2026-07-08', nextType:'nudge',   notes:'Met at Twin Cities MedTech Summit. Has a line to the Arden Hills hiring manager.',   lastActivityType:'inperson', star:true},
+  {id:5, name:'Chris L.',  company:'Inspire Medical',         role:'Sr. PM – Connected Therapy',       rel:'Alumni',        last:'2026-06-07', next:'2026-06-30', nextType:'meeting', notes:'UMN alum at Inspire Golden Valley. Coffee confirmed. Good read on OSA device space.', lastActivityType:'inperson', star:true},
+  // ── Nudge (last 15–60 days → Apr 21 – Jun 5) ────────────────────────────────
+  {id:6, name:'Priya S.',  company:'Philips',                 role:'Sr. PM – Patient Monitoring',      rel:'Connection',    last:'2026-05-28', next:'2026-06-28', nextType:'nudge',   notes:'Connected at MedDevice Minneapolis conference. Warm — referred to Philips opening.',  lastActivityType:'message'},
+  {id:7, name:'Ben A.',    company:'Stryker',                 role:'Recruiter – Surgical & Robotics',  rel:'Recruiter',     last:'2026-05-22', next:'',           nextType:'',        notes:'Inbound recruiter outreach. Warm reply. Surgical navigation PM scope is a fit.',       lastActivityType:'call'},
+  {id:8, name:'Taylor R.', company:'Shockwave Medical (J&J)', role:'Network',                          rel:'Cold Outreach', last:'2026-05-10', next:'',           nextType:'',        notes:'Reached out re: coronary portfolio PM role. No reply yet.',                           lastActivityType:'message'},
+  // ── Cold (last > 60 days → ≤ Apr 21) ────────────────────────────────────────
+  {id:9, name:'Nadia M.',  company:'Anteris Medical',         role:'Head of Product',                  rel:'Cold Outreach', last:'2026-04-15', next:'',           nextType:'',        notes:'Early-stage TAVR startup. Reached out cold. No response.',                            lastActivityType:'message'},
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.2';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -2346,10 +2346,10 @@ function renderNetwork(el) {
 
   // v19: Guest mode — override with real network numbers
   if (isGuest()) {
-    total = 44;
-    warm  = 22;
-    nudge = 11;
-    cold  = 7;
+    total = 9;
+    warm  = 5;
+    nudge = 3;
+    cold  = 1;
   }
 
   // Filter
