@@ -4,12 +4,22 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_3)                       ║
-║  v1_2_3: setup screen redesign — brighter navy→sky gradient, semi-opaque MN   ║
-║          8-pt star watermark, Mpls skyline base image, Quick-start side panel ║
-║          mirroring the README's 5 steps (collapses below form on mobile).     ║
+║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_5)                       ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
+║                                                                              ║
+║  v1_2_3  setup redesign — brighter navy→sky gradient, semi-opaque MN 8-pt    ║
+║          star watermark, Mpls skyline base image, Quick-start side panel     ║
+║          mirroring the README's 5 steps (collapses below form on mobile).    ║
+║  v1_2_4  cost clarity + graceful AI errors. Side panel leads with a          ║
+║          What-you'll-sign-up-for table (GitHub/Cloudflare free, Anthropic    ║
+║          API metered), notes the API is separate from a Claude.ai           ║
+║          subscription, and that AI is optional. friendlyClaudeError() maps   ║
+║          no-key / bad-key / no-credit / rate-limit / proxy-down to fix-      ║
+║          bearing messages; all AI error paths route through it.              ║
+║  v1_2_5  swapped the specific "$5" figure for "a few dollars" everywhere     ║
+║          (cost table, step 2, clarifier) so the copy can't time-lock to a    ║
+║          stale minimum-credit number.                                        ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -1071,12 +1081,40 @@ function claudeHeaders(extra={}) { return { 'Content-Type': 'application/json', 
 async function claudePost(body) {
   const resp = await fetch(CLAUDE_URL, { method:'POST', headers: claudeHeaders(), body: JSON.stringify(body) });
   if (!resp.ok) {
-    let msg = 'AI request failed (' + resp.status + ')';
-    try { const j = await resp.json(); msg = j?.error?.message || msg; }
-    catch { const t = await resp.text().catch(()=>''); if (t.includes('<html')) msg = 'The /api/claude proxy isn\u2019t responding — is your Cloudflare deployment live with ANTHROPIC_API_KEY set?'; }
-    throw new Error(msg);
+    let raw = 'AI request failed (' + resp.status + ')';
+    let isHtml = false;
+    try { const j = await resp.json(); raw = j?.error?.message || raw; }
+    catch { const t = await resp.text().catch(()=>''); if (t.includes('<html')) isHtml = true; }
+    throw new Error(friendlyClaudeError(resp.status, raw, isHtml));
   }
   return resp;
+}
+
+// Translate the common AI-setup failures into plain messages that carry the fix,
+// so a stranger who hasn't finished the API-key step never sees a raw 401/500.
+function friendlyClaudeError(status, raw, isHtml) {
+  const r = (raw || '').toLowerCase();
+  // Proxy reached but no key configured in Cloudflare (proxy returns this 500).
+  if (r.includes('anthropic_api_key is not set') || (status === 500 && r.includes('not set'))) {
+    return 'AI is off because no Anthropic API key is set yet. In your Cloudflare Pages project: Settings → Environment variables → add ANTHROPIC_API_KEY (your sk-ant-… key), then redeploy. Everything except the AI features works without it.';
+  }
+  // Key is present but wrong/expired (Anthropic returns 401 authentication_error).
+  if (status === 401 || r.includes('authentication') || r.includes('x-api-key') || r.includes('invalid api key')) {
+    return 'The Anthropic API key looks invalid. Double-check the ANTHROPIC_API_KEY value in Cloudflare Pages (it should start with sk-ant- and have no extra spaces), save, and redeploy.';
+  }
+  // Out of prepaid credit (Anthropic 400/402/429 mentioning credit/balance).
+  if (r.includes('credit') || r.includes('balance') || r.includes('billing') || status === 402) {
+    return 'Your Anthropic account is out of credit. Add a little at console.anthropic.com → Billing — a few dollars covers thousands of runs. The rest of JobQuest keeps working without AI.';
+  }
+  // Too many requests, key fine.
+  if (status === 429) {
+    return 'Anthropic is rate-limiting requests right now. Wait a moment and try again.';
+  }
+  // Proxy itself not reachable — usually the deployment isn't live, or you opened the file locally.
+  if (isHtml || status === 404) {
+    return 'The /api/claude proxy isn\u2019t responding. Make sure your Cloudflare deployment is live and that functions/api/claude.js was uploaded with that exact path. (Opening the HTML file directly, without deploying, also lands here.)';
+  }
+  return raw;
 }
 
 async function claudeStream(prompt, onChunk) {
@@ -3907,7 +3945,7 @@ function renderSetupWizard() {
   // Quickstart steps mirrored from the README — so people who skip the README still see the path.
   const steps = [
     ['1','Put the code on GitHub','Create a free repo and upload the three files, keeping <code>index.html</code> at the root and <code>claude.js</code> under <code>functions/api/</code>.'],
-    ['2','Get an Anthropic API key','From <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys. Add a little billing credit (a run costs a fraction of a cent). The key starts with <code>sk-ant-</code>.'],
+    ['2','Get an Anthropic API key','From <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys. This is the pay-as-you-go API, <b>separate from a Claude.ai subscription</b> — a Pro/Max plan can\u2019t power the app. Add a few dollars of credit; each AI run costs a fraction of a cent, so that covers thousands. The key starts with <code>sk-ant-</code>.'],
     ['3','Deploy to Cloudflare Pages','Connect the repo in Workers &amp; Pages (framework: None, no build step). Add <code>ANTHROPIC_API_KEY</code> as an environment variable, then redeploy so it takes effect.'],
     ['4','Build your profile','Fill the fields here — or paste your résumé and hit <b>Draft from résumé</b>. This drives every AI feature, so it is worth a few minutes.'],
     ['5','Turn on cloud backup','From the Sync tab, connect a private GitHub Gist (token with only the <code>gist</code> scope). Your data then survives a cleared browser and follows you across devices.']
@@ -3920,11 +3958,29 @@ function renderSetupWizard() {
       </div>
     </div>`).join('');
 
+  const costRow = (svc, cost, free) => `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid var(--brd)">
+      <span style="font-size:12px;color:var(--tx);font-weight:600">${svc}</span>
+      <span style="font-size:11px;color:${free?'var(--jade)':'#E8C97A'};font-family:var(--mono);text-align:right">${cost}</span>
+    </div>`;
+
+  const costBlock = `
+    <div style="margin-bottom:18px">
+      <div style="${WZ_LABEL};margin-bottom:7px">What you'll sign up for</div>
+      ${costRow('GitHub','Free', true)}
+      ${costRow('Cloudflare Pages','Free', true)}
+      ${costRow('Anthropic API','A few $ → 1,000s of runs', false)}
+      <div style="font-size:11px;color:var(--faint);line-height:1.6;margin-top:9px">
+        The first two are free. The Anthropic API is metered pay-as-you-go (not a Claude.ai subscription); a few dollars of credit lasts a long time at a fraction of a cent per run. <b style="color:var(--muted)">AI is optional</b> — the tracker, networking CRM, job-board launcher, and focus timer all work with no key at all.
+      </div>
+    </div>`;
+
   const sidePanel = `
     <aside style="flex:0 0 290px;align-self:flex-start;position:sticky;top:34px">
       <div class="card" style="background:rgba(15,32,53,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-color:var(--brd2)">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:16px;color:var(--tx);margin-bottom:4px">Quick start</div>
         <div style="font-size:11px;color:var(--faint);line-height:1.6;margin-bottom:16px">The five-minute version of the README — for getting JobQuest live and yours.</div>
+        ${costBlock}
         ${steps}
       </div>
     </aside>`;
@@ -4245,16 +4301,16 @@ ${input}`;
       body: JSON.stringify(bodyPayload)
     });
     if (!resp.ok) {
-      let errMsg = `API error ${resp.status}`;
+      let raw = `API error ${resp.status}`, isHtml = false;
       try {
         const errData = await resp.json();
-        errMsg = errData?.error?.message || errMsg;
+        raw = errData?.error?.message || raw;
       } catch(e2) {
         const rawText = await resp.text().catch(()=>'');
-        if (rawText.includes('<html')) errMsg = 'The /api/claude proxy isn\u2019t responding — is your Cloudflare deployment live with ANTHROPIC_API_KEY set?';
-        else errMsg += ': ' + rawText.slice(0, 120);
+        if (rawText.includes('<html')) isHtml = true;
+        else raw += ': ' + rawText.slice(0, 120);
       }
-      throw new Error(errMsg);
+      throw new Error(friendlyClaudeError(resp.status, raw, isHtml));
     }
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
