@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_7)                       ║
+║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_12)                       ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -34,6 +34,34 @@
 ║          See more → Full detail/README-level) + Expand-all, profile builder  ║
 ║          below it (Load example / Skip live here now). Editing from Sync     ║
 ║          jumps straight to the builder, skipping welcome + guide.            ║
+║  v1_2_8  welcome copy reworked ("Built by you, for you" + ownership +        ║
+║          reassurance for first-timers: "if you can copy and paste, you can   ║
+║          do this"). Signup table now describes each service in plain         ║
+║          language and adds GitHub Gist (free cloud data storage) and the     ║
+║          Cloudflare = free file hosting / reach-from-any-device framing.     ║
+║  v1_2_9  welcome hero copy revised: embedded Claude-AI analyzer funnels to   ║
+║          the tracker; ownership line cites Cloudflare deploy + GitHub host/  ║
+║          storage + own Anthropic key. Newcomer reassurance retained.         ║
+║  v1_2_10 welcome card restructured for clarity: stacked (signup table on     ║
+║          top, then steps) instead of side-by-side. Steps reframed under      ║
+║          "This guide will show you how to:" with short verb-first labels     ║
+║          (Host code on GitHub / Deploy to Cloudflare / Develop your profile  ║
+║          / Connect a private cloud backup); step 4 marked "start using the   ║
+║          live tool here".                                                     ║
+║  v1_2_11 welcome + setup polish. (1) Anthropic API cost row now carries a    ║
+║          light-yellow "Suggested" pill and folds in the "not required"       ║
+║          note; the standalone AI-is-optional line is removed. (2) Welcome    ║
+║          hero restyled into a gradient title block (large italic serif +     ║
+║          rose eyebrow + star mark) so it reads as an anchored header.        ║
+║          (3) Per-step disclosure flattened to one tier: "See more" reveals   ║
+║          the full walkthrough at once. (4) Per-step Collapse removed; a      ║
+║          single "Collapse all detail" button sits bottom-right of the card,  ║
+║          mirroring "Expand all detail" top-right. (5) "← Back to welcome"     ║
+║          added left of Expand-all.                                            ║
+║  v1_2_12 step 1 now shows a visual ASCII file-tree of the repo structure     ║
+║          (your-repo/ → index.html, README.md, functions/api/claude.js) in    ║
+║          the full-detail view, so the layout to replicate is seen, not just  ║
+║          described.                                                           ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -3953,9 +3981,12 @@ function openSetupWizard(opts) {
 
 // Advance from the welcome overview into the detailed guide + profile builder.
 function wzGotoSetup() { _wizardStage = 'setup'; renderSetupWizard(); }
-// Per-step disclosure: 0 collapsed → 1 "see more" → 2 "full detail".
+// Per-step disclosure: 0 collapsed → 1 expanded (full detail shown at once).
 function wzExpandStep(n, level) { _wizardExpand[n] = level; renderSetupWizard(); }
-function wzExpandAll() { ['1','2','3','4','5'].forEach(n => _wizardExpand[n] = 2); renderSetupWizard(); }
+function wzExpandAll() { ['1','2','3','4','5'].forEach(n => _wizardExpand[n] = 1); renderSetupWizard(); }
+function wzCollapseAll() { _wizardExpand = {}; renderSetupWizard(); }
+// Return from the setup guide to the full-width welcome overview.
+function wzGotoWelcome() { _wizardStage = 'welcome'; renderSetupWizard(); }
 
 // Re-open the wizard purely as the setup guide (cost + hosting/API steps),
 // reachable from Sync and the un-hosted banner after a user has moved on.
@@ -4008,19 +4039,24 @@ function renderSetupWizard() {
       <span style="font-size:11px;color:var(--faint);border:1px solid var(--brd2);border-radius:10px;padding:1px 7px">${tag}</span>
     </div>`;
 
-  const costRow = (svc, cost, free) => `
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--brd)">
-      <span style="font-size:12.5px;color:var(--tx);font-weight:600">${svc}</span>
-      <span style="font-size:11px;color:${free?'var(--jade)':'#E8C97A'};font-family:var(--mono);text-align:right">${cost}</span>
+  const SUGGESTED_PILL = `<span style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#E8C97A;background:rgba(201,138,14,0.16);border:1px solid var(--amber-dim);border-radius:8px;padding:1px 7px;margin-left:7px;vertical-align:middle">Suggested</span>`;
+  const costRow = (svc, cost, free, desc, pill) => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--brd)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <span style="font-size:12.5px;color:var(--tx);font-weight:600">${svc}${pill ? SUGGESTED_PILL : ''}</span>
+        <span style="font-size:11px;color:${free?'var(--jade)':'#E8C97A'};font-family:var(--mono);text-align:right;white-space:nowrap">${cost}</span>
+      </div>
+      ${desc ? `<div style="font-size:11px;color:var(--faint);line-height:1.5;margin-top:2px">${desc}</div>` : ''}
     </div>`;
   const costTable = `
-    ${costRow('GitHub','Free', true)}
-    ${costRow('Cloudflare Pages','Free', true)}
-    ${costRow('Anthropic API','A few $ → 1,000s of runs', false)}`;
+    ${costRow('GitHub','Free', true, 'Hosts your copy of the app\u2019s files.')}
+    ${costRow('Cloudflare Pages','Free', true, 'Free file hosting that puts your app online, so you can reach it from any device.')}
+    ${costRow('GitHub Gist','Free', true, 'Free cloud storage for your data \u2014 your applications and contacts follow you across devices.')}
+    ${costRow('Anthropic API','A few $ → 1,000s of runs', false, 'Powers the AI features (fit analyzer, interview prep, networking drafts). Pay-as-you-go, a fraction of a cent per run \u2014 not a Claude.ai subscription. Not required: the tracker, CRM, job-board launcher, and timer all work with no key.', true)}`;
 
   // ── STEP CONTENT — three tiers: summary (always), more (moderate), full (README-level)
   const STEPS = [
-    { n:'1', t:'Put the code on GitHub',
+    { n:'1', t:'Put the code on GitHub', ov:'Host your code on GitHub',
       sum:'Upload the three app files to a free GitHub repo — this is where your copy lives.',
       more:'Create a free repo (private is fine), then <b>Add file → Upload files</b> and drag in <code>index.html</code> plus the <code>functions</code> folder. Keep the structure exactly: <code>index.html</code> at the root, <code>claude.js</code> inside <code>functions/api/</code>.',
       full:`<ol style="margin:0;padding-left:18px;line-height:1.7">
@@ -4028,8 +4064,15 @@ function renderSetupWizard() {
         <li>Create a <b>new repository</b> — name it anything (e.g. <code>jobquest</code>). Private is fine.</li>
         <li>On the repo page choose <b>Add file → Upload files</b>, then drag in <code>index.html</code> and the whole <code>functions</code> folder.</li>
       </ol>
+      <div style="margin-top:10px;padding:11px 13px;background:rgba(8,18,30,0.6);border:1px solid var(--brd2);border-radius:8px;font-family:var(--mono);font-size:11.5px;line-height:1.85;color:var(--muted);overflow-x:auto;white-space:pre"><span style="color:var(--sky-blue-light);font-weight:600">📁 your-repo/</span>
+├─ <span style="color:var(--tx)">index.html</span>
+├─ <span style="color:var(--faint)">README.md</span>
+└─ <span style="color:var(--sky-blue-light);font-weight:600">📁 functions/</span>
+   └─ <span style="color:var(--sky-blue-light);font-weight:600">📁 api/</span>
+      └─ <span style="color:var(--tx)">claude.js</span></div>
+      <div style="font-size:11px;color:var(--faint);line-height:1.5;margin-top:5px">Match this exactly — <code>index.html</code> at the root, <code>claude.js</code> nested two folders deep inside <code>functions/api/</code>.</div>
       <div style="margin-top:8px;padding:8px 10px;border-left:2px solid var(--brd2);background:var(--surf2);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--muted)">The folder path matters: Cloudflare turns <code>functions/api/claude.js</code> into the live URL <code>/api/claude</code> automatically.</div>` },
-    { n:'2', t:'Get an Anthropic API key',
+    { n:'2', t:'Get an Anthropic API key', ov:'Get an Anthropic API key',
       sum:'Grab a key from the Anthropic Console and add a few dollars of credit. This is the pay-as-you-go API — not a Claude.ai subscription.',
       more:'At <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>: add a little credit under <b>Billing</b>, then <b>API Keys → Create Key</b> and copy it (starts with <code>sk-ant-</code>). You won\u2019t paste it into the app — it goes into Cloudflare as a secret in the next step. A Claude.ai Pro/Max plan can\u2019t power the app; this is a separate, metered API.',
       full:`<ol style="margin:0;padding-left:18px;line-height:1.7">
@@ -4038,7 +4081,7 @@ function renderSetupWizard() {
         <li>Go to <b>API Keys → Create Key</b> and copy it. It starts with <code>sk-ant-</code>.</li>
       </ol>
       <div style="margin-top:8px;padding:8px 10px;border-left:2px solid var(--amber-dim);background:var(--amber-bg);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--muted)">Keep the key handy for Step 3. It is <b>separate from a Claude.ai subscription</b> — a Pro/Max plan won\u2019t work here. The key becomes a server-side secret and never touches the browser.</div>` },
-    { n:'3', t:'Deploy free to Cloudflare Pages',
+    { n:'3', t:'Deploy free to Cloudflare Pages', ov:'Deploy the app to Cloudflare',
       sum:'Connect the repo to Cloudflare Pages, add your key as a secret, and your live app goes online.',
       more:'In <b>Workers &amp; Pages → Create → Pages → Connect to Git</b>, pick your repo. Framework preset <b>None</b>, build command and output blank (it\u2019s static). After it deploys, <b>Settings → Environment variables</b> → add <code>ANTHROPIC_API_KEY</code> = your <code>sk-ant-…</code> key, then redeploy so it takes effect.',
       full:`<ol style="margin:0;padding-left:18px;line-height:1.7">
@@ -4049,7 +4092,7 @@ function renderSetupWizard() {
         <li>Trigger one more deploy so the variable is picked up: <b>Deployments → Retry/redeploy</b>.</li>
       </ol>
       <div style="margin-top:8px;padding:8px 10px;border-left:2px solid var(--brd2);background:var(--surf2);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--muted)">Your app is now live at <code>https://your-project.pages.dev</code>. Optional: add a custom domain you own under <b>Custom domains</b>.</div>` },
-    { n:'4', t:'Build your profile',
+    { n:'4', t:'Build your profile', ov:'Develop your profile',
       sum:'Fill in who you are — or paste your résumé and let Claude draft it. Every AI feature is built from this.',
       more:'The builder is right below. Fill the Basics, Background, and Fit-criteria fields — or paste your résumé and hit <b>✨ Draft from résumé</b> to pre-fill them (needs your deployment live). You can edit any time later from <b>Sync → Edit profile</b>.',
       full:`<div style="line-height:1.7">Everything the AI uses comes from these fields, so it\u2019s worth a few minutes:
@@ -4059,7 +4102,7 @@ function renderSetupWizard() {
         <li><b>Fit criteria</b> — what makes a role strong, what\u2019s a red flag, and your honest gaps (framed fairly, never as dealbreakers).</li>
       </ul>
       <div style="margin-top:8px">Shortcut: paste your résumé and hit <b>✨ Draft from résumé</b>. Prefer to look around first? <b>Load example data</b> gives you a populated demo.</div></div>` },
-    { n:'5', t:'Turn on cloud backup',
+    { n:'5', t:'Turn on cloud backup', ov:'Connect a private cloud backup',
       sum:'Optional: connect a private GitHub Gist so your data survives a cleared browser and follows you across devices.',
       more:'From the <b>Sync</b> tab, create a GitHub token with only the <code>gist</code> scope, make a secret Gist (<code>jobquest.json</code> containing <code>{}</code>), and paste the token + Gist ID in. Saved locally first, always — a sync hiccup can never lose data.',
       full:`<ol style="margin:0;padding-left:18px;line-height:1.7">
@@ -4072,17 +4115,17 @@ function renderSetupWizard() {
 
   // Compact numbered step used on the WELCOME overview (summary only, no toggles).
   const overviewStep = (s) => `
-    <div style="display:flex;gap:12px;margin-bottom:14px">
-      <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--amber-bg);border:1px solid var(--amber-dim);color:#E8C97A;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--mono)">${s.n}</div>
-      <div style="min-width:0;padding-top:2px">
-        <div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">${s.t}</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.6">${s.sum}</div>
+    <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:11px">
+      <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--amber-bg);border:1px solid var(--amber-dim);color:#E8C97A;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--mono)">${s.n}</div>
+      <div style="min-width:0;font-size:13.5px;color:var(--tx);line-height:1.5">
+        <span style="font-weight:600">${s.ov || s.t}</span>${s.n==='4' ? ` <span style="font-size:11px;color:var(--jade);font-weight:600;white-space:nowrap">— start using the live tool here</span>` : ''}
       </div>
     </div>`;
 
-  // Expandable step used in SETUP stage: summary + "See more" (moderate) + "Full detail" (README).
+  // Expandable step used in SETUP stage: summary + "See more" reveals the full
+  // walkthrough at once (collapsing is handled by the card-level button below).
   const setupStep = (s) => {
-    const ex = _wizardExpand[s.n] || 0; // 0 collapsed, 1 more, 2 full
+    const ex = _wizardExpand[s.n] || 0; // 0 collapsed, 1 expanded (full detail)
     return `
     <div style="border:1px solid var(--brd2);border-radius:9px;padding:13px 14px;margin-bottom:10px;background:var(--surf2)">
       <div style="display:flex;gap:11px">
@@ -4090,13 +4133,11 @@ function renderSetupWizard() {
         <div style="min-width:0;flex:1">
           <div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">${s.t}</div>
           <div style="font-size:12px;color:var(--muted);line-height:1.6">${s.sum}</div>
-          ${ex>=1 ? `<div style="font-size:12px;color:var(--tx);line-height:1.7;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd)">${s.more}</div>` : ''}
-          ${ex>=2 ? `<div style="font-size:12px;color:var(--muted);margin-top:10px">${s.full}</div>` : ''}
+          ${ex>=1 ? `<div style="font-size:12px;color:var(--tx);line-height:1.7;margin-top:9px;padding-top:9px;border-top:1px solid var(--brd)">${s.more}</div>
+                     <div style="font-size:12px;color:var(--muted);margin-top:10px">${s.full}</div>` : ''}
           <div class="row" style="gap:8px;margin-top:9px">
             ${ex===0 ? `<button onclick="wzExpandStep('${s.n}',1)" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">See more ▾</button>` : ''}
-            ${ex===1 ? `<button onclick="wzExpandStep('${s.n}',2)" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Full detail ▾</button>
-                        <button onclick="wzExpandStep('${s.n}',0)" style="font-size:11px;padding:3px 11px;color:var(--faint)">Less ▴</button>` : ''}
-            ${ex===2 ? `<button onclick="wzExpandStep('${s.n}',0)" style="font-size:11px;padding:3px 11px;color:var(--faint)">Collapse ▴</button>` : ''}
+            ${ex>=1 ? `<button onclick="wzExpandStep('${s.n}',0)" style="font-size:11px;padding:3px 11px;color:var(--faint)">Less ▴</button>` : ''}
           </div>
         </div>
       </div>
@@ -4159,10 +4200,25 @@ function renderSetupWizard() {
   if (stage === 'welcome') {
     wz.innerHTML = `${bg}
       <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:48px 22px 70px">
-        ${brand('welcome')}
-        <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:30px;font-weight:400;color:var(--tx);margin:6px 0 10px;line-height:1.2">Run your whole job search in one place.</h1>
-        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 4px;max-width:680px">
-          JobQuest is your personal job-search OS: an <b style="color:var(--tx)">AI fit analyzer</b> that scores any job description against your profile, an <b style="color:var(--tx)">application tracker</b>, a <b style="color:var(--tx)">networking CRM</b>, plus a focus timer, daily tasks, a job-board launcher, and export. It runs on your <b style="color:var(--tx)">own free deployment</b> — your data lives in your browser and your private GitHub Gist, and your API key stays a server-side secret that never touches the browser.
+        <div style="position:relative;border:1px solid rgba(91,160,210,0.20);border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#0D2033 0%,#1C3A50 100%);padding:30px 30px 32px;margin-bottom:26px">
+          <svg width="72" height="72" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:20px;right:22px;filter:drop-shadow(2px 2px 0px #C4607A);opacity:0.9;pointer-events:none"><path d="${STAR}" fill="#F4F8FC"/></svg>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
+            <span style="font-size:17px;font-weight:700;color:#F4F8FC;letter-spacing:.01em">JobQuest</span>
+            <span style="font-size:10px;color:var(--rose);border:1px solid var(--rose-deep);border-radius:10px;padding:1px 8px;letter-spacing:.04em">welcome</span>
+          </div>
+          <div style="font-size:10px;color:var(--rose);letter-spacing:.13em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px">
+            <span style="display:inline-block;width:16px;height:1px;background:var(--rose-deep)"></span>your personal job-search OS
+          </div>
+          <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:42px;font-weight:400;font-style:italic;color:#F4F8FC;margin:0;line-height:1.08;letter-spacing:-.02em;max-width:600px">Run your whole job search in one place.</h1>
+        </div>
+        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;max-width:680px">
+          <b style="color:var(--tx)">Built by you, for you.</b> JobQuest is a personal job-search OS you host and customize yourself. An embedded <b style="color:var(--tx)">Claude-AI fit analyzer</b> scores any job description against your profile and can funnel it straight to your <b style="color:var(--tx)">application tracker</b>, alongside a <b style="color:var(--tx)">networking CRM</b>.
+        </p>
+        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;max-width:680px">
+          It's completely yours from the first click — running on your own free Cloudflare deployment, with GitHub file hosting and private storage. And every built-in AI feature runs on your own Anthropic API key.
+        </p>
+        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0;max-width:680px">
+          <b style="color:var(--tx)">New to GitHub, Cloudflare, or API keys?</b> That's completely fine — most people setting this up are seeing them for the first time. The guide walks you through each one in plain language, and nothing here can break. If you can copy and paste, you can do this.
         </p>
 
         <div class="card" style="margin:22px 0;border-color:var(--brd2);background:${CARD_BG}">
@@ -4170,15 +4226,15 @@ function renderSetupWizard() {
             <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:18px;color:var(--tx)">What you're getting into</div>
             <div style="font-size:11px;color:var(--faint)">~20 minutes, mostly free</div>
           </div>
-          <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:14px">Three quick free signups and a 5-minute deploy. Here's the whole path — you'll get the detailed walkthrough on the next screen.</div>
-          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:22px;align-items:start">
-            <div>${STEPS.map(overviewStep).join('')}</div>
-            <div>
-              <div style="${WZ_LABEL};margin-bottom:7px">What you'll sign up for</div>
-              ${costTable}
-              <div style="font-size:11px;color:var(--faint);line-height:1.6;margin-top:10px">GitHub and Cloudflare are free. The Anthropic API is metered pay-as-you-go (not a Claude.ai subscription); a few dollars covers thousands of runs. <b style="color:var(--muted)">AI is optional</b> — the tracker, CRM, launcher, and timer all work with no key at all.</div>
-            </div>
-          </div>
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:16px">Three quick free signups and a 5-minute deploy. Here's the whole path — you'll get the detailed walkthrough on the next screen.</div>
+
+          <div style="${WZ_LABEL};margin-bottom:7px">What you'll sign up for</div>
+          ${costTable}
+
+          <div style="height:1px;background:var(--brd);margin:18px 0"></div>
+
+          <div style="${WZ_LABEL};margin-bottom:11px">This guide will show you how to:</div>
+          ${STEPS.map(overviewStep).join('')}
         </div>
 
         <div class="row" style="gap:12px;flex-wrap:wrap">
@@ -4201,14 +4257,20 @@ function renderSetupWizard() {
       ` : `
         <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Setup guide</h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 6px;max-width:640px">
-          Follow these to put your own copy online and switch on the AI. Each step has <b style="color:var(--tx)">See more</b> for the exact values, and <b style="color:var(--tx)">Full detail</b> for the complete walkthrough. Already done, or just exploring? Build your profile below and you're off.
+          Follow these to put your own copy online and switch on the AI. Each step has <b style="color:var(--tx)">See more</b> for the exact values and the complete walkthrough. Already done, or just exploring? Build your profile below and you're off.
         </p>
         <div class="card" style="margin:16px 0;border-color:var(--brd2);background:${CARD_BG}">
           <div class="row" style="justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx)">Get JobQuest live</div>
-            <button onclick="wzExpandAll()" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Expand all detail</button>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <button onclick="wzGotoWelcome()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to welcome</button>
+              <button onclick="wzExpandAll()" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Expand all detail</button>
+            </div>
           </div>
           ${STEPS.map(setupStep).join('')}
+          <div class="row" style="justify-content:flex-end;margin-top:4px">
+            <button onclick="wzCollapseAll()" style="font-size:11px;padding:3px 11px;color:var(--faint)">Collapse all detail ▴</button>
+          </div>
         </div>
 
         <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx);margin:26px 0 2px">Build your profile</div>
