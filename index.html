@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_12)                       ║
+║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_14)                       ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -62,6 +62,21 @@
 ║          (your-repo/ → index.html, README.md, functions/api/claude.js) in    ║
 ║          the full-detail view, so the layout to replicate is seen, not just  ║
 ║          described.                                                           ║
+║  v1_2_13 (1) welcome hero gains a "▶ Take a live tour" button beside Get      ║
+║          started — loads the app fully populated with sample data so the     ║
+║          payoff is visible before any signup. Tour is flagged jq_demo (not   ║
+║          setup_skipped); a rose tour banner offers Build my own → and Exit   ║
+║          tour. (2) Wizard split into THREE sequential stages: welcome →       ║
+║          setup (deploy + API guide ONLY, steps 1–3, no profile fields) →      ║
+║          profile (the builder). Profile build is gated behind a "My app is    ║
+║          live — build my profile →" button so nobody starts entering data     ║
+║          before deployment. Manual mode is still reachable, but as a quiet    ║
+║          escape link, not the prominent first-step path. (3) Stage changes    ║
+║          now scroll the wizard back to the top (wzScrollTop) — fixes Get      ║
+║          started landing mid-page on the next screen.                         ║
+║  v1_2_14 added a small green "▶ view live demo" pill in the bottom-right       ║
+║          corner of the welcome hero banner — a third entry point into the      ║
+║          live tour (calls startDemoTour), alongside the hero buttons.          ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -1473,6 +1488,19 @@ function renderHQHero() {
 // or are running un-hosted — points them back to the hosting/API guide. Hidden
 // once dismissed, and once cloud sync is connected (a proxy is clearly live).
 function setupBanner() {
+  if (isDemo()) {
+    return `
+    <div class="card" style="margin-bottom:14px;border-color:var(--rose-deep);border-left:3px solid var(--rose);background:rgba(196,96,122,0.10);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1 1 320px;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:2px">▶ You're in the live tour</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">This is JobQuest loaded with sample roles, contacts, and tools so you can click around. Nothing here is saved to a cloud and the AI features stay off until you set up your own copy. Ready to make it yours?</div>
+      </div>
+      <div class="row" style="gap:6px;flex-shrink:0">
+        <button onclick="buildFromDemo()" class="amber" style="font-size:12px;padding:7px 14px">Build my own →</button>
+        <button onclick="exitDemoTour()" style="font-size:12px;color:var(--faint)" title="Clear the sample data and return to the welcome screen">Exit tour</button>
+      </div>
+    </div>`;
+  }
   const skipped   = localStorage.getItem('setup_skipped');
   const dismissed = localStorage.getItem('setup_banner_dismissed');
   const hasCloud  = state.ghToken && state.ghGistId;
@@ -3964,13 +3992,18 @@ const WZ_INPUT = 'width:100%;font-size:13px;padding:9px 11px;border:1px solid va
 const WZ_LABEL = 'font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:5px';
 let _wizardDraft = null;
 let _wizardGuide = false;
-let _wizardStage = 'welcome';   // 'welcome' | 'setup'
+// Stages run in sequence: welcome → setup (deploy + API only) → profile (builder).
+// 'profile' is gated behind setup so people don't start entering data before the
+// app is actually deployed (the manual-mode escape is offered, but not as the
+// prominent first-step path).
+let _wizardStage = 'welcome';   // 'welcome' | 'setup' | 'profile'
 let _wizardExpand = {};         // per-step disclosure level: {stepN: 0|1|2}
 
 function openSetupWizard(opts) {
   _wizardGuide = !!(opts && opts.guide);
-  // First-run and guide re-entry both start on the welcome screen; editing skips it.
-  _wizardStage = (hasProfile() && !_wizardGuide) ? 'setup' : 'welcome';
+  // Editing an existing profile jumps straight to the builder; first-run and
+  // guide re-entry both start on the welcome screen.
+  _wizardStage = (hasProfile() && !_wizardGuide) ? 'profile' : 'welcome';
   _wizardExpand = {};
   _wizardDraft = getProfile() || {...EMPTY_PROFILE};
   const nav = document.getElementById('nav');   if (nav)  nav.style.display = 'none';
@@ -3979,14 +4012,25 @@ function openSetupWizard(opts) {
   renderSetupWizard();
 }
 
-// Advance from the welcome overview into the detailed guide + profile builder.
-function wzGotoSetup() { _wizardStage = 'setup'; renderSetupWizard(); }
+// Scroll the wizard back to the top whenever the stage changes — without this,
+// the previous screen's scroll offset carries over and lands the user mid-page.
+function wzScrollTop() {
+  const wz = document.getElementById('setup-wizard');
+  if (wz) wz.scrollTo(0, 0);
+}
+function wzGo(stage) { _wizardStage = stage; renderSetupWizard(); wzScrollTop(); }
+
+// Welcome → deploy/API guide (no profile fields yet).
+function wzGotoSetup() { wzGo('setup'); }
+// Guide → profile builder (the gated "I've deployed" path, or the manual escape).
+function wzGotoProfile() { wzGo('profile'); }
 // Per-step disclosure: 0 collapsed → 1 expanded (full detail shown at once).
 function wzExpandStep(n, level) { _wizardExpand[n] = level; renderSetupWizard(); }
 function wzExpandAll() { ['1','2','3','4','5'].forEach(n => _wizardExpand[n] = 1); renderSetupWizard(); }
 function wzCollapseAll() { _wizardExpand = {}; renderSetupWizard(); }
-// Return from the setup guide to the full-width welcome overview.
-function wzGotoWelcome() { _wizardStage = 'welcome'; renderSetupWizard(); }
+// Step back through the sequence.
+function wzGotoWelcome() { wzGo('welcome'); }
+function wzBackToSetup() { wzGo('setup'); }
 
 // Re-open the wizard purely as the setup guide (cost + hosting/API steps),
 // reachable from Sync and the un-hosted banner after a user has moved on.
@@ -4016,9 +4060,10 @@ function readWizardInputs() {
 function renderSetupWizard() {
   const p = _wizardDraft || EMPTY_PROFILE;
   const editing = hasProfile() && !_wizardGuide;
-  // Stage: 'welcome' = full-width intro + overview; 'setup' = guide + profile builder.
-  // Editing an existing profile jumps straight to the builder.
-  if (editing) _wizardStage = 'setup';
+  // Stage: 'welcome' = full-width intro; 'setup' = deploy/API guide only;
+  // 'profile' = the profile builder. Editing an existing profile jumps straight
+  // to the builder.
+  if (editing) _wizardStage = 'profile';
   const stage = _wizardStage;
   const wz = document.getElementById('setup-wizard');
   wz.style.cssText = 'position:fixed;inset:0;z-index:3000;overflow-y:auto';
@@ -4118,7 +4163,7 @@ function renderSetupWizard() {
     <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:11px">
       <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--amber-bg);border:1px solid var(--amber-dim);color:#E8C97A;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--mono)">${s.n}</div>
       <div style="min-width:0;font-size:13.5px;color:var(--tx);line-height:1.5">
-        <span style="font-weight:600">${s.ov || s.t}</span>${s.n==='4' ? ` <span style="font-size:11px;color:var(--jade);font-weight:600;white-space:nowrap">— start using the live tool here</span>` : ''}
+        <span style="font-weight:600">${s.ov || s.t}</span>${s.n==='4' ? ` <span style="font-size:11px;color:var(--sky-blue-light);font-weight:600;white-space:nowrap">— after your app is live</span>` : ''}
       </div>
     </div>`;
 
@@ -4210,6 +4255,7 @@ function renderSetupWizard() {
             <span style="display:inline-block;width:16px;height:1px;background:var(--rose-deep)"></span>your personal job-search OS
           </div>
           <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:42px;font-weight:400;font-style:italic;color:#F4F8FC;margin:0;line-height:1.08;letter-spacing:-.02em;max-width:600px">Run your whole job search in one place.</h1>
+          <button onclick="startDemoTour()" title="Open a fully populated demo — nothing saved" style="position:absolute;bottom:14px;right:16px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--jade);background:var(--jade-pale);border:1px solid var(--jade-border);border-radius:999px;padding:4px 11px;cursor:pointer;z-index:2">▶ view live demo</button>
         </div>
         <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;max-width:680px">
           <b style="color:var(--tx)">Built by you, for you.</b> JobQuest is a personal job-search OS you host and customize yourself. An embedded <b style="color:var(--tx)">Claude-AI fit analyzer</b> scores any job description against your profile and can funnel it straight to your <b style="color:var(--tx)">application tracker</b>, alongside a <b style="color:var(--tx)">networking CRM</b>.
@@ -4237,45 +4283,75 @@ function renderSetupWizard() {
           ${STEPS.map(overviewStep).join('')}
         </div>
 
-        <div class="row" style="gap:12px;flex-wrap:wrap">
+        <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
           <button onclick="wzGotoSetup()" class="amber" style="font-size:14px;padding:12px 26px;font-weight:600">Get started →</button>
-          <span style="font-size:12px;color:var(--faint)">Next: the step-by-step guide, then build your profile.</span>
+          <button onclick="startDemoTour()" style="font-size:13px;padding:11px 20px;font-weight:600;color:var(--sky-blue-light);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">▶ Take a live tour</button>
+          <span style="font-size:12px;color:var(--faint);flex-basis:100%">Build your own, or take the tour first — explore a fully populated app with sample roles, contacts, and tools. No signup, nothing saved.</span>
         </div>
       </div>`;
     wz.style.display = 'block';
     return;
   }
 
-  // ── STAGE: SETUP (guide on top, builder below) ──
+  // ── STAGE: SETUP (deploy + API guide ONLY — no profile fields here) ──
+  // Steps 1–3 are the actual app-setup (host, key, deploy). Building the
+  // profile is the next stage, gated behind "my app is live", so nobody starts
+  // entering their information before there's anything to power it.
+  if (stage === 'setup') {
+    const DEPLOY_STEPS = STEPS.filter(s => ['1','2','3'].includes(s.n));
+    wz.innerHTML = `${bg}
+    <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 22px 70px">
+      ${brand('setup · step 1 of 2')}
+      <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">First, get JobQuest online</h2>
+      <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 6px;max-width:640px">
+        These three steps put your own copy on the web and switch on the AI. Once your app is live you'll build your profile — that comes next, on its own screen. Each step has <b style="color:var(--tx)">See more</b> for exact values and the full walkthrough.
+      </p>
+      <div class="card" style="margin:16px 0;border-color:var(--brd2);background:${CARD_BG}">
+        <div class="row" style="justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx)">Deploy your copy</div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button onclick="wzGotoWelcome()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to welcome</button>
+            <button onclick="wzExpandAll()" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Expand all detail</button>
+          </div>
+        </div>
+        ${DEPLOY_STEPS.map(setupStep).join('')}
+        <div class="row" style="justify-content:flex-end;margin-top:4px">
+          <button onclick="wzCollapseAll()" style="font-size:11px;padding:3px 11px;color:var(--faint)">Collapse all detail ▴</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin:18px 0 0;border-color:var(--amber-dim);border-left:3px solid var(--amber);background:${CARD_BG}">
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx);margin-bottom:4px">App is live?</div>
+        <p style="font-size:12.5px;color:var(--muted);line-height:1.6;margin:0 0 12px;max-width:580px">Once you can open your app at its <code>.pages.dev</code> URL with the key set, you're ready to build your profile and turn on the AI features.</p>
+        <button onclick="wzGotoProfile()" class="amber" style="font-size:14px;padding:12px 26px;font-weight:600">My app is live — build my profile →</button>
+      </div>
+
+      <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--brd);max-width:600px">
+        <p style="font-size:11.5px;color:var(--faint);line-height:1.6;margin:0">
+          Not ready to deploy yet? You can <button onclick="skipSetupForNow()" style="font-size:11.5px;padding:0;color:var(--sky-blue);border:none;background:none;text-decoration:underline;cursor:pointer">use JobQuest in manual mode</button> — the tracker, networking CRM, job-board launcher, and timer all work without hosting. The AI features stay off until you finish the steps above.
+        </p>
+      </div>
+    </div>`;
+    wz.style.display = 'block';
+    return;
+  }
+
+  // ── STAGE: PROFILE (the builder — reached after deploy, or for editing) ──
   wz.innerHTML = `${bg}
     <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 22px 70px">
-      ${brand(editing ? 'edit profile' : 'setup')}
+      ${brand(editing ? 'edit profile' : 'setup · step 2 of 2')}
       ${editing ? `
         <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Edit your profile</h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0;max-width:600px">Everything the AI features use is built from these fields.</p>
         ${builder}
       ` : `
-        <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Setup guide</h2>
-        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 6px;max-width:640px">
-          Follow these to put your own copy online and switch on the AI. Each step has <b style="color:var(--tx)">See more</b> for the exact values and the complete walkthrough. Already done, or just exploring? Build your profile below and you're off.
-        </p>
-        <div class="card" style="margin:16px 0;border-color:var(--brd2);background:${CARD_BG}">
-          <div class="row" style="justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx)">Get JobQuest live</div>
-            <div class="row" style="gap:8px;flex-wrap:wrap">
-              <button onclick="wzGotoWelcome()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to welcome</button>
-              <button onclick="wzExpandAll()" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Expand all detail</button>
-            </div>
-          </div>
-          ${STEPS.map(setupStep).join('')}
-          <div class="row" style="justify-content:flex-end;margin-top:4px">
-            <button onclick="wzCollapseAll()" style="font-size:11px;padding:3px 11px;color:var(--faint)">Collapse all detail ▴</button>
-          </div>
+        <div class="row" style="gap:8px;margin-bottom:4px">
+          <button onclick="wzBackToSetup()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to setup steps</button>
         </div>
-
-        <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx);margin:26px 0 2px">Build your profile</div>
-        <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;max-width:600px">This drives the fit analyzer, interview prep, and networking drafts. You can do this now and deploy later — or skip and start using the tracker right away.</p>
+        <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Now build your profile</h2>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0;max-width:600px">This drives the fit analyzer, interview prep, and networking drafts. With your app live, you can paste your résumé below and let Claude draft it — or fill the fields by hand.</p>
         ${builder}
+        <p style="font-size:11.5px;color:var(--faint);line-height:1.6;margin:18px 0 0;max-width:600px">After this, turn on optional cloud backup any time from the <b style="color:var(--muted)">Sync</b> tab so your data follows you across devices.</p>
       `}
     </div>`;
   wz.style.display = 'block';
@@ -4356,6 +4432,33 @@ function loadExampleData() {
   localStorage.setItem('cloud_skipped', '1');
   closeSetupWizard();
   initApp();
+}
+
+// ── LIVE TOUR ────────────────────────────────────────────────────────────────
+// Seeds the same sample data as loadExampleData, but flags the session as a
+// demo and does NOT set setup_skipped — so exiting drops the user straight back
+// to the welcome screen with nothing persisted as "their" setup.
+function startDemoTour() {
+  loadExampleData();                       // seeds profile + apps + contacts, boots app
+  localStorage.setItem('jq_demo', '1');    // mark this as a tour, not a real setup
+  localStorage.removeItem('setup_skipped');// don't treat the tour as "skipped setup"
+  localStorage.removeItem('setup_banner_dismissed');
+  initApp();                               // re-render so the demo banner shows
+}
+function isDemo() { return localStorage.getItem('jq_demo') === '1'; }
+function exitDemoTour() {
+  // Wipe the sample data and tour flags, then reopen the welcome screen.
+  ['jq_demo','cloud_skipped','setup_banner_dismissed','apps_backup','contacts_backup','backup_updatedAt']
+    .forEach(k => localStorage.removeItem(k));
+  localStorage.removeItem(PROFILE_KEY);
+  state.apps = [];
+  state.contacts = [];
+  openSetupWizard();
+}
+function buildFromDemo() {
+  // Keep the explored data as a starting point, drop tour framing, open the guide.
+  localStorage.removeItem('jq_demo');
+  openSetupGuide();
 }
 
 
