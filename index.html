@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_14)                       ║
+║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_16)                       ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -77,6 +77,23 @@
 ║  v1_2_14 added a small green "▶ view live demo" pill in the bottom-right       ║
 ║          corner of the welcome hero banner — a third entry point into the      ║
 ║          live tour (calls startDemoTour), alongside the hero buttons.          ║
+║  v1_2_15 Step 1 reworked from upload-files to FORK. Title "Get your own copy   ║
+║          on GitHub"; overview label "Fork the app to GitHub". Summary/more/    ║
+║          full all teach the one-click Fork; full tier carries a "Fork starts   ║
+║          here →" link to the live repo (rcorcoran03-jam/jobquest_v1). Fork     ║
+║          destinations show .../jobquest_v1 to match the source repo name.      ║
+║          ASCII file-tree retained, recaptioned "Forking keeps this structure   ║
+║          exact". Step 3 "pick your repo" → "pick your fork" (more + full) for  ║
+║          consistency. Aligns app with README v1.3 (fork-only distribution).    ║
+║  v1_2_16 profile stage (post-deploy) now opens with a 5-node journey strip:    ║
+║          steps 1-3 (Fork/API key/Deploy) shown done (jade ✓), step 4           ║
+║          (Profile) active (amber), step 5 (Backup) upcoming. Builder gets a     ║
+║          "Step 4 of 5 · Your profile" eyebrow. Cloud-backup footnote promoted   ║
+║          to a real Step 5 card with the full inline Gist recipe (token →        ║
+║          secret Gist → paste in Sync tab) and an amber numbered circle like     ║
+║          the other steps — no "optional" badge, reads as a genuine step so it   ║
+║          isn't forgotten. Brand badge "step 2 of 2" → "setup" so it             ║
+║          doesn't clash with the 1-of-5 framing. Editing path unchanged.         ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -4101,13 +4118,13 @@ function renderSetupWizard() {
 
   // ── STEP CONTENT — three tiers: summary (always), more (moderate), full (README-level)
   const STEPS = [
-    { n:'1', t:'Put the code on GitHub', ov:'Host your code on GitHub',
-      sum:'Upload the three app files to a free GitHub repo — this is where your copy lives.',
-      more:'Create a free repo (private is fine), then <b>Add file → Upload files</b> and drag in <code>index.html</code> plus the <code>functions</code> folder. Keep the structure exactly: <code>index.html</code> at the root, <code>claude.js</code> inside <code>functions/api/</code>.',
+    { n:'1', t:'Get your own copy on GitHub', ov:'Fork the app to GitHub',
+      sum:'Fork this project into your own free GitHub account — one click gives you a complete copy, ready to deploy.',
+      more:'On the repo page, click <b>Fork</b> (top-right). GitHub instantly copies every file into <code>github.com/your-username/jobquest_v1</code>, with the folder structure intact — no downloading or dragging files around. That copy is yours to deploy and edit.',
       full:`<ol style="margin:0;padding-left:18px;line-height:1.7">
         <li>Make a free account at <a href="https://github.com" target="_blank" rel="noopener">github.com</a> if you don't have one.</li>
-        <li>Create a <b>new repository</b> — name it anything (e.g. <code>jobquest</code>). Private is fine.</li>
-        <li>On the repo page choose <b>Add file → Upload files</b>, then drag in <code>index.html</code> and the whole <code>functions</code> folder.</li>
+        <li>Open the JobQuest repo: <a href="https://github.com/rcorcoran03-jam/jobquest_v1" target="_blank" rel="noopener"><b>Fork starts here →</b></a></li>
+        <li>Click <b>Fork</b> in the top-right and confirm. You now own a full copy at <code>github.com/your-username/jobquest_v1</code>.</li>
       </ol>
       <div style="margin-top:10px;padding:11px 13px;background:rgba(8,18,30,0.6);border:1px solid var(--brd2);border-radius:8px;font-family:var(--mono);font-size:11.5px;line-height:1.85;color:var(--muted);overflow-x:auto;white-space:pre"><span style="color:var(--sky-blue-light);font-weight:600">📁 your-repo/</span>
 ├─ <span style="color:var(--tx)">index.html</span>
@@ -4115,7 +4132,7 @@ function renderSetupWizard() {
 └─ <span style="color:var(--sky-blue-light);font-weight:600">📁 functions/</span>
    └─ <span style="color:var(--sky-blue-light);font-weight:600">📁 api/</span>
       └─ <span style="color:var(--tx)">claude.js</span></div>
-      <div style="font-size:11px;color:var(--faint);line-height:1.5;margin-top:5px">Match this exactly — <code>index.html</code> at the root, <code>claude.js</code> nested two folders deep inside <code>functions/api/</code>.</div>
+      <div style="font-size:11px;color:var(--faint);line-height:1.5;margin-top:5px">Forking keeps this structure exact — <code>index.html</code> at the root, <code>claude.js</code> nested two folders deep inside <code>functions/api/</code>.</div>
       <div style="margin-top:8px;padding:8px 10px;border-left:2px solid var(--brd2);background:var(--surf2);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--muted)">The folder path matters: Cloudflare turns <code>functions/api/claude.js</code> into the live URL <code>/api/claude</code> automatically.</div>` },
     { n:'2', t:'Get an Anthropic API key', ov:'Get an Anthropic API key',
       sum:'Grab a key from the Anthropic Console and add a few dollars of credit. This is the pay-as-you-go API — not a Claude.ai subscription.',
@@ -4128,10 +4145,10 @@ function renderSetupWizard() {
       <div style="margin-top:8px;padding:8px 10px;border-left:2px solid var(--amber-dim);background:var(--amber-bg);border-radius:0 6px 6px 0;font-size:11.5px;color:var(--muted)">Keep the key handy for Step 3. It is <b>separate from a Claude.ai subscription</b> — a Pro/Max plan won\u2019t work here. The key becomes a server-side secret and never touches the browser.</div>` },
     { n:'3', t:'Deploy free to Cloudflare Pages', ov:'Deploy the app to Cloudflare',
       sum:'Connect the repo to Cloudflare Pages, add your key as a secret, and your live app goes online.',
-      more:'In <b>Workers &amp; Pages → Create → Pages → Connect to Git</b>, pick your repo. Framework preset <b>None</b>, build command and output blank (it\u2019s static). After it deploys, <b>Settings → Environment variables</b> → add <code>ANTHROPIC_API_KEY</code> = your <code>sk-ant-…</code> key, then redeploy so it takes effect.',
+      more:'In <b>Workers &amp; Pages → Create → Pages → Connect to Git</b>, pick your fork. Framework preset <b>None</b>, build command and output blank (it\u2019s static). After it deploys, <b>Settings → Environment variables</b> → add <code>ANTHROPIC_API_KEY</code> = your <code>sk-ant-…</code> key, then redeploy so it takes effect.',
       full:`<ol style="margin:0;padding-left:18px;line-height:1.7">
         <li>Sign in at <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> (free).</li>
-        <li><b>Workers &amp; Pages → Create → Pages → Connect to Git</b>, and select your repo.</li>
+        <li><b>Workers &amp; Pages → Create → Pages → Connect to Git</b>, and select your fork.</li>
         <li>Build settings: framework preset <b>None</b>; leave build command and output directory <b>blank</b> (static site, no build). <b>Save and Deploy</b>.</li>
         <li>When it finishes: <b>Settings → Environment variables → Add variable</b> → name <code>ANTHROPIC_API_KEY</code>, value your <code>sk-ant-…</code> key. Add to Production. Save.</li>
         <li>Trigger one more deploy so the variable is picked up: <b>Deployments → Retry/redeploy</b>.</li>
@@ -4337,9 +4354,54 @@ function renderSetupWizard() {
   }
 
   // ── STAGE: PROFILE (the builder — reached after deploy, or for editing) ──
+  // Journey strip: in the full 5-step setup, the builder is Step 4 (steps 1-3
+  // — fork, API key, deploy — are done by the time someone lands here) and cloud
+  // backup is Step 5. Only shown on the post-deploy path, not when editing.
+  const journeyStrip = (() => {
+    const steps = [
+      { n:'1', label:'Fork',    st:'done' },
+      { n:'2', label:'API key', st:'done' },
+      { n:'3', label:'Deploy',  st:'done' },
+      { n:'4', label:'Profile', st:'active' },
+      { n:'5', label:'Backup',  st:'next' }
+    ];
+    const node = (s) => {
+      const done = s.st==='done', active = s.st==='active';
+      const bg = active ? 'var(--amber-bg)' : (done ? 'rgba(74,158,118,0.14)' : 'var(--surf2)');
+      const bd = active ? 'var(--amber-dim)' : (done ? 'rgba(74,158,118,0.5)' : 'var(--brd2)');
+      const fg = active ? '#E8C97A'         : (done ? 'var(--jade)'          : 'var(--faint)');
+      const lf = active ? 'var(--tx)'       : (done ? 'var(--muted)'         : 'var(--faint)');
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
+          <div style="width:27px;height:27px;border-radius:50%;background:${bg};border:1px solid ${bd};color:${fg};font-size:12px;font-weight:700;font-family:var(--mono);display:flex;align-items:center;justify-content:center">${done ? '✓' : s.n}</div>
+          <span style="font-size:10px;color:${lf};font-weight:${active?'600':'400'};white-space:nowrap">${s.label}</span>
+        </div>`;
+    };
+    const connector = (leftDone) => `<div style="flex:1;height:2px;min-width:8px;align-self:flex-start;margin-top:13px;background:${leftDone ? 'rgba(74,158,118,0.4)' : 'var(--brd2)'}"></div>`;
+    let html = '';
+    steps.forEach((s,i) => { html += node(s); if (i < steps.length-1) html += connector(s.st==='done'); });
+    return `<div style="display:flex;align-items:flex-start;max-width:440px;margin:16px 0 24px">${html}</div>`;
+  })();
+
+  const step5Card = `
+    <div style="border:1px solid var(--brd2);border-radius:9px;padding:15px 16px;margin-top:22px;background:var(--surf2);max-width:600px">
+      <div style="display:flex;gap:11px;align-items:flex-start">
+        <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--amber-bg);border:1px solid var(--amber-dim);color:#E8C97A;font-size:12px;font-weight:700;font-family:var(--mono);display:flex;align-items:center;justify-content:center">5</div>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">Turn on cloud backup</div>
+          <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:10px">Optional but recommended — a private GitHub Gist keeps your applications and contacts safe if your browser clears, and lets you open JobQuest on another device. About two minutes:</div>
+          <ol style="margin:0;padding-left:18px;line-height:1.75;font-size:12px;color:var(--muted)">
+            <li>Create a token at <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a> with <b>only the <code>gist</code> scope</b>, and copy it.</li>
+            <li>Make a new <b>secret</b> Gist at <a href="https://gist.github.com" target="_blank" rel="noopener">gist.github.com</a>: filename <code>jobquest.json</code>, content <code>{}</code>. Copy the long ID from its URL.</li>
+            <li>Open the <b style="color:var(--tx)">Sync</b> tab, paste the token and Gist ID, and click <b>Connect</b>.</li>
+          </ol>
+          <div style="margin-top:10px;padding:8px 10px;border-left:2px solid var(--brd2);background:rgba(8,18,30,0.4);border-radius:0 6px 6px 0;font-size:11px;color:var(--faint);line-height:1.55">Your data always saves to this browser first, so a sync hiccup can never lose it. The token lives in this browser only and is sent only to <code>api.github.com</code>.</div>
+        </div>
+      </div>
+    </div>`;
+
   wz.innerHTML = `${bg}
     <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 22px 70px">
-      ${brand(editing ? 'edit profile' : 'setup · step 2 of 2')}
+      ${brand(editing ? 'edit profile' : 'setup')}
       ${editing ? `
         <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Edit your profile</h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0;max-width:600px">Everything the AI features use is built from these fields.</p>
@@ -4348,10 +4410,12 @@ function renderSetupWizard() {
         <div class="row" style="gap:8px;margin-bottom:4px">
           <button onclick="wzBackToSetup()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to setup steps</button>
         </div>
-        <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Now build your profile</h2>
+        ${journeyStrip}
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rose);margin-bottom:3px">Step 4 of 5 · Your profile</div>
+        <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:0 0 6px">Now build your profile</h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0;max-width:600px">This drives the fit analyzer, interview prep, and networking drafts. With your app live, you can paste your résumé below and let Claude draft it — or fill the fields by hand.</p>
         ${builder}
-        <p style="font-size:11.5px;color:var(--faint);line-height:1.6;margin:18px 0 0;max-width:600px">After this, turn on optional cloud backup any time from the <b style="color:var(--muted)">Sync</b> tab so your data follows you across devices.</p>
+        ${step5Card}
       `}
     </div>`;
   wz.style.display = 'block';

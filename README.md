@@ -1,3 +1,18 @@
+<!--
+  JobQuest README — public starter edition
+  Version: v1.3 (public)  |  internal: readme_v1_3_0
+  Changelog:
+    v1.3 — Distribution rewrite. Step 1 now uses GitHub fork (Path A, recommended)
+           + Cloudflare "Deploy to Cloudflare" button (Path B, experimental).
+           Step 3 branches by path; shared env-var + redeploy tail. Replaces the
+           old "create empty repo and upload three files" flow.
+    v1.2 — Initial public guide (manual repo creation + file upload).
+  Pending / wishlist:
+    - Confirm Deploy button behavior against Pages + Functions setup (no wrangler.toml).
+    - Replace REPLACE_ME in the Path B button URL with the real public repo URL.
+    - Confirm source repo is PUBLIC before distributing.
+    - Add link from jobquest.ryan-corcoran.com landing page -> repo root.
+-->
 # JobQuest — your personal job-search OS
 
 A single-file web app that runs your whole job search in one place:
@@ -24,13 +39,27 @@ README.md               ← this guide
 
 ---
 
-## Step 1 — Put the code on GitHub
+## Step 1 — Get your own copy on GitHub
+
+You don't download anything or copy files around by hand. You make your own copy of this repo, which GitHub calls a **fork** — one click and you get a complete copy, folder structure and all, under your own account.
+
+There are two ways to go from here. If you're not sure, use Path A — it's the one walked end to end below.
+
+### Path A — Fork it yourself (recommended)
 
 1. Create a free account at [github.com](https://github.com) if you don't have one.
-2. Create a **new repository** (e.g. `jobquest`). Private is fine.
-3. Upload these three files, keeping the folder structure exactly — `index.html` at the root, and `claude.js` inside a `functions/api/` folder. (Easiest path: on the repo page, **Add file → Upload files**, then drag the `index.html` and the `functions` folder in.)
+2. On this repo's page, click **Fork** in the top-right. GitHub copies all three files into `github.com/your-username/jobquest`, keeping the folder structure exactly (`index.html` at the root, `claude.js` inside `functions/api/`).
+3. That's it — you now own a full copy. Continue to Step 2, then connect it to Cloudflare in Step 3.
 
-> The folder path matters: Cloudflare turns `functions/api/claude.js` into the live URL `/api/claude` automatically.
+> The folder path matters: Cloudflare turns `functions/api/claude.js` into the live URL `/api/claude` automatically. Forking preserves it for you, which is why this is easier than uploading files by hand.
+
+### Path B — One-click deploy (faster, a little more "magic")
+
+Cloudflare's deploy button creates your own copy *and* sets up the Cloudflare deployment in one flow. It's quicker when it works, but it auto-detects build settings, so if it stumbles, fall back to Path A above.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/REPLACE_ME/jobquest)
+
+Click the button, sign in to (or create) your GitHub and Cloudflare accounts when prompted, and let it run. When it finishes, **skip ahead to Step 3, point 4** to add your API key — that's the one thing the button can't do for you.
 
 ---
 
@@ -46,10 +75,17 @@ Keep it handy for Step 3. You will **not** paste it into the app — it goes int
 
 ## Step 3 — Deploy to Cloudflare Pages
 
+**If you used Path B (the one-click button):** your deployment already exists. Open your project in the Cloudflare dashboard and jump straight to point 4 below to add your API key.
+
+**If you used Path A (forked it yourself):** connect your fork to Cloudflare first.
+
 1. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com) (free account).
-2. Go to **Workers & Pages → Create → Pages → Connect to Git**, and pick your `jobquest` repo.
+2. Go to **Workers & Pages → Create → Pages → Connect to Git**, and pick your `jobquest` fork.
 3. Build settings: leave the framework preset as **None**, and leave the build command and output directory **blank** (this is a static site — no build step). Click **Save and Deploy**.
-4. When it finishes, open **Settings → Environment variables → Add variable**:
+
+**Both paths — add your key and redeploy:**
+
+4. Open **Settings → Environment variables → Add variable**:
    - **Name:** `ANTHROPIC_API_KEY`
    - **Value:** your `sk-ant-…` key
    - Add it to **Production** (and Preview if you want previews to work). Save.
