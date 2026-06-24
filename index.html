@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_18)                       ║
+║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_19)                       ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -108,6 +108,15 @@
 ║          the button and can't accidentally wipe real data. Board also shows a    ║
 ║          gentle sky-blue "exploring with sample data" nudge (same clear action)  ║
 ║          while the flag is set and not in the live tour.                         ║
+║  v1_2_19 wizard chevron nav + sample-data re-entry. A Welcome › Setup ›      ║
+║          Profile chevron breadcrumb replaces the scattered "← Back" buttons  ║
+║          across all three wizard stages — completed stages clickable (sky-    ║
+║          blue), active stage amber, future stages dimmed but reachable.       ║
+║          The "exploring with sample data" board banner gains a primary        ║
+║          "Set up my own →" amber CTA (calls openSetupGuide → Welcome          ║
+║          screen) alongside the existing "Clear sample data" link, so          ║
+║          anyone who loaded example data from the Profile builder can find     ║
+║          their way back into the setup flow without hunting.                  ║
 ║  v1_2_18 authorship: added MIT LICENSE to the repo, a credit line in this        ║
 ║          header (rides along with every fork), a README footer linking back      ║
 ║          to ryan-corcoran.com, and a subtle "built by Ryan Corcoran · MIT        ║
@@ -127,8 +136,8 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="4.9.2">
-<meta name="jq-base" content="18">
+<meta name="jq-version" content="4.9.3">
+<meta name="jq-base" content="19">
 <meta name="jq-date" content="2026-05-29">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
@@ -625,6 +634,9 @@
 
 <!-- ── v18: VERSION BADGE ──────────────────────────────────────────── -->
 <div id="version-badge">JobQuest v<span id="footer-version"></span></div>
+
+<!-- ── SETUP RETURN FLOAT: visible until profile is saved ───────────── -->
+<div id="setup-float" style="display:none"></div>
 
 <!-- ── SETUP WIZARD (first run) ────────────────────────────────────── -->
 <div id="setup-wizard" style="display:none"></div>
@@ -1295,12 +1307,9 @@ const QUICK_LAUNCHES = [
 ];
 
 const TARGET_CAREER_PAGES = [
-  {name:'LinkedIn Jobs', url:'https://www.linkedin.com/jobs/search/?keywords=product+manager'},
-  {name:'Indeed',        url:'https://www.indeed.com/jobs?q=product+manager&sort=date'},
-  {name:'Wellfound',     url:'https://wellfound.com/jobs'},
-  {name:'Built In',      url:'https://builtin.com/jobs/product'},
-  {name:'Glassdoor',     url:'https://www.glassdoor.com/Job/jobs.htm?sc.keyword=product+manager'},
-  {name:'Google Jobs',   url:'https://www.google.com/search?q=product+manager+jobs&ibp=htl;jobs'},
+  {name:'Glassdoor',   url:'https://www.glassdoor.com/Job/jobs.htm?sc.keyword=product+manager'},
+  {name:'Built In',    url:'https://builtin.com/jobs/product'},
+  {name:'Dice',        url:'https://www.dice.com/jobs?q=product+manager'},
 ];
 
 function miniTimerWidget() {
@@ -1457,9 +1466,18 @@ function renderHQHero() {
             <span style="display:inline-block;width:12px;height:1px;background:var(--rose-deep)"></span>${esc(('open to new roles' + ((getProfile()&&getProfile().location)?(' · '+getProfile().location):'')).toLowerCase())}
           </div>
           <div style="font-size:46px;font-weight:400;color:#F4F8FC;line-height:1;letter-spacing:-.02em;font-style:italic;font-family:'DM Serif Display',Georgia,serif">Job Search HQ</div>
-          <div class="hero-subtitle" style="font-size:12px;color:#B8D4E8;margin-top:6px;font-style:italic;font-family:'DM Serif Display',Georgia,serif">${esc([(getProfile()&&getProfile().name)||'', profileLine()].filter(Boolean).join(' · '))}</div>
+          <div class="hero-subtitle" style="font-size:12px;color:#B8D4E8;margin-top:6px;font-style:italic;font-family:'DM Serif Display',Georgia,serif">${esc((getProfile()&&getProfile().name)||'')}</div>
         </div>
 
+      </div>
+
+      <!-- Profile summary bar: key fields + Edit Profile -->
+      <div style="background:rgba(8,18,30,0.74);border-top:1px solid rgba(91,160,210,0.12);padding:9px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          ${[(getProfile()&&getProfile().titles)||'', (getProfile()&&getProfile().focus)||'', (getProfile()&&getProfile().yearsExp)||'', salaryStr(), (getProfile()&&getProfile().workMode)||''].filter(Boolean).map(c=>`<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.11);border-radius:4px;padding:2px 9px;white-space:nowrap">${esc(c)}</span>`).join('')}
+          ${!hasProfile() ? `<span style="font-size:11px;color:var(--faint);font-style:italic">No profile yet — your AI features need this to work.</span>` : ''}
+        </div>
+        <button onclick="editProfile()" style="font-size:12px;font-weight:600;color:#fff;background:#C4607A;border:1px solid #A84F68;border-radius:7px;padding:7px 16px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.02em;transition:background .15s" onmouseover="this.style.background='#D46880'" onmouseout="this.style.background='#C4607A'">${hasProfile() ? 'Edit Profile' : 'Set up profile →'}</button>
       </div>
 
       <!-- KPI strip -->
@@ -1492,11 +1510,11 @@ function renderHQHero() {
     <div class="board-hero-split" style="display:grid;border:1px solid rgba(91,160,210,0.20);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;background:var(--navy-mid)">
 
       <!-- Analyze JD — open to guests via portfolio proxy -->
-      <div style="background:rgba(10,22,36,0.6);padding:16px 20px;border-right:1px solid rgba(255,255,255,0.06)">
+      <div style="background:rgba(10,22,36,0.6);padding:16px 20px;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column">
         <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px">
           <span style="width:20px;height:1px;display:inline-block;background:var(--gold)"></span>✦ Analyze a Job Description
         </div>
-        <textarea id="board-jd-quick" rows="3" placeholder="Paste a job description here — Claude will score fit, surface red flags, and check comp…" style="flex:1;font-size:12px;background:rgba(201,150,26,0.07);border:1px solid rgba(201,138,14,0.35);border-radius:6px;color:var(--tx);padding:8px 11px;resize:none;line-height:1.45;width:100%;margin-bottom:8px"></textarea>
+        <textarea id="board-jd-quick" rows="3" placeholder="Paste a job description here — Claude will score fit, surface red flags, and check comp…" style="flex:1;font-size:12px;background:rgba(201,150,26,0.07);border:1px solid rgba(201,138,14,0.35);border-radius:6px;color:var(--tx);padding:8px 11px;resize:none;line-height:1.45;width:100%;margin-bottom:8px;min-height:0"></textarea>
         <div style="display:flex;gap:8px">
           <button onclick="openAnalyzeModalWithText(document.getElementById('board-jd-quick').value)" style="flex:1;font-size:12px;background:var(--gold);color:#fff;border-color:var(--gold);padding:8px 0;font-weight:600">⚡ Analyze JD</button>
         </div>
@@ -1543,10 +1561,11 @@ function setupBanner() {
     <div class="card" style="margin-bottom:14px;border-color:var(--sky-blue-mid);border-left:3px solid var(--sky-blue);background:var(--sky-blue-pale);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="flex:1 1 320px;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:2px">📋 You're exploring with sample data</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.6">These roles and contacts belong to the example profile (Dario Naharis). Clear them here or from the <b style="color:var(--tx)">Sync</b> tab whenever you're ready to add your own.</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">These roles and contacts belong to the example profile (Dario Naharis). Ready to set up your own? The Welcome screen walks you through it — about 20 minutes, mostly free.</div>
       </div>
-      <div class="row" style="gap:6px;flex-shrink:0">
-        <button onclick="clearSampleData()" style="font-size:12px;padding:7px 14px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Clear sample data</button>
+      <div class="row" style="gap:6px;flex-shrink:0;flex-wrap:wrap">
+        <button onclick="openSetupGuide()" class="amber" style="font-size:12px;padding:7px 14px">Set up my own →</button>
+        <button onclick="clearSampleData()" style="font-size:12px;padding:7px 14px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:transparent">Clear sample data</button>
       </div>
     </div>`;
   }
@@ -1572,33 +1591,50 @@ function dismissSetupBanner() {
 }
 
 function renderBoard(el) {
+  renderSetupFloat();
   const liURL = buildLinkedInURL();
 
   // ── Job board groups (generic — edit QUICK_LAUNCHES + TARGET_CAREER_PAGES) ──
-  const launchCard = (g) => `
-    <div class="card" style="background:var(--navy-light)">
-      <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:2px">${g.icon || '🔎'} ${esc(g.label)}</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${esc(g.desc || '')}</div>
+  const CARD_ACCENTS = [
+    { col:'var(--sky-blue)',   bg:'rgba(91,158,201,0.07)',  brd:'var(--sky-blue-mid)' },
+    { col:'var(--jade)',       bg:'rgba(47,158,110,0.07)',  brd:'var(--jade-border)'  },
+    { col:'#E8C97A',           bg:'rgba(201,138,14,0.07)',  brd:'var(--amber-dim)'    },
+    { col:'var(--teal-light)', bg:'rgba(42,181,160,0.07)', brd:'var(--teal-border)'  },
+  ];
+  const launchCard = (g, i) => {
+    const ac = CARD_ACCENTS[i % CARD_ACCENTS.length];
+    return `
+    <div class="card" style="background:${ac.bg};border-left:3px solid ${ac.col}">
+      <div style="font-size:12.5px;font-weight:700;color:${ac.col};margin-bottom:3px;letter-spacing:.01em">${g.icon || '🔎'} ${esc(g.label)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">${esc(g.desc || '')}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${g.urls.map(b => b.clipboard
-          ? `<button onclick="openWithClipboard('${esc(b.url)}','${esc(typeof b.clipboard === 'string' ? b.clipboard : g.label)}')" style="font-size:11px">${esc(b.name)} ↗</button>`
-          : `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('')}
+          ? `<button onclick="openWithClipboard('${esc(b.url)}','${esc(typeof b.clipboard === 'string' ? b.clipboard : g.label)}')" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18)">${esc(b.name)} ↗</button>`
+          : `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18)">${esc(b.name)} ↗</button>`).join('')}
       </div>
     </div>`;
+  };
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
   el.innerHTML = setupBanner() + renderHQHero() + `
 
-    <div style="margin-top:14px">
+    <!-- ── Board Launcher section ── -->
+    <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
+      <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.10em;text-transform:uppercase;white-space:nowrap">Job Board Launcher</span>
+      <div style="flex:1;height:1px;background:linear-gradient(to right,var(--brd2),transparent)"></div>
+    </div>
 
-      <div class="job-boards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-        ${QUICK_LAUNCHES.map(launchCard).join('')}
+    <div>
+
+      <div class="job-boards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">
+        ${QUICK_LAUNCHES.map((g, i) => launchCard(g, i)).join('')}
       </div>
 
-      <div class="card" style="padding:14px 16px;border-top:3px solid var(--jade);margin-bottom:14px">
-        <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:8px">🔗 More job boards</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">${moreBoardBtns}</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:rgba(8,18,30,0.35);border:1px solid var(--brd);border-radius:8px;margin-bottom:14px">
+        <span style="font-size:10px;font-weight:700;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex-shrink:0">More</span>
+        <div style="width:1px;height:14px;background:var(--brd2);flex-shrink:0"></div>
+        ${moreBoardBtns}
       </div>
 
       <div class="card" style="padding:14px 16px;border-top:3px solid var(--sky-blue)">
@@ -4075,6 +4111,7 @@ function openSetupWizard(opts) {
   const nav = document.getElementById('nav');   if (nav)  nav.style.display = 'none';
   const main = document.getElementById('main');  if (main) main.style.display = 'none';
   const foot = document.getElementById('version-badge'); if (foot) foot.style.display = 'none';
+  const flt  = document.getElementById('setup-float');   if (flt)  flt.style.display  = 'none';
   renderSetupWizard();
 }
 
@@ -4102,12 +4139,63 @@ function wzBackToSetup() { wzGo('setup'); }
 // reachable from Sync and the un-hosted banner after a user has moved on.
 function openSetupGuide() { openSetupWizard({ guide: true }); }
 
+// Floating "Return to Welcome" pill — shown on the board until a real profile
+// is saved, regardless of skip/dismiss flags. Hidden while the wizard is open.
+function renderSetupFloat() {
+  const el = document.getElementById('setup-float');
+  if (!el) return;
+  if (!hasProfile() && !isDemo()) {
+    el.innerHTML = `
+      <button onclick="openSetupGuide()" style="display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:#E8C97A;background:rgba(12,28,46,0.96);border:1px solid rgba(201,138,14,0.50);border-radius:10px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,0.50);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);letter-spacing:.01em;font-family:inherit;transition:border-color .15s" onmouseover="this.style.borderColor='rgba(201,138,14,0.85)'" onmouseout="this.style.borderColor='rgba(201,138,14,0.50)'">
+        ↩ Return to Welcome
+      </button>`;
+    el.style.cssText = 'display:block;position:fixed;bottom:14px;left:14px;z-index:200';
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+}
+
+// Chevron breadcrumb nav rendered at the top of every wizard stage.
+// Completed stages (before active) are clickable for back-navigation.
+// Future stages (after active) are dimmed but still reachable — no hard gates.
+function wzChevronNav(activeStage) {
+  const stages = [
+    { id:'welcome', label:'Welcome', fn:'wzGotoWelcome()' },
+    { id:'setup',   label:'Setup',   fn:'wzGotoSetup()'   },
+    { id:'profile', label:'Profile', fn:'wzGotoProfile()'  }
+  ];
+  const order  = ['welcome','setup','profile'];
+  const ai     = order.indexOf(activeStage);
+  const items  = stages.map((s,i) => {
+    const isActive    = i === ai;
+    const isCompleted = i <  ai;
+    const clr  = isActive    ? '#E8C97A'
+               : isCompleted ? 'var(--sky-blue)'
+               :               'rgba(255,255,255,0.22)';
+    const bg   = isActive    ? 'rgba(201,138,14,0.13)'
+               : isCompleted ? 'var(--sky-blue-pale)'
+               :               'transparent';
+    const brd  = isActive    ? '1px solid var(--amber-dim)'
+               : isCompleted ? '1px solid var(--sky-blue-mid)'
+               :               '1px solid rgba(255,255,255,0.08)';
+    const wt   = isActive ? '700' : '500';
+    const cur  = isActive ? 'default' : 'pointer';
+    const act  = isActive ? '' : `onclick="${s.fn}"`;
+    const chev = i < stages.length-1
+      ? `<span style="color:rgba(255,255,255,0.18);font-size:15px;line-height:1;margin:0 2px;user-select:none">›</span>` : '';
+    return `<button ${act} style="font-size:12px;font-weight:${wt};color:${clr};background:${bg};border:${brd};border-radius:7px;padding:4px 14px;cursor:${cur};letter-spacing:.03em;font-family:inherit;transition:opacity .15s">${s.label}</button>${chev}`;
+  });
+  return `<div style="display:flex;align-items:center;gap:3px;margin-bottom:22px">${items.join('')}</div>`;
+}
+
 function closeSetupWizard() {
   const wz = document.getElementById('setup-wizard');
   if (wz) { wz.style.display = 'none'; wz.innerHTML = ''; }
   const nav = document.getElementById('nav');   if (nav)  nav.style.display = '';
   const main = document.getElementById('main');  if (main) main.style.display = '';
   const foot = document.getElementById('version-badge'); if (foot) foot.style.display = '';
+  renderSetupFloat();
 }
 
 function wzGet(id){ const el = document.getElementById(id); return el ? el.value.trim() : ''; }
@@ -4151,10 +4239,11 @@ function renderSetupWizard() {
     </div>`;
 
   const SUGGESTED_PILL = `<span style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#E8C97A;background:rgba(201,138,14,0.16);border:1px solid var(--amber-dim);border-radius:8px;padding:1px 7px;margin-left:7px;vertical-align:middle">Suggested</span>`;
+  const SUGGESTED_PILL_GREEN = `<span style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);background:rgba(47,158,110,0.14);border:1px solid var(--jade-border);border-radius:8px;padding:1px 7px;margin-left:7px;vertical-align:middle">Suggested</span>`;
   const costRow = (svc, cost, free, desc, pill) => `
     <div style="padding:8px 0;border-bottom:1px solid var(--brd)">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-        <span style="font-size:12.5px;color:var(--tx);font-weight:600">${svc}${pill ? SUGGESTED_PILL : ''}</span>
+        <span style="font-size:12.5px;color:var(--tx);font-weight:600">${svc}${pill==='green' ? SUGGESTED_PILL_GREEN : pill ? SUGGESTED_PILL : ''}</span>
         <span style="font-size:11px;color:${free?'var(--jade)':'#E8C97A'};font-family:var(--mono);text-align:right;white-space:nowrap">${cost}</span>
       </div>
       ${desc ? `<div style="font-size:11px;color:var(--faint);line-height:1.5;margin-top:2px">${desc}</div>` : ''}
@@ -4162,8 +4251,8 @@ function renderSetupWizard() {
   const costTable = `
     ${costRow('GitHub','Free', true, 'Hosts your copy of the app\u2019s files.')}
     ${costRow('Cloudflare Pages','Free', true, 'Free file hosting that puts your app online, so you can reach it from any device.')}
-    ${costRow('GitHub Gist','Free', true, 'Free cloud storage for your data \u2014 your applications and contacts follow you across devices.')}
-    ${costRow('Anthropic API','A few $ → 1,000s of runs', false, 'Powers the AI features (fit analyzer, interview prep, networking drafts). Pay-as-you-go, a fraction of a cent per run \u2014 not a Claude.ai subscription. Not required: the tracker, CRM, job-board launcher, and timer all work with no key.', true)}`;
+    ${costRow('GitHub Gist','Free', true, 'Free cloud storage for your data \u2014 your applications and contacts follow you across devices.', 'green')}
+    ${costRow('Anthropic API','~$0.01 per analysis', false, 'Load your Anthropic account with $5\u201310 to start \u2014 each JD fit analysis, interview prep, or networking draft costs roughly a cent, so a small balance lasts a very long time. Pay-as-you-go, not a Claude.ai subscription. Not required: the tracker, CRM, job boards, and timer all work without it.', true)}`;
 
   // ── STEP CONTENT — three tiers: summary (always), more (moderate), full (README-level)
   const STEPS = [
@@ -4310,7 +4399,8 @@ function renderSetupWizard() {
   // ── STAGE: WELCOME ──
   if (stage === 'welcome') {
     wz.innerHTML = `${bg}
-      <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:48px 22px 70px">
+      <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 22px 70px">
+        ${wzChevronNav('welcome')}
         <div style="position:relative;border:1px solid rgba(91,160,210,0.20);border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#0D2033 0%,#1C3A50 100%);padding:30px 30px 32px;margin-bottom:26px">
           <svg width="72" height="72" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:20px;right:22px;filter:drop-shadow(2px 2px 0px #C4607A);opacity:0.9;pointer-events:none"><path d="${STAR}" fill="#F4F8FC"/></svg>
           <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
@@ -4367,16 +4457,25 @@ function renderSetupWizard() {
     const DEPLOY_STEPS = STEPS.filter(s => ['1','2','3'].includes(s.n));
     wz.innerHTML = `${bg}
     <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 22px 70px">
-      ${brand('setup · step 1 of 2')}
-      <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">First, get JobQuest online</h2>
-      <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 6px;max-width:640px">
+      ${wzChevronNav('setup')}
+      <div style="position:relative;border:1px solid rgba(91,160,210,0.20);border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#0D2033 0%,#1C3A50 100%);padding:30px 30px 32px;margin-bottom:26px">
+        <svg width="72" height="72" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:20px;right:22px;filter:drop-shadow(2px 2px 0px #C4607A);opacity:0.9;pointer-events:none"><path d="${STAR}" fill="#F4F8FC"/></svg>
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
+          <span style="font-size:17px;font-weight:700;color:#F4F8FC;letter-spacing:.01em">JobQuest</span>
+          <span style="font-size:10px;color:var(--rose);border:1px solid var(--rose-deep);border-radius:10px;padding:1px 8px;letter-spacing:.04em">setup</span>
+        </div>
+        <div style="font-size:10px;color:var(--rose);letter-spacing:.13em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px">
+          <span style="display:inline-block;width:16px;height:1px;background:var(--rose-deep)"></span>hosting &amp; api setup
+        </div>
+        <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:38px;font-weight:400;font-style:italic;color:#F4F8FC;margin:0;line-height:1.1;letter-spacing:-.02em;max-width:560px">Get your app online. Then build your profile.</h1>
+      </div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 16px;max-width:640px">
         These three steps put your own copy on the web and switch on the AI. Once your app is live you'll build your profile — that comes next, on its own screen. Each step has <b style="color:var(--tx)">See more</b> for exact values and the full walkthrough.
       </p>
       <div class="card" style="margin:16px 0;border-color:var(--brd2);background:${CARD_BG}">
         <div class="row" style="justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:17px;color:var(--tx)">Deploy your copy</div>
           <div class="row" style="gap:8px;flex-wrap:wrap">
-            <button onclick="wzGotoWelcome()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to welcome</button>
             <button onclick="wzExpandAll()" style="font-size:11px;padding:3px 11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">Expand all detail</button>
           </div>
         </div>
@@ -4432,12 +4531,12 @@ function renderSetupWizard() {
   })();
 
   const step5Card = `
-    <div style="border:1px solid var(--brd2);border-radius:9px;padding:15px 16px;margin-top:22px;background:var(--surf2);max-width:600px">
+    <div style="border:1px solid var(--brd2);border-radius:9px;padding:15px 16px;margin-top:22px;background:var(--surf2)">
       <div style="display:flex;gap:11px;align-items:flex-start">
         <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--amber-bg);border:1px solid var(--amber-dim);color:#E8C97A;font-size:12px;font-weight:700;font-family:var(--mono);display:flex;align-items:center;justify-content:center">5</div>
         <div style="min-width:0;flex:1">
-          <div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">Turn on cloud backup</div>
-          <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:10px">Optional but recommended — a private GitHub Gist keeps your applications and contacts safe if your browser clears, and lets you open JobQuest on another device. About two minutes:</div>
+          <div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px;display:flex;align-items:center;gap:8px">Turn on cloud backup<span style="display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);background:rgba(47,158,110,0.14);border:1px solid var(--jade-border);border-radius:8px;padding:1px 7px;vertical-align:middle">Suggested</span></div>
+          <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:10px">A private GitHub Gist keeps your applications and contacts safe if your browser clears, and lets you open JobQuest on another device. About two minutes:</div>
           <ol style="margin:0;padding-left:18px;line-height:1.75;font-size:12px;color:var(--muted)">
             <li>Create a token at <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a> with <b>only the <code>gist</code> scope</b>, and copy it.</li>
             <li>Make a new <b>secret</b> Gist at <a href="https://gist.github.com" target="_blank" rel="noopener">gist.github.com</a>: filename <code>jobquest.json</code>, content <code>{}</code>. Copy the long ID from its URL.</li>
@@ -4450,15 +4549,13 @@ function renderSetupWizard() {
 
   wz.innerHTML = `${bg}
     <div style="position:relative;z-index:1;max-width:820px;margin:0 auto;padding:40px 22px 70px">
-      ${brand(editing ? 'edit profile' : 'setup')}
       ${editing ? `
+        ${brand('edit profile')}
         <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:4px 0 6px">Edit your profile</h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0;max-width:600px">Everything the AI features use is built from these fields.</p>
         ${builder}
       ` : `
-        <div class="row" style="gap:8px;margin-bottom:4px">
-          <button onclick="wzBackToSetup()" style="font-size:11px;padding:3px 11px;color:var(--rose);border-color:var(--rose-deep);background:rgba(196,96,122,0.10)">← Back to setup steps</button>
-        </div>
+        ${wzChevronNav('profile')}
         ${journeyStrip}
         <div style="font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rose);margin-bottom:3px">Step 4 of 5 · Your profile</div>
         <h2 style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;font-weight:400;color:var(--tx);margin:0 0 6px">Now build your profile</h2>
