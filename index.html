@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_17)                       ║
+║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_18)                       ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
+║                                                                              ║
+║  Created by Ryan Corcoran · ryan-corcoran.com                                ║
+║  Source: github.com/rcorcoran03-jam/jobquest_v1 · MIT License (see LICENSE)  ║
+║  Forks welcome — keep this notice and the credit is preserved.               ║
 ║                                                                              ║
 ║  v1_2_3  setup redesign — brighter navy→sky gradient, semi-opaque MN 8-pt    ║
 ║          star watermark, Mpls skyline base image, Quick-start side panel     ║
@@ -104,6 +108,10 @@
 ║          the button and can't accidentally wipe real data. Board also shows a    ║
 ║          gentle sky-blue "exploring with sample data" nudge (same clear action)  ║
 ║          while the flag is set and not in the live tour.                         ║
+║  v1_2_18 authorship: added MIT LICENSE to the repo, a credit line in this        ║
+║          header (rides along with every fork), a README footer linking back      ║
+║          to ryan-corcoran.com, and a subtle "built by Ryan Corcoran · MIT        ║
+║          licensed" credit at the foot of the Sync tab (links to portfolio).      ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -3790,6 +3798,12 @@ function renderSync(el) {
         </div>
 
       </div>
+
+      <div style="text-align:center;padding:22px 0 6px;margin-top:8px;border-top:1px solid var(--brd2)">
+        <div style="font-size:11px;color:var(--faint);line-height:1.6">
+          JobQuest · built by <a href="https://ryan-corcoran.com" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;border-bottom:1px solid var(--brd2)">Ryan Corcoran</a> · MIT licensed
+        </div>
+      </div>
     </div>
   `;
 }
@@ -4313,10 +4327,10 @@ function renderSetupWizard() {
           <b style="color:var(--tx)">Built by you, for you.</b> JobQuest is a personal job-search OS you host and customize yourself. An embedded <b style="color:var(--tx)">Claude-AI fit analyzer</b> scores any job description against your profile and can funnel it straight to your <b style="color:var(--tx)">application tracker</b>, alongside a <b style="color:var(--tx)">networking CRM</b>.
         </p>
         <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;max-width:680px">
-          It's 100% yours from the first click — running on your own free Cloudflare deployment, with GitHub file hosting and private storage. And every built-in AI feature runs on your own Anthropic API key.
+          It's completely yours from the first click — running on your own free Cloudflare deployment, with GitHub file hosting and private storage. And every built-in AI feature runs on your own Anthropic API key.
         </p>
         <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0;max-width:680px">
-          <b style="color:var(--tx)">New to GitHub, Cloudflare, or API keys?</b> That's completely fine — many people setting this up are seeing them for the first time. The guide walks you through each one in plain language, and nothing here can break. If you can copy and paste, you can do this.
+          <b style="color:var(--tx)">New to GitHub, Cloudflare, or API keys?</b> That's completely fine — most people setting this up are seeing them for the first time. The guide walks you through each one in plain language, and nothing here can break. If you can copy and paste, you can do this.
         </p>
 
         <div class="card" style="margin:22px 0;border-color:var(--brd2);background:${CARD_BG}">

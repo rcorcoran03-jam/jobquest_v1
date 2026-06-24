@@ -1,17 +1,19 @@
 <!--
   JobQuest README — public starter edition
-  Version: v1.3 (public)  |  internal: readme_v1_3_0
+  Version: v1.3.1 (public)  |  internal: readme_v1_3_2
   Changelog:
-    v1.3 — Distribution rewrite. Step 1 now uses GitHub fork (Path A, recommended)
-           + Cloudflare "Deploy to Cloudflare" button (Path B, experimental).
-           Step 3 branches by path; shared env-var + redeploy tail. Replaces the
-           old "create empty repo and upload three files" flow.
+    v1.3.1 — Added Credits & license footer (MIT, links to ryan-corcoran.com).
+             Repo now ships a LICENSE file.
+    v1.3 — Distribution rewrite. Step 1 now uses GitHub fork instead of the old
+           "create empty repo and upload three files" flow. Considered a Cloudflare
+           "Deploy to Cloudflare" button but cut it: button is Workers-oriented and
+           auto-detects build settings, unverified against this Pages + Functions
+           setup (no wrangler.toml). Fork + manual Connect-to-Git is the tested path.
     v1.2 — Initial public guide (manual repo creation + file upload).
   Pending / wishlist:
-    - Confirm Deploy button behavior against Pages + Functions setup (no wrangler.toml).
-    - Replace REPLACE_ME in the Path B button URL with the real public repo URL.
-    - Confirm source repo is PUBLIC before distributing.
+    - Confirm source repo is PUBLIC before distributing (required for Fork).
     - Add link from jobquest.ryan-corcoran.com landing page -> repo root.
+    - Revisit Deploy button later if verified against a Pages-compatible config.
 -->
 # JobQuest — your personal job-search OS
 
@@ -43,23 +45,11 @@ README.md               ← this guide
 
 You don't download anything or copy files around by hand. You make your own copy of this repo, which GitHub calls a **fork** — one click and you get a complete copy, folder structure and all, under your own account.
 
-There are two ways to go from here. If you're not sure, use Path A — it's the one walked end to end below.
-
-### Path A — Fork it yourself (recommended)
-
 1. Create a free account at [github.com](https://github.com) if you don't have one.
-2. On this repo's page, click **Fork** in the top-right. GitHub copies all three files into `github.com/your-username/jobquest`, keeping the folder structure exactly (`index.html` at the root, `claude.js` inside `functions/api/`).
+2. On this repo's page, click **Fork** in the top-right. GitHub copies all three files into `github.com/your-username/jobquest_v1`, keeping the folder structure exactly (`index.html` at the root, `claude.js` inside `functions/api/`).
 3. That's it — you now own a full copy. Continue to Step 2, then connect it to Cloudflare in Step 3.
 
 > The folder path matters: Cloudflare turns `functions/api/claude.js` into the live URL `/api/claude` automatically. Forking preserves it for you, which is why this is easier than uploading files by hand.
-
-### Path B — One-click deploy (faster, a little more "magic")
-
-Cloudflare's deploy button creates your own copy *and* sets up the Cloudflare deployment in one flow. It's quicker when it works, but it auto-detects build settings, so if it stumbles, fall back to Path A above.
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/REPLACE_ME/jobquest)
-
-Click the button, sign in to (or create) your GitHub and Cloudflare accounts when prompted, and let it run. When it finishes, **skip ahead to Step 3, point 4** to add your API key — that's the one thing the button can't do for you.
 
 ---
 
@@ -75,17 +65,12 @@ Keep it handy for Step 3. You will **not** paste it into the app — it goes int
 
 ## Step 3 — Deploy to Cloudflare Pages
 
-**If you used Path B (the one-click button):** your deployment already exists. Open your project in the Cloudflare dashboard and jump straight to point 4 below to add your API key.
-
-**If you used Path A (forked it yourself):** connect your fork to Cloudflare first.
+Connect your fork to Cloudflare, then add your API key.
 
 1. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com) (free account).
-2. Go to **Workers & Pages → Create → Pages → Connect to Git**, and pick your `jobquest` fork.
+2. Go to **Workers & Pages → Create → Pages → Connect to Git**, and pick your `jobquest_v1` fork.
 3. Build settings: leave the framework preset as **None**, and leave the build command and output directory **blank** (this is a static site — no build step). Click **Save and Deploy**.
-
-**Both paths — add your key and redeploy:**
-
-4. Open **Settings → Environment variables → Add variable**:
+4. When it finishes, open **Settings → Environment variables → Add variable**:
    - **Name:** `ANTHROPIC_API_KEY`
    - **Value:** your `sk-ant-…` key
    - Add it to **Production** (and Preview if you want previews to work). Save.
@@ -151,3 +136,13 @@ A few things you can edit directly in `index.html` (search for the name):
 - **The AI** runs on your Anthropic account. You pay Anthropic directly for what you use (typically well under a cent per analysis). Cloudflare Pages and GitHub Gist are free at this scale.
 
 Good luck out there.
+
+---
+
+## Credits & license
+
+JobQuest was built by **Ryan Corcoran** — product manager, Minneapolis. More work and a live demo at **[ryan-corcoran.com](https://ryan-corcoran.com)**.
+
+Released under the [MIT License](LICENSE): use it, fork it, modify it, deploy it, all free of charge. The one ask the license makes is that you keep the copyright notice (it's in the `LICENSE` file and the header comment at the top of `index.html`). If JobQuest helped your search, a link back or a note is always appreciated, never required.
+
+If you build something on top of this, I'd love to see it.
