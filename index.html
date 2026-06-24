@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2.22  (Focus tab: section dashboard redesign) ║
+║  JOBQUEST — Starter Edition  ·  v1.2.23  (Focus tab: KPIs below nav, Wellness/Move KPIs, jade/rose nav tints, rose Move cards; HQ: drop focus pill) ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -156,6 +156,23 @@
 <meta name="jq-date" content="2026-06-24">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
+
+<!-- Open Graph / iMessage / Slack / LinkedIn previews -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://jobquest.ryan-corcoran.com/">
+<meta property="og:site_name" content="JobQuest">
+<meta property="og:title" content="JobQuest — Job Search OS">
+<meta property="og:description" content="AI-powered job search OS. Tracker, networking CRM, fit analyzer, focus timer — one file, privately hosted. Built during the search.">
+<meta property="og:image" content="https://jobquest.ryan-corcoran.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="JobQuest — AI-powered job search OS by Ryan Corcoran">
+
+<!-- Twitter / X card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="JobQuest — Job Search OS">
+<meta name="twitter:description" content="AI-powered job search OS. Tracker, networking CRM, fit analyzer, focus timer — one file, privately hosted. Built during the search.">
+<meta name="twitter:image" content="https://jobquest.ryan-corcoran.com/og-image.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23E8F1F8'/%3E%3Cpolygon points='16,3 17.8,10.2 24.5,7.5 20.5,13.5 27.5,15.5 20.5,17.5 24.5,23.5 17.8,20.8 16,28 14.2,20.8 7.5,23.5 11.5,17.5 4.5,15.5 11.5,13.5 7.5,7.5 14.2,10.2' fill='%231C3347'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -946,7 +963,7 @@ let state = {
   pomIntention: '', pomEnergy: '', pomParked: [],
   pomBreakPicker: false, pomHyperfocusAck: false,
   pomWellnessTab: 'hydrate', pomMoveTipIdx: 0,
-  pomSection: 'focus', pomWellnessCard: '', pomMoveCard: '', pomMoveStep: 0,
+  pomSection: 'focus', pomWellnessCard: '', pomMoveCard: '', pomMoveStep: 0, pomMoveSessionsDone: 0,
   pomBreathTheme: '', pomBreathStep: 0, pomBreathStepSecs: 0, pomBreathRunning: false,
   pomRestSecs: 0, pomRestRunning: false,
   pomPlankLevel: 'beginner', pomPlankRound: 0, pomPlankPhase: 'work', pomPlankSecs: 0, pomPlankRunning: false,
@@ -1616,7 +1633,7 @@ function renderHQHero() {
       <!-- Profile summary bar: key fields + Edit Profile -->
       <div style="background:rgba(8,18,30,0.40);border-top:1px solid rgba(91,160,210,0.12);display:flex;align-items:stretch">
         <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:9px 22px">
-          ${[(getProfile()&&getProfile().titles)||'', (getProfile()&&getProfile().focus)||'', (getProfile()&&getProfile().yearsExp)||'', salaryStr(), (getProfile()&&getProfile().workMode)||''].filter(Boolean).map(c=>`<span style="font-size:11px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:20px;padding:2px 10px;white-space:nowrap">${esc(c)}</span>`).join('')}
+          ${[(getProfile()&&getProfile().titles)||'', (getProfile()&&getProfile().yearsExp)||'', salaryStr(), (getProfile()&&getProfile().workMode)||''].filter(Boolean).map(c=>`<span style="font-size:11px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:20px;padding:2px 10px;white-space:nowrap">${esc(c)}</span>`).join('')}
           ${!hasProfile() ? `<span style="font-size:11px;color:var(--faint);font-style:italic">No profile yet — your AI features need this to work.</span>` : ''}
         </div>
         <button onclick="editProfile()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(196,96,122,0.08);border:none;border-left:1.5px solid var(--rose-deep);color:var(--rose);border-radius:0;padding:0 22px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s" onmouseover="this.style.background='rgba(196,96,122,0.20)'" onmouseout="this.style.background='rgba(196,96,122,0.08)'">
@@ -1695,7 +1712,7 @@ function setupBanner() {
       </div>
       <div class="row" style="gap:6px;flex-shrink:0">
         <button onclick="buildFromDemo()" class="amber" style="font-size:12px;padding:7px 14px">Build my own →</button>
-        <button onclick="exitDemoTour()" style="font-size:12px;color:var(--faint)" title="Clear the sample data and return to the welcome screen">Exit tour</button>
+        <button onclick="exitDemoTour()" style="font-size:12px;padding:7px 14px;background:var(--sky-blue);border-color:var(--sky-blue);color:#0D1F30;font-weight:600" title="Clear the sample data and return to the welcome screen">↩ Return to Welcome</button>
       </div>
     </div>`;
   }
@@ -2443,12 +2460,12 @@ function renderPomodoro(el) {
 
   // ── Section navigation strip ────────────────────────────────────────────────
   const SNAV = [
-    {key:'focus',    label:'Focus',    accent:'var(--amber)',    pale:'rgba(201,138,14,0.10)',  brd:'rgba(201,138,14,0.35)'},
-    {key:'wellness', label:'Wellness', accent:'var(--teal)',     pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)'},
-    {key:'move',     label:'Move',     accent:'var(--sky-blue)', pale:'rgba(91,158,201,0.10)', brd:'rgba(91,158,201,0.30)'},
+    {key:'focus',    label:'Focus',    accent:'var(--amber)',    pale:'rgba(201,138,14,0.10)',  brd:'rgba(201,138,14,0.35)',  navBg:'rgba(201,138,14,0.06)'},
+    {key:'wellness', label:'Wellness', accent:'var(--teal)',     pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)',  navBg:'rgba(47,158,110,0.10)'},
+    {key:'move',     label:'Move',     accent:'var(--sky-blue)', pale:'rgba(91,158,201,0.10)', brd:'rgba(91,158,201,0.30)',  navBg:'rgba(220,80,90,0.09)'},
   ];
   const sectionNav = SNAV.map(s=>`
-    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:'transparent'};border-bottom:${section===s.key?`2px solid ${s.accent}`:'2px solid transparent'};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:'transparent'}'">
+    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:s.navBg};border-bottom:${section===s.key?`2px solid ${s.accent}`:'2px solid transparent'};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:s.navBg}'">
       <div style="font-size:14px;font-weight:700;color:${section===s.key?s.accent:'var(--faint)'};line-height:1;font-family:'DM Mono',monospace">${s.label}</div>
     </div>`).join('');
 
@@ -2459,20 +2476,38 @@ function renderPomodoro(el) {
     : section==='wellness' ? 'hydrate \u00b7 breathe \u00b7 rest'
     : 'yoga \u00b7 walk \u00b7 scan \u00b7 plank';
 
-  // ── KPI strip (Focus section only — matches HQ dashboard style) ─────────────
+  // ── KPI strip (per-section — matches HQ dashboard style) ────────────────────
   const lastWaterMin = hydration.lastTs ? Math.round((Date.now()-hydration.lastTs)/60000) : null;
-  const focusKpis = section==='focus' ? `
+  // Wellness KPIs
+  const breathDone = state.pomBreathTheme==='' && state.pomBreathStep>0 ? 1 : 0;
+  const wellnessActivities = (hydration.glasses>0?1:0) + (breathDone) + (state.pomRestSecs>0&&state.pomRestSecs<20*60?1:0);
+  const waterStatus = lastWaterMin===null ? '—' : lastWaterMin<2 ? 'just now' : lastWaterMin>45 ? `${lastWaterMin}m ⚠` : `${lastWaterMin}m`;
+  // Move KPIs
+  const moveActivities = state.pomMoveSessionsDone || 0;
+  const moveActive = state.pomMoveCard ? 1 : 0;
+  const kpiItems = section==='focus' ? [
+    {val:state.pomSessions,                              label:'sessions',  col:'var(--sky-blue-light)'},
+    {val:streak>0?`\uD83D\uDD25 ${streak}`:'—',         label:'streak',    col:'var(--amber)'},
+    {val:score.label.split(' ')[0],                      label:'score',     col:score.color},
+    {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'hydration', col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--sky-blue-light)'},
+  ] : section==='wellness' ? [
+    {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'water',     col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--teal)'},
+    {val:waterStatus,                                    label:'last sip',  col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--faint)'},
+    {val:wellnessActivities,                             label:'done today',col:'var(--teal)'},
+    {val:state.pomSessions>0?`\uD83D\uDD25 ${state.pomSessions}`:'—', label:'focus sessions', col:'var(--sky-blue-light)'},
+  ] : [
+    {val:moveActivities>0?`\uD83D\uDCAA ${moveActivities}`:(moveActive?'active':'—'), label:'moves done',  col:'var(--rose)'},
+    {val:state.pomMoveCard ? (state.pomMoveCard.charAt(0).toUpperCase()+state.pomMoveCard.slice(1)) : '—', label:'active move', col:'var(--sky-blue-light)'},
+    {val:state.pomMoveStep>0?`step ${state.pomMoveStep+1}`:'—',                        label:'progress',   col:'var(--sky-blue-light)'},
+    {val:state.pomSessions>0?state.pomSessions:'—',                                    label:'sessions',   col:'var(--faint)'},
+  ];
+  const focusKpis = `
     <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:repeat(4,1fr)">
-      ${[
-        {val:state.pomSessions,                              label:'sessions',  col:'var(--sky-blue-light)'},
-        {val:streak>0?`\uD83D\uDD25 ${streak}`:'—',         label:'streak',    col:'var(--amber)'},
-        {val:score.label.split(' ')[0],                      label:'score',     col:score.color},
-        {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'hydration', col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--sky-blue-light)'},
-      ].map(k=>`<div style="padding:9px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.05)">
+      ${kpiItems.map(k=>`<div style="padding:9px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.05)">
         <div style="font-size:15px;font-weight:700;color:${k.col};line-height:1;font-family:'DM Mono',monospace">${k.val}</div>
         <div style="font-size:9px;color:var(--faint);margin-top:3px;letter-spacing:.04em;text-transform:uppercase">${k.label}</div>
       </div>`).join('')}
-    </div>` : '';
+    </div>`;
 
   // ── Break picker ────────────────────────────────────────────────────────────
   const lastMood = state.pomLog.length ? (state.pomLog[state.pomLog.length-1].mood||'') : '';
@@ -2638,10 +2673,10 @@ function renderPomodoro(el) {
           <div style="font-size:46px;font-weight:400;color:#F4F8FC;line-height:1;letter-spacing:-.02em;font-style:italic;font-family:'DM Serif Display',Georgia,serif">${heroTitle}</div>
         </div>
       </div>
-      ${focusKpis}
       <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid rgba(91,160,210,0.10)">
         ${sectionNav}
       </div>
+      ${focusKpis}
     </div>
     ${section==='focus' ? focusContent : section==='wellness' ? buildWellnessContent() : buildMoveContent()}
   </div>`;
@@ -3045,7 +3080,7 @@ function buildMoveContent() {
   ];
   const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;${sel?'margin-bottom:16px':''}">
     ${cards.map(c=>`
-      <div onclick="state.pomMoveCard='${sel===c.id?'':c.id}';state.pomMoveStep=0;render('pomodoro')" style="padding:16px;border:1px solid ${sel===c.id?'rgba(91,158,201,0.45)':'rgba(255,255,255,0.08)'};border-radius:10px;background:${sel===c.id?'rgba(91,158,201,0.10)':'rgba(255,255,255,0.03)'};cursor:pointer;transition:all .15s">
+      <div onclick="state.pomMoveCard='${sel===c.id?'':c.id}';state.pomMoveStep=0;render('pomodoro')" style="padding:16px;border:1px solid ${sel===c.id?'rgba(220,80,90,0.55)':'rgba(220,80,90,0.18)'};border-radius:10px;background:${sel===c.id?'rgba(220,80,90,0.10)':'rgba(220,80,90,0.04)'};cursor:pointer;transition:all .15s">
         <div style="font-size:26px;margin-bottom:8px">${c.icon}</div>
         <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--sky-blue-light)':'var(--muted)'};margin-bottom:3px">${c.label}</div>
         <div style="font-size:10px;color:var(--faint);line-height:1.4">${c.desc}</div>
@@ -3059,7 +3094,7 @@ function buildMoveContent() {
   else if (sel==='plank') expanded = buildPlankContent();
 
   return `
-    <div style="border:1px solid rgba(91,160,210,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
+    <div style="border:1px solid rgba(220,80,90,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
       ${grid}${expanded}
     </div>`;
 }
@@ -3078,7 +3113,7 @@ function buildStepGuide(steps, col, pale, brd) {
         ${stepIdx>0 ? `<button onclick="state.pomMoveStep--;render('pomodoro')" style="font-size:12px">\u2190 Back</button>` : ''}
         ${stepIdx<total-1
           ? `<button onclick="state.pomMoveStep++;render('pomodoro')" style="flex:1;font-size:12px;background:${pale};border-color:${brd};color:${col};font-weight:600">Next \u2192</button>`
-          : `<button onclick="state.pomMoveCard='';state.pomMoveStep=0;render('pomodoro')" style="flex:1;font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green);font-weight:600">Done \u2713</button>`}
+          : `<button onclick="state.pomMoveSessionsDone=(state.pomMoveSessionsDone||0)+1;state.pomMoveCard='';state.pomMoveStep=0;render('pomodoro')" style="flex:1;font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green);font-weight:600">Done \u2713</button>`}
       </div>
     </div>`;
 }
@@ -3225,6 +3260,7 @@ function togglePlank() {
           showToast('\uD83D\uDCAA Go! Round '+(round+2)); render('pomodoro');
         } else {
           clearInterval(plankInterval); plankInterval=null; state.pomPlankRunning=false; state.pomPlankSecs=0;
+          state.pomMoveSessionsDone=(state.pomMoveSessionsDone||0)+1;
           showToast('\uD83D\uDCAA Challenge complete! Core activated.'); render('pomodoro');
         }
       } else {
