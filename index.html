@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2  (internal v1_2_19)                       ║
+║  JOBQUEST — Starter Edition  ·  v1.2.22  (Focus tab: section dashboard redesign) ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -121,6 +121,21 @@
 ║          header (rides along with every fork), a README footer linking back      ║
 ║          to ryan-corcoran.com, and a subtle "built by Ryan Corcoran · MIT        ║
 ║          licensed" credit at the foot of the Sync tab (links to portfolio).      ║
+║  v1_2_20 float pill + Sync CTA. (1) "↩ Return to Welcome" float pill now        ║
+║          shows in demo mode as well as skip/no-profile mode — condition          ║
+║          changed from !hasProfile()&&!isDemo() to isDemo()||!hasProfile()        ║
+║          so the pill is visible during the live tour. (2) "Setup guide"          ║
+║          button on the Sync tab upgraded from pale sky-blue ghost to full        ║
+║          rose (class="amber", matches "Set up cloud →"), with arrow added.       ║
+║  v1_2_21 Focus tab: ADHD toolkit + wellness. Thought parking lot (stray        ║
+║          thought capture, Enter-to-park), intention lock (set focus before      ║
+║          session, displayed as amber anchor while running), energy check-in     ║
+║          (Low / Med / High — auto-saved with session log), session-complete     ║
+║          break picker (mood log 😴😐🙂🔥 + 5 break activities that launch a    ║
+║          timed long-break countdown), hyperfocus warning after 4+ sessions,     ║
+║          focus streak (🔥 day counter via localStorage), focus score label       ║
+║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
+║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -136,9 +151,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="4.9.3">
-<meta name="jq-base" content="19">
-<meta name="jq-date" content="2026-05-29">
+<meta name="jq-version" content="1.2.22">
+<meta name="jq-base" content="21">
+<meta name="jq-date" content="2026-06-24">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -848,9 +863,10 @@ const STAGE_CARD_BG = {
 };
 
 const POM_TASKS = [
-  'Search job boards','Write a cover letter',
-  'Send 2 networking messages','Research a target company',
-  'Workshop a STAR story','Follow up on an application','Review job alerts','Post / LinkedIn activity',
+  'Search \u0026 evaluate new roles',
+  'Research a target company',
+  'LinkedIn \u002F networking activity',
+  'Follow up on an application',
 ];
 
 const REL_COL = {Connection:'amber',Alumni:'blue','Cold Outreach':'purple',Recruiter:'green'};
@@ -927,6 +943,13 @@ let state = {
   intRole: '', intCo: '', intQtype: 'behavioral', intQs: [], intAns: {}, intFb: {}, intLoading: false, intFbLoading: {},
   pomMode: 0, pomSecs: 25*60, pomTotal: 25*60, pomRunning: false,
   pomSessions: 0, pomTask: '', pomCustomTask: '', pomCustomMins: '', pomLog: [],
+  pomIntention: '', pomEnergy: '', pomParked: [],
+  pomBreakPicker: false, pomHyperfocusAck: false,
+  pomWellnessTab: 'hydrate', pomMoveTipIdx: 0,
+  pomSection: 'focus', pomWellnessCard: '', pomMoveCard: '', pomMoveStep: 0,
+  pomBreathTheme: '', pomBreathStep: 0, pomBreathStepSecs: 0, pomBreathRunning: false,
+  pomRestSecs: 0, pomRestRunning: false,
+  pomPlankLevel: 'beginner', pomPlankRound: 0, pomPlankPhase: 'work', pomPlankSecs: 0, pomPlankRunning: false,
   netShowAdd: false, netEditing: null, netExpanded: {}, netFilter: {view:'all', source:'', sort:'smart'}, netDraft: '', netDraftFor: null, netDraftLoading: false,
   tasks: JSON.parse(localStorage.getItem('tasks')||'null') || [
     {id:1,  text:'Fill in your profile (Sync tab → Edit profile)',     done:false, cat:'today',   due:'', priority:'high'},
@@ -947,6 +970,9 @@ let state = {
 };
 
 let pomInterval = null;
+let breathInterval = null;
+let restInterval = null;
+let plankInterval = null;
 let saveTimer = null;  // debounce cloud saves
 let cloudDirty = false; // true when local has unsynced changes
 
@@ -1330,6 +1356,122 @@ const DAILY_TASKS_DEF = [
   { id: 'dt3b', label: 'Apply to a 2nd role',    icon: '🚀', pomMins: 25, desc: 'Stretch goal — second application of the day', stretch: true },
 ];
 
+const MOVEMENT_TIPS = [
+  {label:'Neck rolls',              cue:'Tilt ear to shoulder, hold 3s each side. Then 3 slow circles each direction.'},
+  {label:'Shoulder shrugs',         cue:'Lift shoulders to ears, hold 3s, release slowly. Repeat 5×. Feel the tension melt.'},
+  {label:'Seated spinal twist',     cue:'Sit tall. Twist right from the waist, hand on chair back, hold 5s. Repeat left.'},
+  {label:'Wrist & finger stretch',  cue:'Arms out, flex and spread fingers wide for 5s, then make fists. 5 reps each.'},
+  {label:'20-20-20 eye break',      cue:'Look at something 20 feet away for 20 seconds. Blink slowly. Then refocus.'},
+  {label:'Calf raises',             cue:'Stand if you can. Rise onto tiptoes 10×. Instant circulation boost.'},
+  {label:'Forward fold',            cue:'Stand, hinge at hips, let arms hang heavy. Hold 20–30s. No bouncing.'},
+  {label:'Box breath reset',        cue:'Inhale 4 counts, hold 4, exhale 4, hold 4. Run 4 cycles. Resets the nervous system.'},
+  {label:'Hip flexor stretch',      cue:'Scoot to the front of your chair. Extend one leg straight. Hold 15s each side.'},
+  {label:'Eagle arms',              cue:'Cross arms at elbows, lift to shoulder height. Hold 5s, switch crossing. 3 reps.'},
+];
+
+const BREAK_ACTIVITIES = [
+  {id:'hydrate', icon:'\uD83D\uDCA7', label:'Hydrate',    mins:5},
+  {id:'breathe', icon:'\uD83C\uDF2C', label:'Box breath', mins:5},
+  {id:'stretch', icon:'\uD83E\uDD38', label:'Stretch',    mins:5},
+  {id:'snack',   icon:'\uD83C\uDF4E', label:'Snack',      mins:10},
+  {id:'walk',    icon:'\uD83D\uDEB6', label:'Walk',        mins:10},
+];
+
+const BREATH_THEMES = [
+  {
+    id:'confidence', icon:'\uD83D\uDCAA', label:'Confidence', color:'var(--amber)', pale:'rgba(201,138,14,0.10)', brd:'rgba(201,138,14,0.30)',
+    desc:'Ground into your strengths before a high-stakes moment.',
+    steps:[
+      {label:'Settle in',        cue:'Sit tall. Feel your feet on the floor. You belong in every room you\'re about to enter.',                          secs:20},
+      {label:'Inhale strength',  cue:'Breathe in slowly for 4 counts \u2014 fill your chest, then your belly.',                                           secs:4},
+      {label:'Hold',             cue:'Hold for 4 counts. Feel the energy build.',                                                                        secs:4},
+      {label:'Release doubt',    cue:'Exhale for 6 counts. Let go of what isn\'t yours to carry. (Repeat 3 more cycles)',                                secs:40},
+      {label:'Your evidence',    cue:'Name one thing you\'ve done that was genuinely hard. You did it. You\'ll do this too.',                             secs:25},
+      {label:'Forward',          cue:'One final breath \u2014 deep in, hold 2 counts, slow out. You are ready.',                                          secs:15},
+    ]
+  },
+  {
+    id:'grounding', icon:'\uD83C\uDF31', label:'Grounding', color:'var(--green)', pale:'rgba(42,155,122,0.10)', brd:'rgba(42,155,122,0.30)',
+    desc:'Return to your body when anxiety is running the show.',
+    steps:[
+      {label:'5 things you see', cue:'Look around slowly. Name 5 things you can see right now. Take your time with each one.',                           secs:25},
+      {label:'Feel your weight', cue:'Notice the weight of your body. The chair supporting you. The floor beneath your feet.',                            secs:20},
+      {label:'4-7-8 breath',    cue:'Inhale for 4 counts. Hold for 7. Exhale for 8. (Repeat 3 more times \u2014 this is the practice)',                  secs:60},
+      {label:'Release tension',  cue:'Soften your jaw. Drop your shoulders an inch. Unclench your hands. You are safe right now.',                       secs:25},
+      {label:'One breath',       cue:'Just this breath. Then the next. You don\'t have to solve everything right now.',                                   secs:20},
+    ]
+  },
+  {
+    id:'connectedness', icon:'\uD83E\uDD1D', label:'Connectedness', color:'var(--sky-blue)', pale:'rgba(91,158,201,0.10)', brd:'rgba(91,158,201,0.30)',
+    desc:'A practice for the loneliness and isolation of searching alone.',
+    steps:[
+      {label:'You are not alone', cue:'Right now, thousands of people are doing exactly what you\'re doing. Searching, hoping, trying hard.',              secs:25},
+      {label:'For yourself',      cue:'Breathe in: may I be at ease. Breathe out: may I be kind to myself. Three slow cycles.',                           secs:30},
+      {label:'Two people',        cue:'Think of two people who would want good things for you. Let them appear without forcing it.',                       secs:20},
+      {label:'For them',          cue:'Breathe in: may they be well. Breathe out: sending them warmth. Three cycles.',                                    secs:30},
+      {label:'Widen the circle',  cue:'Breathe in: may all of us searching today find our way. Breathe out: we are in this together.',                    secs:25},
+      {label:'One small reach',   cue:'Who can you message today? Not to ask for anything \u2014 just to say hello and mean it.',                          secs:20},
+    ]
+  },
+  {
+    id:'acceptance', icon:'\uD83C\uDF0A', label:'Acceptance', color:'var(--purple)', pale:'rgba(155,114,204,0.10)', brd:'rgba(155,114,204,0.30)',
+    desc:'For the sting of rejection and the weight of uncertainty.',
+    steps:[
+      {label:'Name it',          cue:'What are you feeling right now? Disappointment? Fear? Frustration? Just name it \u2014 don\'t try to fix it.',     secs:20},
+      {label:'It\'s allowed',    cue:'This is hard. You are allowed to feel this. Breathe in: this is real. Breathe out: and that\'s okay.',              secs:25},
+      {label:'Impermanence',     cue:'Inhale: this moment will change. Exhale: it always does. Three slow cycles.',                                       secs:30},
+      {label:'What\'s still true', cue:'Name one thing that is still true and good right now. One thing that hasn\'t been taken.',                        secs:20},
+      {label:'Release the story', cue:'Breathe in: I release what I cannot control. Breathe out: I trust what is next for me.',                          secs:25},
+      {label:'You are still here', cue:'You are still showing up. Still trying. That is not nothing. Take one small action today.',                      secs:20},
+    ]
+  },
+];
+
+const SURRENDER_SERIES = [
+  {label:'Constructive rest',       cue:'Lie on your back. Knees bent, feet flat hip-width apart. Arms at your sides, palms up. Close your eyes.'},
+  {label:'Reclined butterfly',      cue:'Let your knees fall open, soles of feet together. Rest hands on your belly. Breathe into your low belly.'},
+  {label:'Legs elevated',           cue:'Swing legs up against a wall, or rest your calves on a chair seat. Let your nervous system settle completely.'},
+  {label:'Savasana \u2014 full surrender', cue:'Legs long, feet falling naturally open. Arms away from body, palms up. Let go of every thought. You are done.'},
+];
+
+const CHAIR_YOGA = [
+  {label:'Mountain seat',         cue:'Sit at the edge of your chair, feet flat, spine long. Hands rest on thighs. Feel rooted. Breathe here.',           secs:30},
+  {label:'Seated cat-cow',        cue:'Hands on knees. Inhale: arch back, lift chest and gaze (cow). Exhale: round spine, tuck chin (cat). Slow and fluid.', secs:45},
+  {label:'Neck rolls',            cue:'Drop right ear to right shoulder. Slowly roll chin to chest, then left ear to left shoulder. Pause where you feel tension.', secs:40},
+  {label:'Eagle arms',            cue:'Cross right arm under left at the elbows, lift to shoulder height. Hold 20 seconds, then switch arms.',             secs:45},
+  {label:'Seated forward fold',   cue:'Feet wide, hinge forward from your hips. Let arms hang, or rest on thighs. Head heavy. Breathe into your back.',   secs:30},
+  {label:'Seated spinal twist',   cue:'Right hand on left knee, left hand behind. Inhale tall, exhale and twist left. Hold 20 seconds. Switch sides.',    secs:45},
+  {label:'Wrist release',         cue:'Extend both arms. Flex wrists, spread fingers wide for 5 seconds, then shake your hands loose.',                   secs:20},
+  {label:'Three closing breaths', cue:'Hands on heart. Inhale for 4 counts, exhale for 6. Three times. Thank your body for being here.',                  secs:30},
+];
+
+const WALK_GUIDE = [
+  {label:'Set an intention',    cue:'Before your first step: what quality are you walking toward? Clarity? Calm? Energy? Not a destination \u2014 a feeling.',  secs:30},
+  {label:'First steps',         cue:'Begin walking. Slow down about 30% from normal. Notice: heel lifts \u2192 foot swings \u2192 foot meets ground.',         secs:60},
+  {label:'Breath and body',     cue:'Let your arms swing naturally. Feel your breath sync with your steps. No forcing \u2014 just observing.',                  secs:60},
+  {label:'Sensory scan',        cue:'What do you hear? What do you feel \u2014 air temperature, light on skin? Let the world in without judging any of it.',    secs:60},
+  {label:'Thoughts arise',      cue:'When a thought comes, notice it like a cloud. You don\'t have to follow it. Return to the sensation of your feet.',       secs:60},
+  {label:'Arrive',              cue:'Come to a stop. Three slow breaths. Notice where you are. Carry this quietness back with you.',                          secs:30},
+];
+
+const BODY_SCAN = [
+  {label:'Crown of head',       cue:'Breathe into the top of your skull. Scalp, forehead \u2014 let them soften completely.',                               secs:25},
+  {label:'Face and jaw',        cue:'Unclench your jaw. Soften behind the eyes. Let your tongue drop from the roof of your mouth.',                         secs:25},
+  {label:'Neck and shoulders',  cue:'Let your shoulders drop an inch. Breathe into the back of the neck. Release what you\'ve been holding there.',         secs:25},
+  {label:'Arms and hands',      cue:'Feel the weight of your arms. Wiggle your fingers once. A slow wrist circle. Let them rest.',                          secs:25},
+  {label:'Chest and heart',     cue:'One hand on chest. Breathe into your hand. Rise and fall. You are alive and trying \u2014 that is enough.',             secs:30},
+  {label:'Belly and low back',  cue:'Breathe deep into your belly. Feel the low back expand on the inhale. If there\'s tension here, just acknowledge it.', secs:25},
+  {label:'Hips and seat',       cue:'Notice where your body meets the chair. Feel held. You can set things down here.',                                     secs:20},
+  {label:'Legs and feet',       cue:'Feel your feet on the floor. Flex your toes up, then release. Press down. You are grounded.',                          secs:25},
+  {label:'Full body',           cue:'One full inhale from feet to crown. Hold 2 counts. Exhale everything. You are here. That is the whole practice.',      secs:20},
+];
+
+const PLANK_LEVELS = {
+  beginner:     {rounds:[{work:20,rest:10},{work:20,rest:10},{work:20,rest:0}]},
+  intermediate: {rounds:[{work:40,rest:15},{work:40,rest:15},{work:40,rest:0}]},
+  advanced:     {rounds:[{work:60,rest:15},{work:60,rest:15},{work:60,rest:0}]},
+};
+
 function getDailyTaskState() {
   const today = new Date().toISOString().slice(0,10);
   const raw = localStorage.getItem('daily_tasks');
@@ -1472,12 +1614,15 @@ function renderHQHero() {
       </div>
 
       <!-- Profile summary bar: key fields + Edit Profile -->
-      <div style="background:rgba(8,18,30,0.74);border-top:1px solid rgba(91,160,210,0.12);padding:9px 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-          ${[(getProfile()&&getProfile().titles)||'', (getProfile()&&getProfile().focus)||'', (getProfile()&&getProfile().yearsExp)||'', salaryStr(), (getProfile()&&getProfile().workMode)||''].filter(Boolean).map(c=>`<span style="font-size:11px;color:var(--muted);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.11);border-radius:4px;padding:2px 9px;white-space:nowrap">${esc(c)}</span>`).join('')}
+      <div style="background:rgba(8,18,30,0.40);border-top:1px solid rgba(91,160,210,0.12);display:flex;align-items:stretch">
+        <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:9px 22px">
+          ${[(getProfile()&&getProfile().titles)||'', (getProfile()&&getProfile().focus)||'', (getProfile()&&getProfile().yearsExp)||'', salaryStr(), (getProfile()&&getProfile().workMode)||''].filter(Boolean).map(c=>`<span style="font-size:11px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:20px;padding:2px 10px;white-space:nowrap">${esc(c)}</span>`).join('')}
           ${!hasProfile() ? `<span style="font-size:11px;color:var(--faint);font-style:italic">No profile yet — your AI features need this to work.</span>` : ''}
         </div>
-        <button onclick="editProfile()" style="font-size:12px;font-weight:600;color:#fff;background:#C4607A;border:1px solid #A84F68;border-radius:7px;padding:7px 16px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.02em;transition:background .15s" onmouseover="this.style.background='#D46880'" onmouseout="this.style.background='#C4607A'">${hasProfile() ? 'Edit Profile' : 'Set up profile →'}</button>
+        <button onclick="editProfile()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(196,96,122,0.08);border:none;border-left:1.5px solid var(--rose-deep);color:var(--rose);border-radius:0;padding:0 22px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s" onmouseover="this.style.background='rgba(196,96,122,0.20)'" onmouseout="this.style.background='rgba(196,96,122,0.08)'">
+          <span style="font-size:14px;line-height:1">👤</span>
+          <span style="font-size:10.5px;font-weight:600;letter-spacing:.03em">${hasProfile() ? 'Edit Profile' : 'Set up Profile'}</span>
+        </button>
       </div>
 
       <!-- KPI strip -->
@@ -2277,68 +2422,157 @@ function copyProfile() {
 // ── POMODORO ──────────────────────────────────────────────────────────────────
 
 function renderPomodoro(el) {
-  const MODES = [
-    {key:'focus',  label:'Focus',       mins:25, col:'var(--amber)', pale:'rgba(201,138,14,0.10)', brd:'rgba(201,138,14,0.35)', countUp:false},
-    {key:'short',  label:'Short break', mins:5,  col:'var(--green)', pale:'rgba(42,155,122,0.10)', brd:'rgba(42,155,122,0.30)', countUp:true},
-    {key:'long',   label:'Long break',  mins:15, col:'var(--blue)',  pale:'rgba(74,159,212,0.10)', brd:'rgba(74,159,212,0.30)', countUp:false},
+  const section = state.pomSection || 'focus';
+  const FOCUS_MODES = [
+    {key:'focus', label:'Focus', mins:25, col:'var(--amber)', pale:'rgba(201,138,14,0.10)', brd:'rgba(201,138,14,0.35)', countUp:false},
+    {key:'short', label:'Break', mins:5,  col:'var(--green)', pale:'rgba(42,155,122,0.10)', brd:'rgba(42,155,122,0.30)', countUp:true},
+    {key:'long',  label:'Deep',  mins:15, col:'var(--blue)',  pale:'rgba(74,159,212,0.10)', brd:'rgba(74,159,212,0.30)', countUp:false},
   ];
-  const cur = MODES[state.pomMode];
+  const cur = FOCUS_MODES[state.pomMode];
   const R=80, Circ=2*Math.PI*R;
-  // count-up: ring fills as time passes (cap visual at 10min); countdown: drains normally
-  const pct = cur.countUp
-    ? Math.min(state.pomSecs / (10*60), 1)
-    : state.pomSecs/state.pomTotal;
-  const displaySecs = state.pomSecs;
-  const mm=String(Math.floor(displaySecs/60)).padStart(2,'0'), ss=String(displaySecs%60).padStart(2,'0');
+  const pct = cur.countUp ? Math.min(state.pomSecs/(10*60),1) : state.pomSecs/state.pomTotal;
+  const mm=String(Math.floor(state.pomSecs/60)).padStart(2,'0'), ss=String(state.pomSecs%60).padStart(2,'0');
   const timeDisplay = cur.countUp ? `+${mm}:${ss}` : `${mm}:${ss}`;
   const ds = getDailyTaskState();
+  const streak = getFocusStreak();
+  const score = getFocusScore();
+  const hydration = getHydrationState();
+  const parked = state.pomParked || [];
+  const intention = state.pomIntention || '';
+  const energy = state.pomEnergy || '';
 
-  const logRows = state.pomLog.slice(-6).reverse().map(l =>
-    `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--brd);font-size:12px">
-      <span style="color:var(--muted)">${esc(l.task)}</span>
-      <span style="color:var(--faint);font-family:var(--mono);font-size:11px">${l.time} · ${l.mins}m</span>
-    </div>`
-  ).join('');
+  // ── Section navigation strip ────────────────────────────────────────────────
+  const SNAV = [
+    {key:'focus',    label:'Focus',    accent:'var(--amber)',    pale:'rgba(201,138,14,0.10)',  brd:'rgba(201,138,14,0.35)'},
+    {key:'wellness', label:'Wellness', accent:'var(--teal)',     pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)'},
+    {key:'move',     label:'Move',     accent:'var(--sky-blue)', pale:'rgba(91,158,201,0.10)', brd:'rgba(91,158,201,0.30)'},
+  ];
+  const sectionNav = SNAV.map(s=>`
+    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:'transparent'};border-bottom:${section===s.key?`2px solid ${s.accent}`:'2px solid transparent'};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:'transparent'}'">
+      <div style="font-size:14px;font-weight:700;color:${section===s.key?s.accent:'var(--faint)'};line-height:1;font-family:'DM Mono',monospace">${s.label}</div>
+    </div>`).join('');
 
-  const dots = [...Array(4)].map((_,i) =>
-    `<div style="width:12px;height:12px;border-radius:50%;background:${i<(state.pomSessions%4)?'var(--amber)':'rgba(255,255,255,0.06)'};border:1px solid ${i<(state.pomSessions%4)?'rgba(201,138,14,0.5)':'rgba(255,255,255,0.10)'}"></div>`
-  ).join('');
+  // ── Hero meta per section ───────────────────────────────────────────────────
+  const heroAccent = SNAV.find(s=>s.key===section)?.accent || 'var(--amber)';
+  const heroTitle = section==='focus' ? 'Focus' : section==='wellness' ? 'Wellness' : 'Move';
+  const heroSub   = section==='focus' ? 'deep work \u00b7 stay in flow'
+    : section==='wellness' ? 'hydrate \u00b7 breathe \u00b7 rest'
+    : 'yoga \u00b7 walk \u00b7 scan \u00b7 plank';
 
-  el.innerHTML = `
-  <!-- ═══════ FOCUS TIMER ═══════ -->
-  <div style="margin-bottom:20px">
+  // ── KPI strip (Focus section only — matches HQ dashboard style) ─────────────
+  const lastWaterMin = hydration.lastTs ? Math.round((Date.now()-hydration.lastTs)/60000) : null;
+  const focusKpis = section==='focus' ? `
+    <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:repeat(4,1fr)">
+      ${[
+        {val:state.pomSessions,                              label:'sessions',  col:'var(--sky-blue-light)'},
+        {val:streak>0?`\uD83D\uDD25 ${streak}`:'—',         label:'streak',    col:'var(--amber)'},
+        {val:score.label.split(' ')[0],                      label:'score',     col:score.color},
+        {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'hydration', col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--sky-blue-light)'},
+      ].map(k=>`<div style="padding:9px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:15px;font-weight:700;color:${k.col};line-height:1;font-family:'DM Mono',monospace">${k.val}</div>
+        <div style="font-size:9px;color:var(--faint);margin-top:3px;letter-spacing:.04em;text-transform:uppercase">${k.label}</div>
+      </div>`).join('')}
+    </div>` : '';
 
-    <!-- Identity bar — mirrors HQ hero -->
-    <div style="border-radius:12px 12px 0 0;overflow:hidden;border:1px solid rgba(91,160,210,0.20);border-bottom:none">
-      <div style="background:linear-gradient(135deg,#0D2033 0%,#1C3A50 100%);padding:18px 22px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden">
-        <svg width="54" height="54" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:14px;right:16px;filter:drop-shadow(2px 2px 0px rgba(255,255,255,0.4));opacity:0.9;pointer-events:none">
-          <polygon points="16,2 18.2,10.5 26,7.5 21.5,14.5 30,16 21.5,17.5 26,24.5 18.2,21.5 16,30 13.8,21.5 6,24.5 10.5,17.5 2,16 10.5,14.5 6,7.5 13.8,10.5" fill="#F5A623"/>
-        </svg>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;color:var(--amber);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px">
-            <span style="display:inline-block;width:12px;height:1px;background:var(--amber)"></span>deep work · stay in flow
-          </div>
-          <div style="font-size:46px;font-weight:400;color:#F4F8FC;line-height:1;letter-spacing:-.02em;font-style:italic;font-family:'DM Serif Display',Georgia,serif">Focus</div>
-          <div style="font-size:12px;color:#B8D4E8;margin-top:6px;font-style:italic;font-family:'DM Serif Display',Georgia,serif">Pomodoro timer · session log · daily cadence</div>
+  // ── Break picker ────────────────────────────────────────────────────────────
+  const lastMood = state.pomLog.length ? (state.pomLog[state.pomLog.length-1].mood||'') : '';
+  const breakPickerBlock = state.pomBreakPicker ? `
+    <div style="padding:20px 22px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--green);margin-bottom:3px">\u2713 Session complete!</div>
+          <div style="font-size:11px;color:var(--muted)">Take a real break \u2014 your brain earned it.</div>
         </div>
+        <button onclick="dismissBreakPicker()" style="font-size:11px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;white-space:nowrap;margin-top:2px">Skip \u2192</button>
       </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">How did that session feel?</div>
+        <div style="display:flex;gap:8px">${['\uD83D\uDE34','\uD83D\uDE10','\uD83D\uDE42','\uD83D\uDD25'].map(e=>`<button onclick="logSessionMood('${e}')" style="font-size:18px;line-height:1;padding:6px 10px;background:${lastMood===e?'rgba(42,155,122,0.22)':'rgba(255,255,255,0.05)'};border:1px solid ${lastMood===e?'rgba(42,155,122,0.45)':'rgba(255,255,255,0.10)'};border-radius:8px;cursor:pointer">${e}</button>`).join('')}</div>
+      </div>
+      <div style="font-size:10px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Start a break activity</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${BREAK_ACTIVITIES.map(b=>`<button onclick="launchBreakActivity('${b.id}')" style="font-size:11px;padding:7px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--brd2);border-radius:8px;color:var(--muted);cursor:pointer">${b.icon} ${b.label} <span style="color:var(--faint);font-size:10px">${b.mins}m</span></button>`).join('')}</div>
+    </div>` : '';
 
-      <!-- Mode strip -->
-      <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid rgba(91,160,210,0.10)">
-        ${MODES.map((m,i) => `
-          <div onclick="switchPomMode(${i})" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${state.pomMode===i?m.pale:'transparent'};border-bottom:${state.pomMode===i?`2px solid ${m.col}`:'2px solid transparent'};transition:all .15s" onmouseover="this.style.background='${m.pale}'" onmouseout="this.style.background='${state.pomMode===i?m.pale:'transparent'}'">
-            <div style="font-size:15px;font-weight:700;color:${state.pomMode===i?m.col:'var(--faint)'};line-height:1;font-family:'DM Mono',monospace">${m.countUp ? '↑' : [25,5,15][i]+'m'}</div>
-            <div style="font-size:9px;color:${state.pomMode===i?m.col:'var(--faint)'};margin-top:3px;letter-spacing:.04em;text-transform:uppercase">${m.label}</div>
-          </div>`).join('')}
+  // ── Hyperfocus warning ──────────────────────────────────────────────────────
+  const hyperfocusBlock = (state.pomSessions>=4&&!state.pomHyperfocusAck) ? `
+    <div style="padding:9px 16px;border-bottom:1px solid rgba(201,138,14,0.20);background:rgba(201,138,14,0.07);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:11px;color:rgba(232,201,122,0.80)">\u26a0 ${state.pomSessions} sessions deep \u2014 stood up lately? Had water?</div>
+      <button onclick="state.pomHyperfocusAck=true;render('pomodoro')" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0 0 0 12px;text-decoration:underline;flex-shrink:0">Got it</button>
+    </div>` : '';
+
+  // ── Intention block ─────────────────────────────────────────────────────────
+  const intentionBlock = (state.pomRunning&&intention) ? `
+    <div style="background:rgba(201,138,14,0.08);border:1px solid rgba(201,138,14,0.22);border-radius:8px;padding:8px 12px;width:100%;box-sizing:border-box">
+      <div style="font-size:9px;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">This session</div>
+      <div style="font-size:12px;color:#E8C97A;font-weight:500;line-height:1.4">${esc(intention)}</div>
+    </div>` : (!state.pomRunning ? `
+    <div style="width:100%;box-sizing:border-box">
+      <div style="font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Intention (optional)</div>
+      <div style="display:flex;gap:5px">
+        ${inp('intention-input',intention,"One thing this session\u2026",'flex:1;font-size:11px')}
+        ${intention?`<button onclick="clearIntention()" style="font-size:10px;color:var(--faint);background:none;border:1px solid rgba(255,255,255,0.10);border-radius:6px;cursor:pointer;padding:0 8px">\u2715</button>`:''}
+      </div>
+    </div>` : '');
+
+  // ── Energy check-in ─────────────────────────────────────────────────────────
+  const energyDefs=[
+    {id:'low',    label:'Low \uD83D\uDD0B',  bg:'rgba(74,159,212,0.16)',  brd:'rgba(74,159,212,0.45)',  col:'var(--blue)'},
+    {id:'medium', label:'Med \u26a1',        bg:'rgba(201,138,14,0.16)',  brd:'rgba(201,138,14,0.45)',  col:'var(--amber)'},
+    {id:'high',   label:'High \uD83D\uDD25', bg:'rgba(42,155,122,0.16)',  brd:'rgba(42,155,122,0.45)',  col:'var(--green)'},
+  ];
+  const energyBlock = !state.pomRunning ? `
+    <div style="width:100%;box-sizing:border-box">
+      <div style="font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Energy</div>
+      <div style="display:flex;gap:5px">${energyDefs.map(e=>`<button onclick="setEnergy('${e.id}')" style="flex:1;font-size:10px;padding:5px 2px;background:${energy===e.id?e.bg:'rgba(255,255,255,0.04)'};border:1px solid ${energy===e.id?e.brd:'rgba(255,255,255,0.10)'};color:${energy===e.id?e.col:'var(--faint)'};border-radius:6px;cursor:pointer">${e.label}</button>`).join('')}</div>
+    </div>` : (energy?`
+    <div style="width:100%;box-sizing:border-box">
+      <div style="font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">Energy</div>
+      <div style="font-size:11px;color:var(--muted)">${energyDefs.find(e=>e.id===energy)?.label||''}</div>
+    </div>` : '');
+
+  // ── Parking lot ─────────────────────────────────────────────────────────────
+  const parkingBlock = `
+    <div>
+      <div style="font-size:10px;color:var(--faint);letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <span style="width:14px;height:1px;display:inline-block;background:rgba(255,255,255,0.15)"></span>Parking lot
+      </div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:7px;line-height:1.4">Stray thought? Park it here \u2014 don\u2019t chase it mid-session.</div>
+      <div style="display:flex;gap:5px;${parked.length?'margin-bottom:8px':''}">
+        ${inp('park-input','','Quick thought\u2026','flex:1;font-size:11px')}
+        <button onclick="addParkedThought()" style="font-size:13px;padding:0 10px;font-weight:600" title="Park this thought (Enter)">\u2193</button>
+      </div>
+      ${parked.map(t=>`<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 9px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;margin-top:4px">
+        <span style="flex:1;font-size:11px;color:var(--muted);word-break:break-word;line-height:1.4">${esc(t.text)}</span>
+        <button onclick="clearParkedThought(${t.id})" style="font-size:11px;padding:0;color:var(--faint);background:none;border:none;cursor:pointer;flex-shrink:0;margin-top:1px">\u2715</button>
+      </div>`).join('')}
+    </div>`;
+
+  // ── Session log ─────────────────────────────────────────────────────────────
+  const dots = [...Array(4)].map((_,i)=>`<div style="width:12px;height:12px;border-radius:50%;background:${i<(state.pomSessions%4)?'var(--amber)':'rgba(255,255,255,0.06)'};border:1px solid ${i<(state.pomSessions%4)?'rgba(201,138,14,0.5)':'rgba(255,255,255,0.10)'}"></div>`).join('');
+  const logRows = state.pomLog.slice(-6).reverse().map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--brd);font-size:12px">
+    <span style="color:var(--muted)">${esc(l.task)}</span>
+    <span style="display:flex;align-items:center;gap:6px">${l.mood?`<span style="font-size:13px">${l.mood}</span>`:''}<span style="color:var(--faint);font-family:var(--mono);font-size:11px">${l.time} \u00b7 ${l.mins}m</span></span>
+  </div>`).join('');
+  const sessionLogBlock = (state.pomLog.length||streak>0) ? `
+  <div style="margin-top:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:10px;color:var(--faint);letter-spacing:.09em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:14px;height:1px;display:inline-block;background:var(--faint)"></span>Today\u2019s log</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${streak>0?`<span style="font-size:11px;color:var(--amber)">\uD83D\uDD25 Day ${streak}</span>`:''}
+        <span style="font-size:11px;color:${score.color};font-weight:500">${score.label}</span>
       </div>
     </div>
+    ${state.pomLog.length?`<div style="background:rgba(8,18,30,0.40);border:1px solid var(--navy-border);border-radius:8px;padding:4px 10px">${logRows}</div>`:''}
+  </div>` : '';
 
-    <!-- Timer + controls panel -->
-    <div style="border:1px solid rgba(91,160,210,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);overflow:hidden">
+  // ── Focus section content ───────────────────────────────────────────────────
+  const focusContent = `
+    <div style="border:1px solid ${state.pomBreakPicker?'rgba(42,155,122,0.30)':'rgba(91,160,210,0.20)'};border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);overflow:hidden">
+      ${hyperfocusBlock}
+      ${state.pomBreakPicker ? breakPickerBlock : `
       <div class="focus-layout" style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-
-        <!-- Left: ring + controls -->
-        <div class="focus-ring-col" style="padding:24px 20px;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;gap:16px">
+        <div class="focus-ring-col" style="padding:20px;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;gap:12px">
+          <div style="display:flex;gap:5px;width:100%">${FOCUS_MODES.map((m,i)=>`<button onclick="switchPomMode(${i})" style="flex:1;font-size:10px;padding:4px 2px;background:${state.pomMode===i?m.pale:'rgba(255,255,255,0.03)'};border:1px solid ${state.pomMode===i?m.brd:'rgba(255,255,255,0.08)'};color:${state.pomMode===i?m.col:'var(--faint)'};border-radius:6px;cursor:pointer">${m.countUp?'\u2191':[25,5,15][i]+'m'} ${m.label}</button>`).join('')}</div>
           <div style="position:relative;width:200px;height:200px">
             <svg id="pom-svg" width="200" height="200">
               <circle cx="100" cy="100" r="${R}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
@@ -2346,7 +2580,7 @@ function renderPomodoro(el) {
             </svg>
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">
               <div class="pom-countdown-display" style="font-size:42px;font-weight:500;letter-spacing:-2px;color:var(--tx);font-family:'DM Mono',monospace">${timeDisplay}</div>
-              <div style="font-size:11px;color:${cur.col};margin-top:4px;letter-spacing:.04em;text-transform:uppercase">${cur.countUp ? 'on break' : cur.label}</div>
+              <div style="font-size:11px;color:${cur.col};margin-top:4px;letter-spacing:.04em;text-transform:uppercase">${cur.countUp?'on break':cur.label}</div>
             </div>
           </div>
           <div style="display:flex;gap:8px;width:100%">
@@ -2357,64 +2591,75 @@ function renderPomodoro(el) {
             ${inp('pom-custom',state.pomCustomMins,'Custom mins','flex:1')}
             <button onclick="applyPomCustom()" style="white-space:nowrap">Set</button>
           </div>
+          ${intentionBlock}
+          ${energyBlock}
           <div style="display:flex;align-items:center;gap:8px">
-            ${dots}
-            <span style="font-size:11px;color:var(--muted)">${state.pomSessions} session${state.pomSessions!==1?'s':''} today</span>
+            ${dots}<span style="font-size:11px;color:var(--muted)">${state.pomSessions} session${state.pomSessions!==1?'s':''} today</span>
           </div>
         </div>
-
-        <!-- Right: task + log -->
         <div class="focus-tasks-col" style="padding:20px;display:flex;flex-direction:column;gap:14px">
           <div>
             <div style="font-size:10px;color:var(--amber);letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:14px;height:1px;display:inline-block;background:var(--amber)"></span>Daily tasks</div>
-            <div style="margin-bottom:12px">
-              ${DAILY_TASKS_DEF.map(task => {
-                const done = ds.done[task.id];
-                const isActive = state.pomTask === task.label && !state.pomCustomTask;
-                const isStretch = !!task.stretch;
-                return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);${isStretch?'opacity:0.75':''}">
-                  <button onclick="launchDailyTaskById('${task.id}')" style="flex-shrink:0;font-size:10px;white-space:nowrap;padding:3px 8px;background:${done?'rgba(255,255,255,0.04)':isActive?'rgba(201,138,14,0.22)':'rgba(201,138,14,0.10)'};border-color:${done?'rgba(255,255,255,0.08)':isActive?'rgba(201,138,14,0.55)':'rgba(201,138,14,0.28)'};color:${done?'var(--faint)':isActive?'#E8C97A':'rgba(232,201,122,0.65)'};font-weight:600">⏱ ${task.pomMins}m</button>
-                  <div onclick="setPomTask('${esc(task.label)}')" style="flex:1;min-width:0;cursor:pointer">
-                    <div style="font-size:11px;font-weight:${isActive?'600':'500'};color:${done?'var(--faint)':isActive?'var(--tx)':'var(--muted)'};${done?'text-decoration:line-through':''}">${task.icon} ${task.label}${isStretch?' <span style="font-size:9px;color:var(--faint);font-weight:400">stretch</span>':''}</div>
-                  </div>
-                  <button onclick="setDailyTaskDone('${task.id}',${!done});render('pomodoro')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-size:11px;${done?'background:var(--green);border-color:var(--green);color:#fff':'background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.12);color:var(--faint)'}" title="${done?'Mark incomplete':'Mark done'}">${done?'✓':'○'}</button>
-                </div>`;
-              }).join('')}
-            </div>
-            <div style="font-size:10px;color:var(--sky-blue-light);letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:14px;height:1px;display:inline-block;background:var(--sky-blue)"></span>Other tasks</div>
-            <div style="margin-bottom:10px">
-              ${POM_TASKS.map(t => {
-                const isActive = state.pomTask === t && !state.pomCustomTask;
-                return `<div onclick="setPomTask('${esc(t)}')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;background:${isActive?'rgba(91,158,201,0.12)':'transparent'};border:1px solid ${isActive?'var(--sky-blue-mid)':'transparent'};transition:all .12s" onmouseover="if(!${isActive})this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!${isActive})this.style.background='transparent'">
-                  <div style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${isActive?'var(--sky-blue)':'rgba(255,255,255,0.18)'}"></div>
-                  <span style="font-size:11px;color:${isActive?'var(--sky-blue-light)':'var(--muted)'};font-weight:${isActive?'600':'400'}">${esc(t)}</span>
-                </div>`;
-              }).join('')}
-            </div>
-            ${inp('pom-task-custom',state.pomCustomTask,'Or type a custom task…')}
+            <div style="margin-bottom:12px">${DAILY_TASKS_DEF.map(task=>{
+              const done=ds.done[task.id],isActive=state.pomTask===task.label&&!state.pomCustomTask,isStretch=!!task.stretch;
+              return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);${isStretch?'opacity:0.75':''}">
+                <button onclick="launchDailyTaskById('${task.id}')" style="flex-shrink:0;font-size:10px;white-space:nowrap;padding:3px 8px;background:${done?'rgba(255,255,255,0.04)':isActive?'rgba(201,138,14,0.22)':'rgba(201,138,14,0.10)'};border-color:${done?'rgba(255,255,255,0.08)':isActive?'rgba(201,138,14,0.55)':'rgba(201,138,14,0.28)'};color:${done?'var(--faint)':isActive?'#E8C97A':'rgba(232,201,122,0.65)'};font-weight:600">\u23f1 ${task.pomMins}m</button>
+                <div onclick="setPomTask('${esc(task.label)}')" style="flex:1;min-width:0;cursor:pointer">
+                  <div style="font-size:11px;font-weight:${isActive?'600':'500'};color:${done?'var(--faint)':isActive?'var(--tx)':'var(--muted)'};${done?'text-decoration:line-through':''}">${task.icon} ${task.label}${isStretch?` <span style="font-size:9px;color:var(--faint);font-weight:400">stretch</span>`:''}</div>
+                </div>
+                <button onclick="setDailyTaskDone('${task.id}',${!done});render('pomodoro')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-size:11px;${done?'background:var(--green);border-color:var(--green);color:#fff':'background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.12);color:var(--faint)'}">${done?'\u2713':'\u25cb'}</button>
+              </div>`;}).join('')}</div>
+            <div style="font-size:10px;color:var(--sky-blue-light);letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:14px;height:1px;display:inline-block;background:var(--sky-blue)"></span>Quick tasks</div>
+            <div style="margin-bottom:10px">${POM_TASKS.map(t=>{
+              const isActive=state.pomTask===t&&!state.pomCustomTask;
+              return `<div onclick="setPomTask('${esc(t)}')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;background:${isActive?'rgba(91,158,201,0.12)':'transparent'};border:1px solid ${isActive?'var(--sky-blue-mid)':'transparent'};transition:all .12s" onmouseover="if(!${isActive})this.style.background='rgba(255,255,255,0.04)'" onmouseout="if(!${isActive})this.style.background='transparent'">
+                <div style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${isActive?'var(--sky-blue)':'rgba(255,255,255,0.18)'}"></div>
+                <span style="font-size:11px;color:${isActive?'var(--sky-blue-light)':'var(--muted)'};font-weight:${isActive?'600':'400'}">${esc(t)}</span>
+              </div>`;}).join('')}</div>
+            ${inp('pom-task-custom',state.pomCustomTask,'Or type a custom task\u2026')}
           </div>
-          ${state.pomLog.length ? `
-          <div>
-            <div style="font-size:10px;color:var(--faint);letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px"><span style="width:14px;height:1px;display:inline-block;background:var(--faint)"></span>Today's log</div>
-            <div style="background:rgba(8,18,30,0.4);border:1px solid var(--navy-border);border-radius:8px;padding:4px 10px">${logRows}</div>
-          </div>` : ''}
+          ${parkingBlock}
         </div>
+      </div>`}
+    </div>
+    ${sessionLogBlock}`;
 
+  el.innerHTML = `
+  <div style="margin-bottom:20px">
+    <div style="border-radius:12px 12px 0 0;overflow:hidden;border:1px solid rgba(91,160,210,0.20);border-bottom:none">
+      <div style="background:linear-gradient(135deg,#0D2033 0%,#1C3A50 100%);padding:18px 22px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden">
+        <svg width="54" height="54" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:14px;right:16px;filter:drop-shadow(2px 2px 0px rgba(255,255,255,0.4));opacity:0.9;pointer-events:none">
+          <polygon points="16,2 18.2,10.5 26,7.5 21.5,14.5 30,16 21.5,17.5 26,24.5 18.2,21.5 16,30 13.8,21.5 6,24.5 10.5,17.5 2,16 10.5,14.5 6,7.5 13.8,10.5" fill="#F5A623"/>
+        </svg>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:${heroAccent};letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            <span style="display:inline-block;width:12px;height:1px;background:${heroAccent}"></span>${heroSub}
+          </div>
+          <div style="font-size:46px;font-weight:400;color:#F4F8FC;line-height:1;letter-spacing:-.02em;font-style:italic;font-family:'DM Serif Display',Georgia,serif">${heroTitle}</div>
+        </div>
+      </div>
+      ${focusKpis}
+      <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid rgba(91,160,210,0.10)">
+        ${sectionNav}
       </div>
     </div>
-
+    ${section==='focus' ? focusContent : section==='wellness' ? buildWellnessContent() : buildMoveContent()}
   </div>`;
 
-  document.getElementById('pom-custom').addEventListener('input',e=>state.pomCustomMins=e.target.value);
-  document.getElementById('pom-task-custom').addEventListener('input',e=>{ state.pomCustomTask=e.target.value; if(e.target.value) state.pomTask=''; });
+  document.getElementById('pom-custom')?.addEventListener('input',e=>state.pomCustomMins=e.target.value);
+  document.getElementById('pom-task-custom')?.addEventListener('input',e=>{ state.pomCustomTask=e.target.value; if(e.target.value) state.pomTask=''; });
+  const parkEl=document.getElementById('park-input');
+  if(parkEl){ parkEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addParkedThought();}}); }
+  const intEl=document.getElementById('intention-input');
+  if(intEl){ intEl.addEventListener('input',e=>{state.pomIntention=e.target.value;}); intEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();lockIntention();}}); }
 }
-
 function switchPomMode(i) {
   clearInterval(pomInterval); pomInterval=null;
   const mins=[25,5,15][i];
   const countUp = i===1; // short break is count-up
   state.pomMode=i; state.pomRunning=false; state.pomTotal=mins*60;
   state.pomSecs = countUp ? 0 : mins*60;
+  state.pomBreakPicker=false;
   render('pomodoro');
 }
 
@@ -2438,6 +2683,8 @@ function togglePom() {
           if(state.pomMode===0) {
             state.pomSessions++;
             state.pomLog.push({task:state.pomCustomTask||state.pomTask,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),mins:[25,5,15][state.pomMode]});
+            updateFocusStreak();
+            state.pomBreakPicker=true;
           }
           state.pomSecs=0;
           render('pomodoro');
@@ -2454,7 +2701,7 @@ function togglePom() {
   render('pomodoro');
 }
 
-function resetPom() { clearInterval(pomInterval); pomInterval=null; state.pomRunning=false; state.pomSecs=state.pomTotal; render('pomodoro'); updateMiniTimer(); }
+function resetPom() { clearInterval(pomInterval); pomInterval=null; state.pomRunning=false; state.pomSecs=state.pomTotal; state.pomBreakPicker=false; render('pomodoro'); updateMiniTimer(); }
 
 function updateMiniTimer() {
   const widgets = document.querySelectorAll('.mini-timer-widget');
@@ -2485,12 +2732,514 @@ function applyPomCustom() {
   if(!m||m<1||m>120) return;
   clearInterval(pomInterval); pomInterval=null;
   state.pomRunning=false; state.pomTotal=m*60; state.pomSecs=m*60; state.pomCustomMins='';
+  state.pomBreakPicker=false;
   render('pomodoro');
 }
 
 function setPomTask(t) { state.pomTask=t; state.pomCustomTask=''; render('pomodoro'); }
 
-// ── NETWORKING CRM ────────────────────────────────────────────────────────────
+// ── FOCUS STREAK + SCORE ──────────────────────────────────────────────────────
+
+function getFocusStreak() {
+  try {
+    const raw = localStorage.getItem('focus_streak');
+    if (!raw) return 0;
+    const s = JSON.parse(raw);
+    const today = new Date().toISOString().slice(0,10);
+    const yest  = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if (s.last === today || s.last === yest) return s.days || 0;
+    return 0;
+  } catch(e) { return 0; }
+}
+
+function updateFocusStreak() {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const yest  = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    const raw   = localStorage.getItem('focus_streak');
+    let s = raw ? JSON.parse(raw) : {days:0, last:''};
+    if (s.last === today) return;
+    s.days = (s.last === yest) ? (s.days||0) + 1 : 1;
+    s.last = today;
+    localStorage.setItem('focus_streak', JSON.stringify(s));
+  } catch(e) {}
+}
+
+function getFocusScore() {
+  const n = state.pomSessions;
+  if (n === 0) return {label:'Getting started',    color:'var(--faint)'};
+  if (n >= 4)  return {label:'Strong day \uD83C\uDF1F', color:'var(--green)'};
+  if (n >= 2)  return {label:'Steady',              color:'var(--amber)'};
+  return              {label:'Building momentum',   color:'var(--sky-blue)'};
+}
+
+// ── HYDRATION ─────────────────────────────────────────────────────────────────
+
+function getHydrationState() {
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const raw = localStorage.getItem('hydration');
+    if (raw) {
+      const h = JSON.parse(raw);
+      if (h.date === today) return h;
+    }
+  } catch(e) {}
+  return {date:today, glasses:0, lastTs:null};
+}
+
+function logWater() {
+  const h = getHydrationState();
+  h.glasses = (h.glasses||0) + 1;
+  h.lastTs = Date.now();
+  localStorage.setItem('hydration', JSON.stringify(h));
+  render('pomodoro');
+}
+
+function clearWater() {
+  const today = new Date().toISOString().slice(0,10);
+  localStorage.setItem('hydration', JSON.stringify({date:today, glasses:0, lastTs:null}));
+  render('pomodoro');
+}
+
+// ── PARKING LOT ───────────────────────────────────────────────────────────────
+
+function addParkedThought() {
+  const el = document.getElementById('park-input');
+  if (!el || !el.value.trim()) return;
+  state.pomParked = [...(state.pomParked||[]), {id:Date.now(), text:el.value.trim()}];
+  el.value = '';
+  render('pomodoro');
+  // re-focus the input so rapid parking is easy
+  setTimeout(()=>{ const e=document.getElementById('park-input'); if(e) e.focus(); }, 50);
+}
+
+function clearParkedThought(id) {
+  state.pomParked = (state.pomParked||[]).filter(t=>t.id!==id);
+  render('pomodoro');
+}
+
+// ── INTENTION ─────────────────────────────────────────────────────────────────
+
+function lockIntention() {
+  const el = document.getElementById('intention-input');
+  if (el) state.pomIntention = el.value.trim();
+  render('pomodoro');
+}
+
+function clearIntention() {
+  state.pomIntention = '';
+  render('pomodoro');
+}
+
+// ── ENERGY ────────────────────────────────────────────────────────────────────
+
+function setEnergy(level) {
+  state.pomEnergy = (state.pomEnergy === level) ? '' : level; // toggle off if same
+  render('pomodoro');
+}
+
+// ── BREAK PICKER ─────────────────────────────────────────────────────────────
+
+function dismissBreakPicker() {
+  state.pomBreakPicker = false;
+  render('pomodoro');
+}
+
+function logSessionMood(emoji) {
+  if (state.pomLog.length > 0) {
+    state.pomLog[state.pomLog.length-1].mood = emoji;
+  }
+  render('pomodoro');
+}
+
+function launchBreakActivity(type) {
+  const act = BREAK_ACTIVITIES.find(a=>a.id===type);
+  if (!act) { dismissBreakPicker(); return; }
+  state.pomBreakPicker = false;
+  clearInterval(pomInterval); pomInterval = null;
+  // Break activities run as long-break countdowns (blue ring)
+  state.pomMode  = 2;
+  state.pomSecs  = act.mins * 60;
+  state.pomTotal = act.mins * 60;
+  state.pomTask  = act.icon + ' ' + act.label;
+  state.pomCustomTask = '';
+  state.pomRunning = true;
+  render('pomodoro');
+  pomInterval = setInterval(() => {
+    state.pomSecs--;
+    if (state.pomSecs <= 0) {
+      clearInterval(pomInterval); pomInterval = null; state.pomRunning = false;
+      state.pomSecs = 0;
+      showToast(act.icon + ' Break done \u2014 time to refocus!');
+      render('pomodoro'); updateMiniTimer();
+    } else {
+      const m=Math.floor(state.pomSecs/60), s=state.pomSecs%60;
+      document.querySelectorAll('.pom-countdown-display').forEach(el=>el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+      updateMiniTimer();
+    }
+  }, 1000);
+  updateMiniTimer();
+  showToast('\u25B6 ' + act.icon + ' ' + act.label + ' \u2014 ' + act.mins + 'm break started');
+}
+
+// ── SECTION NAVIGATION ────────────────────────────────────────────────────────
+
+function switchSection(s) {
+  state.pomSection = s;
+  render('pomodoro');
+}
+
+// ── WELLNESS SECTION BUILDERS ─────────────────────────────────────────────────
+
+function buildWellnessContent() {
+  const sel = state.pomWellnessCard || '';
+  const cards = [
+    {id:'hydrate', icon:'\uD83D\uDCA7', label:'Hydrate', desc:'Daily water tracker'},
+    {id:'breathe', icon:'\uD83C\uDF2C', label:'Breathe', desc:'Guided meditation'},
+    {id:'rest',    icon:'\uD83D\uDCA4', label:'Rest',    desc:'20-min nap \u00b7 surrender series'},
+  ];
+  const cardRow = cards.map(c=>`
+    <div onclick="state.pomWellnessCard='${sel===c.id?'':c.id}';render('pomodoro')" style="flex:1;padding:14px;border:1px solid ${sel===c.id?'rgba(42,181,160,0.45)':'rgba(255,255,255,0.08)'};border-radius:10px;background:${sel===c.id?'rgba(42,181,160,0.10)':'rgba(255,255,255,0.03)'};cursor:pointer;transition:all .15s;text-align:center">
+      <div style="font-size:26px;margin-bottom:6px">${c.icon}</div>
+      <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--teal-light)':'var(--muted)'}">${c.label}</div>
+      <div style="font-size:10px;color:var(--faint);margin-top:3px;line-height:1.4">${c.desc}</div>
+    </div>`).join('');
+
+  let expanded = '';
+  if (sel==='hydrate') expanded = buildHydrateContent();
+  else if (sel==='breathe') expanded = buildBreatheContent();
+  else if (sel==='rest') expanded = buildRestContent();
+
+  return `
+    <div style="border:1px solid rgba(42,181,160,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
+      <div style="display:flex;gap:10px;${sel?'margin-bottom:16px':''}">${cardRow}</div>
+      ${expanded}
+    </div>`;
+}
+
+function buildHydrateContent() {
+  const h = getHydrationState();
+  const lastMin = h.lastTs ? Math.round((Date.now()-h.lastTs)/60000) : null;
+  const warn = lastMin!==null && lastMin>45;
+  const status = lastMin===null ? 'No water logged yet' : lastMin<2 ? 'Just now \u2713' : warn ? `${lastMin}m ago \u26a0` : `${lastMin}m ago`;
+  return `
+    <div style="border:1px solid rgba(91,160,210,0.15);border-radius:10px;background:rgba(8,18,30,0.40);padding:18px">
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:14px">
+        <div style="text-align:center;min-width:60px">
+          <div style="font-size:52px;font-weight:600;color:var(--tx);font-family:var(--mono);line-height:1">${h.glasses}</div>
+          <div style="font-size:10px;color:var(--faint);margin-top:2px">glasses</div>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--sky-blue)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
+          <div style="font-size:11px;color:${warn?'var(--amber)':'var(--muted)'}">Goal: 8 glasses \u00b7 ${status}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--faint);margin-bottom:4px">Why it matters</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">Even mild dehydration impacts focus, memory, and mood. Your brain is 75% water.</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--faint);margin-bottom:4px">Simple rhythm</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">One glass at session start + end. One with each meal. That\u2019s your 8.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="logWater()" style="flex:1;font-size:12px;background:rgba(91,158,201,0.12);border-color:rgba(91,158,201,0.28);color:var(--sky-blue-light)">+ Glass</button>
+        ${h.glasses>0?`<button onclick="clearWater()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Reset</button>`:''}
+      </div>
+    </div>`;
+}
+
+function buildBreatheContent() {
+  const themeId = state.pomBreathTheme || '';
+  if (!themeId) {
+    return `<div>
+      <div style="font-size:10px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Choose a practice</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${BREATH_THEMES.map(t=>`
+          <div onclick="startBreathTheme('${t.id}')" style="padding:14px;border:1px solid ${t.brd};border-radius:10px;background:${t.pale};cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='0.82'" onmouseout="this.style.opacity='1'">
+            <div style="font-size:22px;margin-bottom:6px">${t.icon}</div>
+            <div style="font-size:13px;font-weight:600;color:${t.color};margin-bottom:4px">${t.label}</div>
+            <div style="font-size:11px;color:var(--faint);line-height:1.45">${t.desc}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  const theme = BREATH_THEMES.find(t=>t.id===themeId);
+  const stepIdx = state.pomBreathStep || 0;
+  const step = theme.steps[stepIdx];
+  const secs = state.pomBreathStepSecs || step.secs;
+  const isRunning = state.pomBreathRunning;
+  const m = Math.floor(secs/60), s = secs%60;
+  const timeStr = m>0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
+  return `
+    <div style="border:1px solid ${theme.brd};border-radius:10px;background:${theme.pale};padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px">${theme.icon}</span>
+          <span style="font-size:13px;font-weight:600;color:${theme.color}">${theme.label}</span>
+        </div>
+        <button onclick="closeBreath()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;text-decoration:underline">\u2190 Back</button>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:14px">${theme.steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?theme.color:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
+      <div style="font-size:11px;color:${theme.color};letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Step ${stepIdx+1} of ${theme.steps.length} \u00b7 ${step.label}</div>
+      <div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:16px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:32px;font-weight:600;color:${theme.color};font-family:var(--mono);min-width:52px" id="breath-timer">${timeStr}</div>
+        <div style="flex:1;display:flex;gap:8px">
+          <button onclick="toggleBreathTimer()" style="flex:1;font-size:12px;background:${isRunning?'rgba(255,255,255,0.06)':theme.pale};border-color:${theme.brd};color:${theme.color};font-weight:600">${isRunning?'Pause':secs===step.secs?'Begin':'Resume'}</button>
+          ${stepIdx<theme.steps.length-1
+            ? `<button onclick="nextBreathStep()" style="font-size:12px">Next \u2192</button>`
+            : `<button onclick="closeBreath()" style="font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green)">Done \u2713</button>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildRestContent() {
+  const total = 20*60;
+  const secs = state.pomRestSecs || total;
+  const elapsed = total - secs;
+  const isRunning = state.pomRestRunning;
+  let curPhase = SURRENDER_SERIES[0], acc = 0;
+  const phaseDur = Math.floor(total / SURRENDER_SERIES.length);
+  for (let i=0; i<SURRENDER_SERIES.length; i++) {
+    if (elapsed < acc + phaseDur) { curPhase = SURRENDER_SERIES[i]; break; }
+    acc += phaseDur;
+    curPhase = SURRENDER_SERIES[i];
+  }
+  const m = String(Math.floor(secs/60)).padStart(2,'0'), s = String(secs%60).padStart(2,'0');
+  const phaseBar = SURRENDER_SERIES.map((_,i)=>{
+    const pAcc = i*phaseDur;
+    const done = elapsed>=pAcc+phaseDur, active = elapsed>=pAcc&&elapsed<pAcc+phaseDur;
+    return `<div style="flex:1;height:4px;border-radius:2px;background:${done?'var(--blue)':active?'rgba(74,159,212,0.50)':'rgba(255,255,255,0.08)'}"></div>`;
+  }).join('');
+  return `
+    <div style="border:1px solid rgba(74,159,212,0.25);border-radius:10px;background:rgba(74,159,212,0.06);padding:18px">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:48px;font-weight:600;color:var(--blue);font-family:var(--mono);line-height:1" id="rest-timer">${m}:${s}</div>
+        <div style="font-size:11px;color:var(--faint);margin-top:4px">20-minute surrender series</div>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:12px">${phaseBar}</div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:10px;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px">${curPhase.label}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.65;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${curPhase.cue}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="toggleRestTimer()" style="flex:1;font-size:12px;background:${isRunning?'rgba(255,255,255,0.06)':'rgba(74,159,212,0.12)'};border-color:rgba(74,159,212,0.30);color:var(--blue);font-weight:600">${isRunning?'Pause':secs===total?'Begin rest':'Resume'}</button>
+        ${secs<total ? `<button onclick="resetRestTimer()" style="font-size:12px">Reset</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── MOVE SECTION BUILDERS ─────────────────────────────────────────────────────
+
+function buildMoveContent() {
+  const sel = state.pomMoveCard || '';
+  const cards = [
+    {id:'chair', icon:'\uD83E\uDDD8', label:'Chair Yoga',      desc:'8 poses \u00b7 ~5 min'},
+    {id:'walk',  icon:'\uD83D\uDEB6', label:'Walk Meditation', desc:'6 mindful prompts'},
+    {id:'scan',  icon:'\uD83D\uDC41\uFE0F', label:'Body Scan', desc:'Head-to-toe \u00b7 ~4 min'},
+    {id:'plank', icon:'\uD83D\uDCAA', label:'Plank Challenge', desc:'3 rounds \u00b7 choose level'},
+  ];
+  const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;${sel?'margin-bottom:16px':''}">
+    ${cards.map(c=>`
+      <div onclick="state.pomMoveCard='${sel===c.id?'':c.id}';state.pomMoveStep=0;render('pomodoro')" style="padding:16px;border:1px solid ${sel===c.id?'rgba(91,158,201,0.45)':'rgba(255,255,255,0.08)'};border-radius:10px;background:${sel===c.id?'rgba(91,158,201,0.10)':'rgba(255,255,255,0.03)'};cursor:pointer;transition:all .15s">
+        <div style="font-size:26px;margin-bottom:8px">${c.icon}</div>
+        <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--sky-blue-light)':'var(--muted)'};margin-bottom:3px">${c.label}</div>
+        <div style="font-size:10px;color:var(--faint);line-height:1.4">${c.desc}</div>
+      </div>`).join('')}
+  </div>`;
+
+  let expanded = '';
+  if (sel==='chair') expanded = buildStepGuide(CHAIR_YOGA, 'var(--jade)', 'rgba(47,158,110,0.10)', 'rgba(111,207,151,0.35)');
+  else if (sel==='walk') expanded = buildStepGuide(WALK_GUIDE, 'var(--sky-blue)', 'rgba(91,158,201,0.10)', 'rgba(91,158,201,0.35)');
+  else if (sel==='scan') expanded = buildStepGuide(BODY_SCAN, 'var(--purple)', 'rgba(155,114,204,0.10)', 'rgba(155,114,204,0.30)');
+  else if (sel==='plank') expanded = buildPlankContent();
+
+  return `
+    <div style="border:1px solid rgba(91,160,210,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
+      ${grid}${expanded}
+    </div>`;
+}
+
+function buildStepGuide(steps, col, pale, brd) {
+  const stepIdx = Math.min(state.pomMoveStep||0, steps.length-1);
+  const step = steps[stepIdx];
+  const total = steps.length;
+  return `
+    <div style="border:1px solid ${brd};border-radius:10px;background:${pale};padding:18px">
+      <div style="display:flex;gap:3px;margin-bottom:12px">${steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?col:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
+      <div style="font-size:11px;color:${col};letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Step ${stepIdx+1} of ${total} \u00b7 ${step.label}</div>
+      <div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:10px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:14px">${step.secs>=60?Math.floor(step.secs/60)+'m suggested':step.secs+'s suggested'}</div>
+      <div style="display:flex;gap:8px">
+        ${stepIdx>0 ? `<button onclick="state.pomMoveStep--;render('pomodoro')" style="font-size:12px">\u2190 Back</button>` : ''}
+        ${stepIdx<total-1
+          ? `<button onclick="state.pomMoveStep++;render('pomodoro')" style="flex:1;font-size:12px;background:${pale};border-color:${brd};color:${col};font-weight:600">Next \u2192</button>`
+          : `<button onclick="state.pomMoveCard='';state.pomMoveStep=0;render('pomodoro')" style="flex:1;font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green);font-weight:600">Done \u2713</button>`}
+      </div>
+    </div>`;
+}
+
+function buildPlankContent() {
+  const level = state.pomPlankLevel || 'beginner';
+  const round = state.pomPlankRound || 0;
+  const phase = state.pomPlankPhase || 'work';
+  const isRunning = state.pomPlankRunning;
+  const rounds = PLANK_LEVELS[level].rounds;
+  const cur = rounds[Math.min(round, rounds.length-1)];
+  const displaySecs = state.pomPlankSecs || (phase==='work' ? cur.work : cur.rest);
+  const levelBtns = ['beginner','intermediate','advanced'].map(l=>`
+    <button onclick="startPlank('${l}')" style="font-size:10px;padding:4px 11px;background:${level===l?'rgba(201,138,14,0.18)':'rgba(255,255,255,0.04)'};border:1px solid ${level===l?'rgba(201,138,14,0.45)':'rgba(255,255,255,0.10)'};color:${level===l?'var(--amber)':'var(--faint)'};border-radius:99px;cursor:pointer">${l}</button>`).join('');
+  const roundDots = rounds.map((_,i)=>`<div style="width:18px;height:18px;border-radius:50%;background:${i<round?'var(--amber)':i===round?'rgba(201,138,14,0.50)':'rgba(255,255,255,0.07)'};border:1px solid ${i===round?'var(--amber)':'rgba(255,255,255,0.12)'}"></div>`).join('');
+  return `
+    <div style="border:1px solid rgba(201,138,14,0.30);border-radius:10px;background:rgba(201,138,14,0.08);padding:18px">
+      <div style="display:flex;gap:8px;margin-bottom:14px">${levelBtns}</div>
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:11px;color:${phase==='work'?'var(--amber)':'var(--green)'};letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">${phase==='work'?'Hold plank':'Rest'} \u00b7 Round ${round+1} of ${rounds.length}</div>
+        <div style="font-size:58px;font-weight:600;color:var(--tx);font-family:var(--mono);line-height:1" id="plank-timer">${displaySecs}s</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:14px">${roundDots}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="togglePlank()" style="flex:1;font-size:12px;background:${isRunning?'rgba(255,255,255,0.06)':'rgba(201,138,14,0.12)'};border-color:rgba(201,138,14,0.30);color:var(--amber);font-weight:600">${isRunning?'Pause':state.pomPlankSecs>0?'Resume':'Start'}</button>
+        ${state.pomPlankSecs>0&&!isRunning ? `<button onclick="resetPlank()" style="font-size:12px">Reset</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── BREATHWORK ACTIONS ────────────────────────────────────────────────────────
+
+function startBreathTheme(id) {
+  const theme = BREATH_THEMES.find(t=>t.id===id);
+  if (!theme) return;
+  clearInterval(breathInterval); breathInterval=null;
+  state.pomBreathTheme=id; state.pomBreathStep=0;
+  state.pomBreathStepSecs=theme.steps[0].secs; state.pomBreathRunning=false;
+  render('pomodoro');
+}
+
+function toggleBreathTimer() {
+  if (state.pomBreathRunning) {
+    clearInterval(breathInterval); breathInterval=null;
+    state.pomBreathRunning=false; render('pomodoro');
+  } else {
+    state.pomBreathRunning=true; render('pomodoro');
+    breathInterval = setInterval(()=>{
+      state.pomBreathStepSecs--;
+      if (state.pomBreathStepSecs<=0) {
+        const theme=BREATH_THEMES.find(t=>t.id===state.pomBreathTheme);
+        const step=state.pomBreathStep||0;
+        if (theme&&step<theme.steps.length-1) {
+          state.pomBreathStep=step+1;
+          state.pomBreathStepSecs=theme.steps[step+1].secs;
+          render('pomodoro');
+        } else {
+          clearInterval(breathInterval); breathInterval=null;
+          state.pomBreathRunning=false; state.pomBreathTheme=''; state.pomBreathStep=0; state.pomBreathStepSecs=0;
+          showToast('\uD83C\uDF2C Breathwork complete \u2014 carry this with you.');
+          render('pomodoro');
+        }
+      } else {
+        const m=Math.floor(state.pomBreathStepSecs/60), s=state.pomBreathStepSecs%60;
+        const el=document.getElementById('breath-timer');
+        if (el) el.textContent = m>0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
+      }
+    }, 1000);
+  }
+}
+
+function nextBreathStep() {
+  clearInterval(breathInterval); breathInterval=null; state.pomBreathRunning=false;
+  const theme=BREATH_THEMES.find(t=>t.id===state.pomBreathTheme);
+  const step=state.pomBreathStep||0;
+  if (theme&&step<theme.steps.length-1) {
+    state.pomBreathStep=step+1;
+    state.pomBreathStepSecs=theme.steps[step+1].secs;
+  }
+  render('pomodoro');
+}
+
+function closeBreath() {
+  clearInterval(breathInterval); breathInterval=null;
+  state.pomBreathRunning=false; state.pomBreathTheme=''; state.pomBreathStep=0; state.pomBreathStepSecs=0;
+  render('pomodoro');
+}
+
+// ── REST TIMER ACTIONS ────────────────────────────────────────────────────────
+
+function toggleRestTimer() {
+  if (state.pomRestRunning) {
+    clearInterval(restInterval); restInterval=null;
+    state.pomRestRunning=false; render('pomodoro');
+  } else {
+    if (!state.pomRestSecs) state.pomRestSecs=20*60;
+    state.pomRestRunning=true; render('pomodoro');
+    restInterval = setInterval(()=>{
+      state.pomRestSecs--;
+      if (state.pomRestSecs<=0) {
+        clearInterval(restInterval); restInterval=null;
+        state.pomRestRunning=false; state.pomRestSecs=0;
+        showToast('\uD83D\uDCA4 Rest complete \u2014 take your time returning.');
+        render('pomodoro');
+      } else {
+        const el=document.getElementById('rest-timer');
+        if (el) { const m=Math.floor(state.pomRestSecs/60), s=state.pomRestSecs%60; el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+      }
+    }, 1000);
+  }
+}
+
+function resetRestTimer() {
+  clearInterval(restInterval); restInterval=null;
+  state.pomRestRunning=false; state.pomRestSecs=20*60; render('pomodoro');
+}
+
+// ── PLANK TIMER ACTIONS ───────────────────────────────────────────────────────
+
+function startPlank(level) {
+  clearInterval(plankInterval); plankInterval=null;
+  state.pomPlankLevel=level; state.pomPlankRound=0; state.pomPlankPhase='work';
+  state.pomPlankSecs=PLANK_LEVELS[level].rounds[0].work; state.pomPlankRunning=false;
+  render('pomodoro');
+}
+
+function togglePlank() {
+  if (state.pomPlankRunning) {
+    clearInterval(plankInterval); plankInterval=null; state.pomPlankRunning=false; render('pomodoro');
+  } else {
+    const lv = state.pomPlankLevel||'beginner';
+    if (!state.pomPlankSecs) { state.pomPlankSecs=PLANK_LEVELS[lv].rounds[0].work; state.pomPlankPhase='work'; state.pomPlankRound=0; }
+    state.pomPlankRunning=true; render('pomodoro');
+    plankInterval = setInterval(()=>{
+      state.pomPlankSecs--;
+      if (state.pomPlankSecs<=0) {
+        const rounds=PLANK_LEVELS[state.pomPlankLevel||'beginner'].rounds;
+        const round=state.pomPlankRound||0; const cur=rounds[round];
+        if (state.pomPlankPhase==='work'&&cur.rest>0) {
+          state.pomPlankPhase='rest'; state.pomPlankSecs=cur.rest;
+          showToast('\uD83D\uDCAA Rest \u2014 catch your breath!'); render('pomodoro');
+        } else if (round<rounds.length-1) {
+          state.pomPlankRound=round+1; state.pomPlankPhase='work'; state.pomPlankSecs=rounds[round+1].work;
+          showToast('\uD83D\uDCAA Go! Round '+(round+2)); render('pomodoro');
+        } else {
+          clearInterval(plankInterval); plankInterval=null; state.pomPlankRunning=false; state.pomPlankSecs=0;
+          showToast('\uD83D\uDCAA Challenge complete! Core activated.'); render('pomodoro');
+        }
+      } else {
+        const el=document.getElementById('plank-timer');
+        if (el) el.textContent=state.pomPlankSecs+'s';
+      }
+    }, 1000);
+  }
+}
+
+function resetPlank() {
+  clearInterval(plankInterval); plankInterval=null;
+  state.pomPlankRunning=false; state.pomPlankSecs=0; state.pomPlankRound=0; state.pomPlankPhase='work';
+  render('pomodoro');
+}
 
 const NET_FILTER_DEFAULT = {view:'all', source:'', sort:'smart'};
 if(!state.netFilter) state.netFilter = {...NET_FILTER_DEFAULT};
@@ -3687,7 +4436,7 @@ function renderSync(el) {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:13px;font-weight:500;color:var(--tx)">👤 Your profile</div>
         <div class="row" style="gap:6px">
-          <button onclick="openSetupGuide()" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale);padding:4px 12px">Setup guide</button>
+          <button onclick="openSetupGuide()" class="amber" style="font-size:11px;padding:4px 12px">Setup guide →</button>
           <button onclick="editProfile()" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:var(--jade-pale);padding:4px 12px">Edit profile</button>
         </div>
       </div>
@@ -4144,7 +4893,7 @@ function openSetupGuide() { openSetupWizard({ guide: true }); }
 function renderSetupFloat() {
   const el = document.getElementById('setup-float');
   if (!el) return;
-  if (!hasProfile() && !isDemo()) {
+  if (isDemo() || !hasProfile()) {
     el.innerHTML = `
       <button onclick="openSetupGuide()" style="display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:#E8C97A;background:rgba(12,28,46,0.96);border:1px solid rgba(201,138,14,0.50);border-radius:10px;padding:8px 14px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,0.50);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);letter-spacing:.01em;font-family:inherit;transition:border-color .15s" onmouseover="this.style.borderColor='rgba(201,138,14,0.85)'" onmouseout="this.style.borderColor='rgba(201,138,14,0.50)'">
         ↩ Return to Welcome
