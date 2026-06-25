@@ -137,6 +137,13 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_2  Focus tab color identity pass. (1) Section mini-nav: non-selected      ║
+║          items now show their own hue (gold dim / jade dim / rose dim) instead   ║
+║          of --faint; each also has a matching dim bottom border. (2) Hero star   ║
+║          SVG fill is now section-aware (gold → teal → rose). (3) Move section   ║
+║          accent aligned to --rose/--rose-pale/--rose-border throughout           ║
+║          (card borders, KPI cols, wrapper border). (4) Wellness hydrate button   ║
+║          and glass progress bars converted from sky-blue → --teal vars.          ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  SETUP   First-run wizard captures USER_PROFILE → localStorage.              ║
 ║  AI      All AI features POST to /api/claude (Cloudflare Pages Function).    ║
@@ -152,7 +159,7 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3">
+<meta name="jq-version" content="1.3.2">
 <meta name="jq-base" content="24">
 <meta name="jq-date" content="2026-06-25">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2311,13 +2318,13 @@ function renderPomodoro(el) {
 
   // ── Section navigation strip ────────────────────────────────────────────────
   const SNAV = [
-    {key:'focus',    label:'Focus',    accent:'var(--amber)',    pale:'rgba(201,138,14,0.10)',  brd:'rgba(201,138,14,0.35)',  navBg:'rgba(201,138,14,0.06)'},
-    {key:'wellness', label:'Wellness', accent:'var(--teal)',     pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)',  navBg:'rgba(47,158,110,0.10)'},
-    {key:'move',     label:'Move',     accent:'var(--sky-blue)', pale:'rgba(91,158,201,0.10)', brd:'rgba(91,158,201,0.30)',  navBg:'rgba(220,80,90,0.09)'},
+    {key:'focus',    label:'Focus',    accent:'var(--amber)',    dim:'rgba(201,138,14,0.55)',  bdrDim:'rgba(201,138,14,0.22)',  pale:'rgba(201,138,14,0.10)',  brd:'rgba(201,138,14,0.35)',  navBg:'rgba(201,138,14,0.06)'},
+    {key:'wellness', label:'Wellness', accent:'var(--teal)',     dim:'rgba(42,181,160,0.60)',  bdrDim:'rgba(42,181,160,0.22)',  pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)',  navBg:'rgba(47,158,110,0.10)'},
+    {key:'move',     label:'Move',     accent:'var(--rose)',     dim:'rgba(196,96,122,0.60)',  bdrDim:'rgba(196,96,122,0.22)',  pale:'var(--rose-pale)',       brd:'var(--rose-border)',     navBg:'rgba(196,96,122,0.06)'},
   ];
   const sectionNav = SNAV.map(s=>`
-    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:s.navBg};border-bottom:${section===s.key?`2px solid ${s.accent}`:'2px solid transparent'};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:s.navBg}'">
-      <div style="font-size:14px;font-weight:700;color:${section===s.key?s.accent:'var(--faint)'};line-height:1;font-family:'DM Mono',monospace">${s.label}</div>
+    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:s.navBg};border-bottom:${section===s.key?`2px solid ${s.accent}`:`2px solid ${s.bdrDim}`};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:s.navBg}'">
+      <div style="font-size:14px;font-weight:700;color:${section===s.key?s.accent:s.dim};line-height:1;font-family:'DM Mono',monospace">${s.label}</div>
     </div>`).join('');
 
   // ── Hero meta per section ───────────────────────────────────────────────────
@@ -2326,6 +2333,7 @@ function renderPomodoro(el) {
   const heroSub   = section==='focus' ? 'deep work \u00b7 stay in flow'
     : section==='wellness' ? 'hydrate \u00b7 breathe \u00b7 rest'
     : 'yoga \u00b7 walk \u00b7 scan \u00b7 plank';
+  const starFill  = section==='focus' ? '#F5A623' : section==='wellness' ? '#2AB5A0' : '#C4607A';
 
   // ── KPI strip (per-section — matches HQ dashboard style) ────────────────────
   const lastWaterMin = hydration.lastTs ? Math.round((Date.now()-hydration.lastTs)/60000) : null;
@@ -2348,8 +2356,8 @@ function renderPomodoro(el) {
     {val:state.pomSessions>0?`\uD83D\uDD25 ${state.pomSessions}`:'—', label:'focus sessions', col:'var(--sky-blue-light)'},
   ] : [
     {val:moveActivities>0?`\uD83D\uDCAA ${moveActivities}`:(moveActive?'active':'—'), label:'moves done',  col:'var(--rose)'},
-    {val:state.pomMoveCard ? (state.pomMoveCard.charAt(0).toUpperCase()+state.pomMoveCard.slice(1)) : '—', label:'active move', col:'var(--sky-blue-light)'},
-    {val:state.pomMoveStep>0?`step ${state.pomMoveStep+1}`:'—',                        label:'progress',   col:'var(--sky-blue-light)'},
+    {val:state.pomMoveCard ? (state.pomMoveCard.charAt(0).toUpperCase()+state.pomMoveCard.slice(1)) : '—', label:'active move', col:'var(--rose)'},
+    {val:state.pomMoveStep>0?`step ${state.pomMoveStep+1}`:'—',                        label:'progress',   col:'var(--rose)'},
     {val:state.pomSessions>0?state.pomSessions:'—',                                    label:'sessions',   col:'var(--faint)'},
   ];
   const focusKpis = `
@@ -2515,7 +2523,7 @@ function renderPomodoro(el) {
     <div style="border-radius:12px 12px 0 0;overflow:hidden;border:1px solid rgba(91,160,210,0.20);border-bottom:none">
       <div style="background:linear-gradient(135deg,#0D2033 0%,#1C3A50 100%);padding:18px 22px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden">
         <svg width="54" height="54" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:14px;right:16px;filter:drop-shadow(2px 2px 0px rgba(255,255,255,0.4));opacity:0.9;pointer-events:none">
-          <polygon points="16,2 18.2,10.5 26,7.5 21.5,14.5 30,16 21.5,17.5 26,24.5 18.2,21.5 16,30 13.8,21.5 6,24.5 10.5,17.5 2,16 10.5,14.5 6,7.5 13.8,10.5" fill="#F5A623"/>
+          <polygon points="16,2 18.2,10.5 26,7.5 21.5,14.5 30,16 21.5,17.5 26,24.5 18.2,21.5 16,30 13.8,21.5 6,24.5 10.5,17.5 2,16 10.5,14.5 6,7.5 13.8,10.5" fill="${starFill}"/>
         </svg>
         <div style="flex:1;min-width:0">
           <div style="font-size:10px;color:${heroAccent};letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px">
@@ -2816,7 +2824,7 @@ function buildHydrateContent() {
           <div style="font-size:10px;color:var(--faint);margin-top:2px">glasses</div>
         </div>
         <div style="flex:1">
-          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--sky-blue)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
+          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--teal)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
           <div style="font-size:11px;color:${warn?'var(--amber)':'var(--muted)'}">Goal: 8 glasses \u00b7 ${status}</div>
         </div>
       </div>
@@ -2831,7 +2839,7 @@ function buildHydrateContent() {
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="logWater()" style="flex:1;font-size:12px;background:rgba(91,158,201,0.12);border-color:rgba(91,158,201,0.28);color:var(--sky-blue-light)">+ Glass</button>
+        <button onclick="logWater()" style="flex:1;font-size:12px;background:var(--teal-pale);border-color:var(--teal-border);color:var(--teal-light)">+ Glass</button>
         ${h.glasses>0?`<button onclick="clearWater()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Reset</button>`:''}
       </div>
     </div>`;
@@ -2931,9 +2939,9 @@ function buildMoveContent() {
   ];
   const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;${sel?'margin-bottom:16px':''}">
     ${cards.map(c=>`
-      <div onclick="state.pomMoveCard='${sel===c.id?'':c.id}';state.pomMoveStep=0;render('pomodoro')" style="padding:16px;border:1px solid ${sel===c.id?'rgba(220,80,90,0.55)':'rgba(220,80,90,0.18)'};border-radius:10px;background:${sel===c.id?'rgba(220,80,90,0.10)':'rgba(220,80,90,0.04)'};cursor:pointer;transition:all .15s">
+      <div onclick="state.pomMoveCard='${sel===c.id?'':c.id}';state.pomMoveStep=0;render('pomodoro')" style="padding:16px;border:1px solid ${sel===c.id?'var(--rose-border)':'rgba(196,96,122,0.18)'};border-radius:10px;background:${sel===c.id?'var(--rose-pale)':'rgba(196,96,122,0.04)'};cursor:pointer;transition:all .15s">
         <div style="font-size:26px;margin-bottom:8px">${c.icon}</div>
-        <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--sky-blue-light)':'var(--muted)'};margin-bottom:3px">${c.label}</div>
+        <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--rose)':'var(--muted)'};margin-bottom:3px">${c.label}</div>
         <div style="font-size:10px;color:var(--faint);line-height:1.4">${c.desc}</div>
       </div>`).join('')}
   </div>`;
@@ -2945,7 +2953,7 @@ function buildMoveContent() {
   else if (sel==='plank') expanded = buildPlankContent();
 
   return `
-    <div style="border:1px solid rgba(220,80,90,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
+    <div style="border:1px solid var(--rose-border);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
       ${grid}${expanded}
     </div>`;
 }
@@ -5247,12 +5255,12 @@ function loadExampleData() {
     location:'Minneapolis, MN',
     workMode:'Hybrid preferred, remote ok, in-person ok',
     noReloc:'Minneapolis, St. Paul, Bloomington, Eden Prairie, Plymouth, Maple Grove, Fridley, Mounds View, Arden Hills, Golden Valley',
-    background:'Led upstream and downstream product initiatives spanning clinical device commercialization and 0-to-1 digital health builds. Experience with cardiac, rhythm management, and connected device portfolios. Deep familiarity with the Minneapolis medtech ecosystem and the clinical-to-commercial handoff.',
-    specialties:'upstream PM, downstream product marketing, cardiac devices, clinical commercialization, go-to-market, competitive analysis, 0-to-1 digital health, field enablement',
-    education:'MBA, Medical Industry Leadership (UMN Carlson); BS Biomedical Sciences',
-    idealSignals:'cardiac or structural heart devices, upstream/downstream PM, medtech commercialization, digital health + device crossover, $140K+, hybrid Minneapolis metro, 510(k) experience valued',
-    redFlagSignals:'no comp range posted, 10+ years required for a senior title, reposted >90 days, pure software with no clinical scope, relocation required',
-    honestGaps:'No direct 510(k) submission ownership. Limited pure enterprise SaaS PM background.',
+    background:'Led upstream and downstream product initiatives spanning clinical device commercialization and 0-to-1 digital health builds. Cardiac, rhythm management, and connected device portfolios. Realized somewhere around the third role that the through-line was always the clinical-to-commercial handoff, not the device category. Deep familiarity with the Minneapolis medtech ecosystem.',
+    specialties:'upstream PM, downstream product marketing, cardiac devices, clinical commercialization, go-to-market, competitive analysis, 0-to-1 digital health, field enablement, identity flexibility',
+    education:'MBA, Medical Industry Leadership (UMN Carlson); BS Biomedical Sciences; supplemental coursework in consequence architecture',
+    idealSignals:'upstream or downstream PM title (not project management), cardiac / structural heart / rhythm management device company, comp range actually listed in the JD, Minneapolis metro or genuinely remote-friendly, FDA pathway or clinical evidence mentioned somewhere in the role, company has a shipped product, bonus points if 510(k) shows up anywhere',
+    redFlagSignals:'no comp range posted, 10+ years required for a senior title, reposted >90 days, pure software with no clinical scope, relocation required, "must be willing to wear many hats" listed as a genuine perk',
+    honestGaps:'No direct 510(k) submission ownership. Limited pure enterprise SaaS PM background. References available pending confirmation of which face is currently on file.',
     portfolioUrl:''
   };
   saveProfile(EXAMPLE_PROFILE);
