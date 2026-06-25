@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.2.23  (Focus tab: KPIs below nav, Wellness/Move KPIs, jade/rose nav tints, rose Move cards; HQ: drop focus pill) ║
-║  A single-file job-search OS: JD fit analyzer, application tracker,           ║
+║  JOBQUEST — Starter Edition  ·  v1.3  (launch release: cleanup pass,        ║
+║  profile pill truncation fix, CLAUDE_MODEL → sonnet-4-6)                    ║
+║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
 ║  Created by Ryan Corcoran · ryan-corcoran.com                                ║
@@ -151,9 +152,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.2.22">
-<meta name="jq-base" content="21">
-<meta name="jq-date" content="2026-06-24">
+<meta name="jq-version" content="1.3">
+<meta name="jq-base" content="24">
+<meta name="jq-date" content="2026-06-25">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -176,7 +177,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23E8F1F8'/%3E%3Cpolygon points='16,3 17.8,10.2 24.5,7.5 20.5,13.5 27.5,15.5 20.5,17.5 24.5,23.5 17.8,20.8 16,28 14.2,20.8 7.5,23.5 11.5,17.5 4.5,15.5 11.5,13.5 7.5,7.5 14.2,10.2' fill='%231C3347'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Avenir+Next:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
@@ -187,9 +187,7 @@
     --navy-mid:    #1C3348;
     --navy-light:  #1E2E3E;
     --navy-border: rgba(255,255,255,0.08);
-    --navy-border2: rgba(255,255,255,0.13);  /* alias for inputs/borders */
-    --rose-light:   #F4C0D1;                 /* alias — same as --rose */
-    --sky-blue-mid:     rgba(91,158,201,0.35);   /* alias — same as sky-blue-mid */
+    --navy-border2: rgba(255,255,255,0.13);
 
     /* ── Sky blue — structural/titles/links ── */
     --sky-blue:        #5B9EC9;
@@ -214,7 +212,6 @@
     --teal-light:  #7ADDD0;
     --teal-pale:   rgba(42,181,160,0.10);
     --teal-border: rgba(42,181,160,0.30);
-    --teal-bg:     rgba(42,181,160,0.10);
     --teal-dim:    rgba(42,181,160,0.35);
 
     /* ── Gold — Claude/Analyze JD only ── */
@@ -298,7 +295,7 @@
   button.amber { background: var(--rose-deep); color: #fff; border-color: var(--rose-deep); font-weight: 500; }
   button.amber:hover:not(:disabled) { background: #A84E65; border-color: #A84E65; }
   button.ghost { color: var(--faint); border-color: transparent; background: transparent; }
-  button.danger { color: var(--rose-light); border-color: var(--rose-border); background: var(--rose-pale); }
+  button.danger { color: var(--rose); border-color: var(--rose-border); background: var(--rose-pale); }
   button.full { width: 100%; padding: 9px 0; font-size: 13px; }
 
   #nav {
@@ -408,7 +405,7 @@
   .badge.red   { background: var(--red-bg);   color: #E8907A;  border-color: var(--rose-border); }
   .badge.blue  { background: var(--blue-bg);  color: var(--sky-blue); border-color: rgba(74,159,212,0.4); }
   .badge.purple{ background: var(--purple-bg);color: #C4A8E8;  border-color: rgba(155,114,204,0.4); }
-  .badge.teal  { background: var(--teal-bg);  color: var(--teal); border-color: var(--teal-dim); }
+  .badge.teal  { background: var(--teal-pale);  color: var(--teal); border-color: var(--teal-dim); }
 
   /* PILL */
   .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 8px; background: rgba(91,158,201,0.10); border: 1px solid var(--navy-border); color: var(--muted); margin: 2px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
@@ -472,86 +469,7 @@
   /* STAGE FILTERS */
   .stage-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 
-  /* ── v18: AUTH / LOGIN SCREEN ── */
-  #auth-screen {
-    position: fixed; inset: 0; background: var(--navy-deep);
-    z-index: 9999; display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-    background-image: radial-gradient(ellipse at 20% 50%, rgba(91,158,201,0.06) 0%, transparent 60%),
-                      radial-gradient(ellipse at 80% 20%, rgba(196,96,122,0.06) 0%, transparent 50%);
-  }
-  #auth-screen.hidden { display: none; }
-  .auth-card {
-    width: 100%; max-width: 400px;
-    background: var(--navy-mid);
-    border: 1px solid rgba(91,160,210,0.20);
-    border-radius: 16px;
-    padding: 36px 32px 30px;
-    box-shadow: 0 16px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
-    animation: authIn .35s cubic-bezier(.22,1,.36,1);
-  }
-  @keyframes authIn { from { opacity:0; transform:translateY(16px) scale(.97) } to { opacity:1; transform:none } }
-  .auth-logo-row { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
-  .auth-logo { width:36px; height:36px; border-radius:9px; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; }
-  .auth-brand { font-size:20px; font-weight:600; color:#E8F1F8; letter-spacing:-.3px; }
-  .auth-brand-yr { font-size:11px; color:rgba(244,192,209,0.45); letter-spacing:.06em; margin-left:2px; }
-  .auth-heading { font-family: 'DM Serif Display', Georgia, serif; font-size:22px; color:#E8F1F8; margin-bottom:4px; }
-  .auth-sub { font-size:12px; color:var(--muted); margin-bottom:24px; line-height:1.6; }
-  .auth-label { font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-bottom:5px; font-weight:500; }
-  .auth-input { width:100%; background:rgba(255,255,255,0.06); color:var(--tx); border:1px solid var(--navy-border2); border-radius:8px; padding:10px 13px; font-size:14px; outline:none; transition:border-color .15s; margin-bottom:14px; box-sizing:border-box; }
-  .auth-input:focus { border-color:var(--sky-blue-mid); }
-  .auth-btn { width:100%; padding:11px 0; font-size:14px; font-weight:600; border-radius:8px; border:none; background:var(--rose-deep); color:#fff; cursor:pointer; transition:background .15s; margin-top:4px; letter-spacing:.01em; }
-  .auth-btn:hover { background:#A84E65; }
-  .auth-btn.secondary { background:rgba(255,255,255,0.06); color:var(--muted); border:1px solid var(--navy-border2); font-weight:400; font-size:13px; margin-top:8px; }
-  .auth-btn.secondary:hover { background:rgba(255,255,255,0.10); color:var(--tx); }
-  .auth-error { font-size:12px; color:#E8907A; background:var(--rose-pale); border:1px solid var(--rose-border); border-radius:6px; padding:8px 11px; margin-top:10px; display:none; }
-  .auth-divider { border:none; border-top:1px solid var(--navy-border); margin:18px 0; }
-  .auth-guest-hint { font-size:11px; color:var(--faint); text-align:center; margin-top:14px; }
-  .auth-guest-hint a { color:var(--sky-blue); cursor:pointer; text-decoration:underline; }
 
-  /* v4.9.2: Guest banner deprecated — replaced by compact nav chip */
-  #guest-banner { display: none !important; }
-  .guest-badge { background: var(--rose-pale); border: 1px solid var(--rose-border); border-radius: 4px; padding: 2px 8px; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; margin-right: 6px; }
-
-  /* v4.9.2: Compact guest chip — lives in navbar upper-right */
-  #nav-guest-chip {
-    display: flex; align-items: center; gap: 4px;
-    background: rgba(196,96,122,0.11);
-    border: 1px solid rgba(196,96,122,0.28);
-    border-radius: 20px;
-    padding: 3px 5px 3px 9px;
-    font-size: 10px; color: var(--rose);
-    letter-spacing: .04em;
-    white-space: nowrap;
-    flex-shrink: 0;
-    align-self: center;
-    transition: opacity .3s, transform .3s;
-  }
-  #nav-guest-chip.hidden { display: none; }
-  #nav-guest-chip .chip-dot {
-    width: 5px; height: 5px; border-radius: 50%;
-    background: var(--rose-deep); flex-shrink: 0;
-    box-shadow: 0 0 4px rgba(196,96,122,0.6);
-  }
-  #nav-guest-chip .chip-name { font-weight: 600; color: var(--rose); }
-  #nav-guest-chip .chip-sep { color: rgba(244,192,209,0.28); margin: 0 1px; }
-  #nav-guest-chip .chip-out {
-    font-size: 9px; color: var(--faint);
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 10px; padding: 2px 7px;
-    cursor: pointer; margin-left: 2px;
-    letter-spacing: .03em; transition: all .15s;
-  }
-  #nav-guest-chip .chip-out:hover { color: var(--tx); background: rgba(255,255,255,0.11); }
-
-  /* v18: Redacted data */
-  .redacted { filter: blur(5px); user-select: none; pointer-events: none; border-radius: 3px; }
-
-  /* v18: Guest manager modal */
-  #guest-mgr-modal { position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px; }
-  #guest-mgr-modal.hidden { display:none; }
-  .guest-mgr-card { background:var(--navy-mid);border:1px solid var(--navy-border2);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:28px 26px; }
 
   /* v18: Version badge */
   #version-badge { position:fixed;bottom:10px;right:14px;font-size:9px;font-family:var(--mono);color:rgba(255,255,255,0.18);letter-spacing:.05em;z-index:50;pointer-events:none; }
@@ -581,10 +499,6 @@
     /* Mobile: show short "Apps" label, hide full "Applications" */
     #tab-tracker .tab-full { display: none; }
     #tab-tracker .tab-short { display: inline; }
-
-    /* Guest chip: tighten on mobile */
-    #nav-guest-chip { font-size: 9px; padding: 2px 4px 2px 7px; }
-    #nav-guest-chip .chip-name { max-width: 72px; overflow: hidden; text-overflow: ellipsis; }
 
     /* Stats strip: 5 across over two rows instead of 10 squeezed cells */
     .kpi-strip { grid-template-columns: repeat(5, 1fr); }
@@ -710,7 +624,6 @@
       <button onclick="showTab('pomodoro')" id="tab-pomodoro">Focus</button>
       <button onclick="showTab('sync')" id="tab-sync">Sync</button>
     </div>
-    <div id="nav-guest-chip" class="hidden" style="display:none"></div>
   </div>
 </div>
 
@@ -719,74 +632,15 @@
   <div id="pane-tracker" style="display:none"></div>
   <div id="pane-pomodoro" style="display:none"></div>
   <div id="pane-network" style="display:none"></div>
-  <div id="pane-targets" style="display:none"></div>
   <div id="pane-sync" style="display:none"></div>
 </div>
 
 <script>
 // ── USER SYSTEM (shareable edition) ───────────────────────────────────────────
-// The original owner/guest auth is removed: whoever runs their own deployment is
-// the sole owner of their own data. These stubs keep the rest of the codebase
-// (which still branches on isGuest()/isOwner() in a few render paths) working.
-let currentUser = { type: 'owner' };
+// Auth/guest system removed. Each deployment is owner-only.
+// isOwner/isGuest kept as shims — render paths still reference them.
 function isOwner() { return true; }
 function isGuest() { return false; }
-
-// No-op shims for removed guest/auth UI still referenced in a couple of places.
-function authLogout() {}
-function setupGuestUI() {}
-function addOwnerNavButtons() {}
-function getGuestUsers() { return []; }
-
-
-// ── v4.9.2: Guest scroll chip — appear once welcome card leaves viewport ─────
-let _guestChipObs = null;
-function setupGuestScrollChip() {
-  if (!isGuest()) return;
-  const chip = document.getElementById('nav-guest-chip');
-  if (!chip) return;
-
-  // Disconnect any previous observer
-  if (_guestChipObs) { _guestChipObs.disconnect(); _guestChipObs = null; }
-
-  const welcome = document.getElementById('guest-hero-welcome');
-  if (!welcome) {
-    // No welcome card on this pane — show chip immediately
-    chip.classList.remove('hidden');
-    return;
-  }
-
-  // Start hidden (welcome card is visible on load)
-  chip.classList.add('hidden');
-
-  // rootMargin top offset = sticky nav height (52px)
-  _guestChipObs = new IntersectionObserver(([entry]) => {
-    chip.classList.toggle('hidden', entry.isIntersecting);
-  }, { threshold: 0.05, rootMargin: '-52px 0px 0px 0px' });
-
-  _guestChipObs.observe(welcome);
-}
-
-// ── Guest redaction helpers ───────────────────────────────────────────────────
-
-function guestBlur(html) {
-  if (!isGuest()) return html;
-  return `<span class="redacted" title="Sign in for full details">${html}</span>`;
-}
-
-function guestContactName(name) {
-  if (!isGuest()) return String(name || '');
-  const parts = String(name || '').split(' ');
-  if (parts.length < 2) return parts[0] || '';
-  // Return first name as plain text; last name blurred — unescaped intentionally here,
-  // caller should handle escaping around this
-  return parts[0] + ' <span class="redacted" style="font-size:11px">████</span>';
-}
-
-// ── Removed guest-sharing system (shareable edition) ─────────────────────────
-// No-op shims kept only because a couple of render paths still name these.
-function openGuestMgr() {}
-function closeGuestMgr() {}
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
@@ -932,7 +786,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1170,12 +1024,6 @@ function showTab(tab) {
     if (el) el.style.display = t === tab ? '' : 'none';
   });
   render(tab);
-  // v4.9.2: on non-board tabs, chip should show immediately (no hero card)
-  if (isGuest() && tab !== 'board') {
-    if (_guestChipObs) { _guestChipObs.disconnect(); _guestChipObs = null; }
-    const chip = document.getElementById('nav-guest-chip');
-    if (chip) chip.classList.remove('hidden');
-  }
 }
 
 function render(tab) {
@@ -1218,7 +1066,7 @@ const fmtSal = j => { if(!j.salary_min&&!j.salary_max) return null; const f=n=>n
 // /api/claude. The Anthropic API key lives ONLY as the ANTHROPIC_API_KEY env var
 // on your Cloudflare Pages deployment — never in the browser. See README.md.
 const CLAUDE_URL = '/api/claude';
-const CLAUDE_MODEL = 'claude-sonnet-4-5';
+const CLAUDE_MODEL = 'claude-sonnet-4-6';
 
 // The proxy adds auth server-side, so the browser sends no key/version headers.
 function claudeHeaders(extra={}) { return { 'Content-Type': 'application/json', ...extra }; }
@@ -1632,8 +1480,14 @@ function renderHQHero() {
 
       <!-- Profile summary bar: key fields + Edit Profile -->
       <div style="background:rgba(8,18,30,0.40);border-top:1px solid rgba(91,160,210,0.12);display:flex;align-items:stretch">
-        <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:9px 22px">
-          ${[(getProfile()&&getProfile().titles)||'', (getProfile()&&getProfile().yearsExp)||'', salaryStr(), (getProfile()&&getProfile().workMode)||''].filter(Boolean).map(c=>`<span style="font-size:11px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:20px;padding:2px 10px;white-space:nowrap">${esc(c)}</span>`).join('')}
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:9px 22px;overflow:hidden">
+          ${(()=>{
+            const p = getProfile();
+            const shortTitle = p&&p.titles ? p.titles.split(/\s*[\/|]\s*/)[0].trim() : '';
+            const shortMode  = p&&p.workMode ? p.workMode.split(/[,\/]/)[0].trim().replace(/\s+(preferred|ok|only|options?)$/i,'') : '';
+            return [(shortTitle||''), (p&&p.yearsExp)||'', salaryStr(), shortMode].filter(Boolean)
+              .map(c=>`<span style="font-size:11px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:20px;padding:2px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${esc(c)}</span>`).join('');
+          })()}
           ${!hasProfile() ? `<span style="font-size:11px;color:var(--faint);font-style:italic">No profile yet — your AI features need this to work.</span>` : ''}
         </div>
         <button onclick="editProfile()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(196,96,122,0.08);border:none;border-left:1.5px solid var(--rose-deep);color:var(--rose);border-radius:0;padding:0 22px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s" onmouseover="this.style.background='rgba(196,96,122,0.20)'" onmouseout="this.style.background='rgba(196,96,122,0.08)'">
@@ -1836,9 +1690,6 @@ function renderBoard(el) {
   document.getElementById('li-time').addEventListener('change', updateLiPreview);
   document.getElementById('li-exp').addEventListener('change', updateLiPreview);
   updateMiniTimer();
-
-  // v4.9.2: wire up scroll chip for guest view
-  if (isGuest()) setupGuestScrollChip();
 }
 
 
@@ -3517,13 +3368,13 @@ function renderNetwork(el) {
         <!-- LEFT: who -->\
         <div style="flex:1;min-width:0;padding-right:10px;cursor:pointer" onclick="state.netExpanded=state.netExpanded||{};state.netExpanded[${c.id}]=!state.netExpanded[${c.id}];render('network')">
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:3px">
-            <span style="font-size:13px;font-weight:600;color:var(--tx)">${isGuest() ? guestBlur(esc(c.name)) : esc(c.name)}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--tx)">${esc(c.name)}</span>
             ${heatBadge}
             ${badge(c.rel, REL_COL[c.rel]||'blue')}
-            ${!isGuest() ? `<button onclick="event.stopPropagation();toggleContactFlag(${c.id},'star')" title="${c.star?'Remove High Priority':'Mark High Priority'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.star?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.star?'1':'0.25'}'">⭐</button>` : ''}
-            ${!isGuest() ? `<button onclick="event.stopPropagation();toggleContactFlag(${c.id},'champion')" title="${c.champion?'Remove Champion':'Mark as Champion'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.champion?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.champion?'1':'0.25'}'">🏆</button>` : ''}
+            <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'star')" title="${c.star?'Remove High Priority':'Mark High Priority'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.star?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.star?'1':'0.25'}'">⭐</button>
+            <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'champion')" title="${c.champion?'Remove Champion':'Mark as Champion'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.champion?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.champion?'1':'0.25'}'">🏆</button>
           </div>
-          <div style="color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isGuest() ? [c.role&&`<span class="redacted">${esc(c.role)}</span>`,c.company&&esc(c.company)].filter(Boolean).join(' · ') : [c.role,c.company].filter(Boolean).map(esc).join(' · ')}</div>
+          <div style="color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${[c.role,c.company].filter(Boolean).map(esc).join(' · ')}</div>
           <div style="margin-top:4px;font-size:11px;color:var(--sky-blue);font-weight:500">${isExpanded?'▲ collapse':'▼ expand'}</div>
         </div>
         <!-- MIDDLE: last contact -->
@@ -4312,21 +4163,6 @@ function exportContactsXLSX() {
   XLSX.utils.book_append_sheet(wb, wsData,    'Contacts');
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
   XLSX.writeFile(wb, `contacts_${new Date().toISOString().slice(0,10)}.xlsx`, { cellStyles: true });
-}
-
-// Legacy HTML-table XLS (kept for fallback only — not exposed in UI)
-function tableToXLSHtml(cols, rows, headerBg, zebraBg) {
-  const e = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const thead = `<tr>${cols.map(c=>`<th style="background:${headerBg};color:#FFFFFF;border:1px solid #8A8A8A;padding:6px 10px;font-family:Calibri,Arial,sans-serif;font-size:11pt;text-align:left;font-weight:bold">${e(c)}</th>`).join('')}</tr>`;
-  const tbody = rows.map((r,ri)=>`<tr>${r.map(cell=>`<td style="background:${ri%2?zebraBg:'#FFFFFF'};border:1px solid #DDDDDD;padding:5px 10px;font-family:Calibri,Arial,sans-serif;font-size:10pt;mso-number-format:'\\@'">${e(cell)}</td>`).join('')}</tr>`).join('');
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${thead}${tbody}</table></body></html>`;
-}
-function downloadXLS(html, filename) {
-  const blob = new Blob(['\ufeff', html], {type:'application/vnd.ms-excel;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
 }
 
 function parseCSV(text) {
