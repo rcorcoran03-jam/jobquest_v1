@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3  (launch release: cleanup pass,        ║
-║  profile pill truncation fix, CLAUDE_MODEL → sonnet-4-6)                    ║
+║  JOBQUEST — Starter Edition  ·  v1.3.1  (polish: welcome headline lifted     ║
+║  to DM Serif Display; body copy left-aligned with card rail)                 ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -786,7 +786,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.3.1';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -5034,14 +5034,15 @@ function renderSetupWizard() {
           <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:42px;font-weight:400;font-style:italic;color:#F4F8FC;margin:0;line-height:1.08;letter-spacing:-.02em;max-width:600px">Run your whole job search in one place.</h1>
           <button onclick="startDemoTour()" title="Open a fully populated demo — nothing saved" style="position:absolute;bottom:14px;right:16px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--jade);background:var(--jade-pale);border:1px solid var(--jade-border);border-radius:999px;padding:4px 11px;cursor:pointer;z-index:2">▶ view live demo</button>
         </div>
-        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;max-width:680px">
-          <b style="color:var(--tx)">Built by you, for you.</b> JobQuest is a personal job-search OS you host and customize yourself. An embedded <b style="color:var(--tx)">Claude-AI fit analyzer</b> scores any job description against your profile and can funnel it straight to your <b style="color:var(--tx)">application tracker</b>, alongside a <b style="color:var(--tx)">networking CRM</b>.
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:24px;color:var(--tx);line-height:1.2;margin:0 0 14px;padding-left:20px;max-width:680px">Built by you, for you, <span style="color:var(--gold)">with Claude.</span></div>
+        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;padding-left:20px;max-width:680px">
+          JobQuest is a personal job-search OS you host, own, and customize yourself. A built-in <b style="color:var(--tx)">Claude-powered fit analyzer</b> scores any job description against your profile and funnels it straight to your <b style="color:var(--tx)">application tracker</b>, alongside a <b style="color:var(--tx)">networking CRM</b> — all running on infrastructure you build and control.
         </p>
-        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;max-width:680px">
-          It's completely yours from the first click — running on your own free Cloudflare deployment, with GitHub file hosting and private storage. And every built-in AI feature runs on your own Anthropic API key.
+        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;padding-left:20px;max-width:680px">
+          But the bigger return is what you learn along the way. Getting this running walks you through hosting a live web app, editing code with AI, and deploying your own tools from scratch — foundational skills that matter more every week.
         </p>
-        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0;max-width:680px">
-          <b style="color:var(--tx)">New to GitHub, Cloudflare, or API keys?</b> That's completely fine — most people setting this up are seeing them for the first time. The guide walks you through each one in plain language, and nothing here can break. If you can copy and paste, you can do this.
+        <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0;padding-left:20px;max-width:680px">
+          <b style="color:var(--tx)">New to GitHub, Cloudflare, or API keys?</b> That's exactly who this guide is written for. Most people going through it are seeing these tools for the first time. The walkthrough is in plain language, nothing here can break, and by the end you'll have built something real — and left with a clearer, more grounded sense of what AI can actually help you do.
         </p>
 
         <div class="card" style="margin:22px 0;border-color:var(--brd2);background:${CARD_BG}">
