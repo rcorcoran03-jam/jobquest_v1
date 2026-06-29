@@ -1210,6 +1210,34 @@ const TARGET_CAREER_PAGES = [
   {name:'Dice',        url:'https://www.dice.com/jobs?q=product+manager'},
 ];
 
+// ── CUSTOM LINKS (user-managed, persisted in localStorage) ───────────────────
+function getCustomLinks() {
+  try { return JSON.parse(localStorage.getItem('custom_links') || '[]'); } catch(e) { return []; }
+}
+function saveCustomLinks(links) {
+  localStorage.setItem('custom_links', JSON.stringify(links));
+}
+function addCustomLink() {
+  const nameEl = document.getElementById('cl-name');
+  const urlEl  = document.getElementById('cl-url');
+  const name   = (nameEl.value || '').trim();
+  let   url    = (urlEl.value  || '').trim();
+  if (!name || !url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  const links = getCustomLinks();
+  links.push({ name, url });
+  saveCustomLinks(links);
+  nameEl.value = '';
+  urlEl.value  = '';
+  render('board');
+}
+function removeCustomLink(idx) {
+  const links = getCustomLinks();
+  links.splice(idx, 1);
+  saveCustomLinks(links);
+  render('board');
+}
+
 function miniTimerWidget() {
   return `<div class="mini-timer-widget" id="mini-timer-${Date.now()}">
     <div class="mini-dot"></div>
@@ -1650,17 +1678,28 @@ function renderBoard(el) {
 
     <div>
 
-      <div class="job-boards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">
-        ${QUICK_LAUNCHES.map((g, i) => launchCard(g, i)).join('')}
-      </div>
+      ${(()=>{
+        const customLinks = getCustomLinks();
+        const ac = { col:'var(--teal-light)', bg:'rgba(42,181,160,0.07)', brd:'var(--teal-border)' };
+        const linkBtns = customLinks.map((b,i) =>
+          `<div style="display:flex;align-items:center;gap:3px">
+            <button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18)">${esc(b.name)} ↗</button>
+            <button onclick="removeCustomLink(${i})" title="Remove" style="font-size:10px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10);padding:3px 6px;line-height:1">×</button>
+          </div>`).join('');
+        return `
+        <div class="card" style="background:${ac.bg};border-left:3px solid ${ac.col};margin-bottom:14px">
+          <div style="font-size:12.5px;font-weight:700;color:${ac.col};margin-bottom:3px;letter-spacing:.01em">🔗 My Links</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">Your saved companies, career pages, or any URL — click to open</div>
+          ${customLinks.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${linkBtns}</div>` : ''}
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input id="cl-name" type="text" placeholder="Label (e.g. Optum · Sr PM)" style="font-size:11px;flex:1;min-width:120px;padding:5px 9px;background:rgba(0,0,0,0.20);border:1px solid ${ac.brd};border-radius:5px;color:var(--tx)" onkeydown="if(event.key==='Enter')document.getElementById('cl-url').focus()">
+            <input id="cl-url" type="text" placeholder="URL" style="font-size:11px;flex:2;min-width:160px;padding:5px 9px;background:rgba(0,0,0,0.20);border:1px solid ${ac.brd};border-radius:5px;color:var(--tx)" onkeydown="if(event.key==='Enter')addCustomLink()">
+            <button onclick="addCustomLink()" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18);white-space:nowrap">+ Add</button>
+          </div>
+        </div>`;
+      })()}
 
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:rgba(8,18,30,0.35);border:1px solid var(--brd);border-radius:8px;margin-bottom:14px">
-        <span style="font-size:10px;font-weight:700;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex-shrink:0">More</span>
-        <div style="width:1px;height:14px;background:var(--brd2);flex-shrink:0"></div>
-        ${moreBoardBtns}
-      </div>
-
-      <div class="card" style="padding:14px 16px;border-top:3px solid var(--sky-blue)">
+      <div class="card" style="padding:14px 16px;border-top:3px solid var(--sky-blue);margin-bottom:14px">
         <div style="font-size:13px;font-weight:600;color:var(--sky-blue-light);letter-spacing:.03em;margin-bottom:2px">🔍 LinkedIn Search Builder</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Compose and launch a targeted LinkedIn search from your criteria</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px">
@@ -1674,6 +1713,17 @@ function renderBoard(el) {
           <button onclick="copyLinkedInURL()" style="font-size:11px">Copy URL</button>
         </div>
         <div id="li-url-preview" style="font-size:10px;color:var(--faint);margin-top:6px;word-break:break-all">${esc(liURL)}</div>
+      </div>
+
+      <div class="job-boards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        ${QUICK_LAUNCHES.map((g, i) => launchCard(g, i)).join('')}
+      </div>
+
+      <div style="padding:10px 14px;border:1px dashed rgba(255,255,255,0.08);border-radius:8px;display:flex;align-items:center;gap:10px;background:rgba(8,18,30,0.25)">
+        <span style="font-size:15px;line-height:1;flex-shrink:0">✦</span>
+        <div style="font-size:10.5px;color:var(--faint);line-height:1.55">
+          <strong style="color:var(--muted);font-weight:600">Tip:</strong> The job board cards are fully customizable — open <code style="font-size:10px;background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;color:var(--sky-blue-light)">QUICK_LAUNCHES</code> in Claude Code and ask it to add, remove, or retarget any card or button.
+        </div>
       </div>
 
     </div>
