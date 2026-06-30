@@ -1176,8 +1176,8 @@ const LINKEDIN_TIME = {any:'','24h':'r86400','week':'r604800','month':'r2592000'
 
 const QUICK_LAUNCHES = [
   {
-    label: 'Senior PM — all boards', icon: '🎯',
-    desc: 'Senior product manager roles across the major boards',
+    label: 'Primary search', icon: '🎯',
+    desc: 'Core job boards for your role',
     urls: [
       {name:'LinkedIn',   url:'https://www.linkedin.com/jobs/search/?keywords=senior+product+manager&f_E=4&f_TPR=r2592000'},
       {name:'Indeed',     url:'https://www.indeed.com/jobs?q=senior+product+manager&sort=date'},
@@ -1185,30 +1185,13 @@ const QUICK_LAUNCHES = [
     ]
   },
   {
-    label: 'Remote PM', icon: '🌐',
-    desc: 'Remote-first product roles',
+    label: 'Parallel path', icon: '🚀',
+    desc: 'Startups, remote, and niche boards',
     urls: [
-      {name:'LinkedIn',   url:'https://www.linkedin.com/jobs/search/?keywords=senior+product+manager&f_WT=2&f_TPR=r2592000'},
+      {name:'Wellfound',        url:'https://wellfound.com/jobs', clipboard:true},
       {name:'We Work Remotely', url:'https://weworkremotely.com/remote-jobs/search?term=product+manager'},
-      {name:'Wellfound',  url:'https://wellfound.com/jobs', clipboard:true},
-    ]
-  },
-  {
-    label: 'Startups', icon: '🚀',
-    desc: 'Growth-stage and startup product roles',
-    urls: [
-      {name:'Wellfound',  url:'https://wellfound.com/jobs', clipboard:true},
-      {name:'Y Combinator', url:'https://www.ycombinator.com/jobs/role/product-manager'},
-      {name:'Built In',   url:'https://builtin.com/jobs/product?search=product+manager'},
-    ]
-  },
-  {
-    label: 'Google Jobs', icon: '🔎',
-    desc: 'Aggregated listings via Google',
-    urls: [
-      {name:'Google Jobs', url:'https://www.google.com/search?q=senior+product+manager+jobs&ibp=htl;jobs'},
-      {name:'Indeed',      url:'https://www.indeed.com/jobs?q=product+manager&sort=date'},
-      {name:'LinkedIn',    url:'https://www.linkedin.com/jobs/search/?keywords=product+manager&f_TPR=r604800'},
+      {name:'Built In',         url:'https://builtin.com/jobs/product?search=product+manager'},
+      {name:'Y Combinator',     url:'https://www.ycombinator.com/jobs/role/product-manager'},
     ]
   },
 ];
@@ -1668,13 +1651,17 @@ function renderBoard(el) {
   const launchCard = (g, i) => {
     const ac = CARD_ACCENTS[i % CARD_ACCENTS.length];
     return `
-    <div class="card" style="background:${ac.bg};border-left:3px solid ${ac.col}">
-      <div style="font-size:12.5px;font-weight:700;color:${ac.col};margin-bottom:3px;letter-spacing:.01em">${g.icon || '🔎'} ${esc(g.label)}</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">${esc(g.desc || '')}</div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
+    <div class="card" style="background:${ac.bg};border-left:3px solid ${ac.col};border-radius:0 8px 8px 0">
+      <div style="font-size:13px;font-weight:500;color:${ac.col};margin-bottom:2px">${g.icon || '🔎'} ${esc(g.label)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">${esc(g.desc || '')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;color:${ac.col};letter-spacing:.09em;text-transform:uppercase">Job boards</span>
+        <button onclick="openAll(${i})" style="font-size:11.5px;font-weight:500;color:#4A9EFF;border:1.5px solid #4A9EFF;background:rgba(74,158,255,0.13);border-radius:6px;padding:5px 13px;white-space:nowrap">Open all ↗</button>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
         ${g.urls.map(b => b.clipboard
-          ? `<button onclick="openWithClipboard('${esc(b.url)}','${esc(typeof b.clipboard === 'string' ? b.clipboard : g.label)}')" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18)">${esc(b.name)} ↗</button>`
-          : `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18)">${esc(b.name)} ↗</button>`).join('')}
+          ? `<button onclick="openWithClipboard('${esc(b.url)}','${esc(typeof b.clipboard === 'string' ? b.clipboard : g.label)}')" style="font-size:12px;padding:7px 13px;border-radius:7px;color:${ac.col};border:0.5px solid ${ac.brd};background:rgba(0,0,0,0.14)">${esc(b.name)} ↗</button>`
+          : `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:12px;padding:7px 13px;border-radius:7px;color:${ac.col};border:0.5px solid ${ac.brd};background:rgba(0,0,0,0.14)">${esc(b.name)} ↗</button>`).join('')}
       </div>
     </div>`;
   };
@@ -1696,14 +1683,18 @@ function renderBoard(el) {
         const ac = { col:'var(--teal-light)', bg:'rgba(42,181,160,0.07)', brd:'var(--teal-border)' };
         const linkBtns = customLinks.map((b,i) =>
           `<div style="display:flex;align-items:center;gap:3px">
-            <button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px;color:${ac.col};border-color:${ac.brd};background:rgba(0,0,0,0.18)">${esc(b.name)} ↗</button>
-            <button onclick="removeCustomLink(${i})" title="Remove" style="font-size:10px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10);padding:3px 6px;line-height:1">×</button>
+            <button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:12px;padding:7px 13px;border-radius:7px;color:${ac.col};border:0.5px solid ${ac.brd};background:rgba(0,0,0,0.14)">${esc(b.name)} ↗</button>
+            <button onclick="removeCustomLink(${i})" title="Remove" style="font-size:10px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10);padding:3px 6px;border-radius:5px;line-height:1">×</button>
           </div>`).join('');
         return `
-        <div class="card" style="background:${ac.bg};border-left:3px solid ${ac.col};margin-bottom:14px">
-          <div style="font-size:12.5px;font-weight:700;color:${ac.col};margin-bottom:3px;letter-spacing:.01em">🔗 My Links</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">Your saved companies, career pages, or any URL — click to open</div>
-          ${customLinks.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${linkBtns}</div>` : ''}
+        <div class="card" style="background:${ac.bg};border-left:3px solid ${ac.col};border-radius:0 8px 8px 0;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:500;color:${ac.col};margin-bottom:2px">🔗 My links</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">Your saved companies, career pages, or any URL</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:10px;font-weight:700;color:${ac.col};letter-spacing:.09em;text-transform:uppercase">Saved links</span>
+            <button onclick="openAllCustomLinks()" style="font-size:11.5px;font-weight:500;color:#4A9EFF;border:1.5px solid #4A9EFF;background:rgba(74,158,255,0.13);border-radius:6px;padding:5px 13px;white-space:nowrap">Open all ↗</button>
+          </div>
+          ${customLinks.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">${linkBtns}</div>` : ''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
             <input id="cl-name" type="text" placeholder="Label (e.g. Optum · Sr PM)" style="font-size:11px;flex:1;min-width:120px;padding:5px 9px;background:rgba(0,0,0,0.20);border:1px solid ${ac.brd};border-radius:5px;color:var(--tx)" onkeydown="if(event.key==='Enter')document.getElementById('cl-url').focus()">
             <input id="cl-url" type="text" placeholder="URL" style="font-size:11px;flex:2;min-width:160px;padding:5px 9px;background:rgba(0,0,0,0.20);border:1px solid ${ac.brd};border-radius:5px;color:var(--tx)" onkeydown="if(event.key==='Enter')addCustomLink()">
@@ -1803,6 +1794,12 @@ function openAll(idx) {
   }
   ql.urls.forEach(u => window.open(u.url, '_blank'));
   if (hasCB) showToast('Search term copied — paste on any board that opens');
+}
+
+function openAllCustomLinks() {
+  const links = getCustomLinks();
+  if (!links.length) { showToast('No links saved yet — add some above'); return; }
+  links.forEach(b => window.open(b.url, '_blank'));
 }
 
 function openBoardWithClip(url, e) {
