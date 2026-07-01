@@ -2031,6 +2031,120 @@ function readAppForm(prefix) {
   return obj;
 }
 
+// Shared by both the High Priority strip and the main application list — used
+// to be two separately-maintained templates that drifted apart (missing
+// Archive/contact-line/AI actions on the strip, and a broken Edit button
+// there since only the main list's map() checked state.appEditing). One
+// render path now, so they can't drift again.
+function renderAppCard(app, isPriority) {
+  if(state.appEditing===app.id) {
+    return `<div class="card" style="margin-bottom:8px;border-left:3px solid var(--amber)">
+      <div style="font-size:12px;font-weight:500;color:var(--amber);margin-bottom:10px">Editing: ${esc(app.company)}</div>
+      ${appFormHTML(`e-${app.id}`,app)}
+      <div class="row" style="margin-top:10px">
+        <button class="amber" onclick="saveEdit(${app.id})">Save changes</button>
+        <button onclick="state.appEditing=null;render('tracker')">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  const isExpanded   = state.appExpanded && state.appExpanded[app.id];
+  const borderCol    = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[app.stage]||(isPriority?'var(--amber)':'var(--brd2)');
+  const cardBg       = STAGE_CARD_BG[app.stage]||'var(--card-default)';
+
+  // Heat tag: saved role sitting >28 days
+  let heatTag = '';
+  if(app.stage === 'Saved' && app.savedAt) {
+    const daysSaved = Math.floor((Date.now() - new Date(app.savedAt).getTime()) / 86400000);
+    if(daysSaved >= 28) {
+      const heatCol = daysSaved >= 56 ? '#E85D3A' : 'var(--amber)';
+      const heatBg  = daysSaved >= 56 ? 'rgba(232,93,58,0.12)' : 'var(--amber-bg)';
+      const heatBrd = daysSaved >= 56 ? 'rgba(232,93,58,0.35)' : 'var(--amber-dim)';
+      heatTag = `<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:${heatBg};border:1px solid ${heatBrd};color:${heatCol};font-weight:600;white-space:nowrap">⏰ ${daysSaved}d saved</span>`;
+    }
+  }
+
+  const details      = [
+    app.salary && pill(esc(app.salary)),
+    app.location && pill(esc(app.location)),
+    app.fit && fitPill(app),
+    heatTag
+  ].filter(Boolean).join('');
+  const contactLine  = [app.contact,app.netContact].filter(s=>s&&s!=='—')
+    .map(s => isGuest() ? `<span class="redacted">${esc(s)}</span>` : esc(s)).join(' · ');
+  const nextLine     = isGuest()
+    ? [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(s=>`<span class="redacted">${esc(s)}</span>`).join(' → ')
+    : [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(esc).join(' → ');
+  const keyReqs      = app.keyReqs&&app.keyReqs!=='—'?app.keyReqs:'';
+  const gaps         = app.gaps||app.notes||'';
+  const netRel       = app.netRel&&app.netRel!=='—'?app.netRel:'';
+  const STAGE_CSS_COL = {Saved:'var(--teal)',Applied:'var(--blue)','Coffee / Networking':'var(--green)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)'};
+  const stageColor = STAGE_CSS_COL[app.stage] || 'var(--amber)';
+  const updatedLabel = app.updatedAt
+    ? `<span style="font-weight:600;color:var(--tx2)">${esc(app.stage)}</span> <span style="color:${stageColor}">${app.updatedAt.slice(0,10)}</span>`
+    : '';
+  const isHigh       = app.priority==='High';
+
+  const aiGrid = isGuest() ? '' : `
+    <div class="app-card-ai-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:0 0 auto;align-self:flex-start">
+      <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Company Profile</button>
+      <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Interview Prep</button>
+      <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Cover Letter Support</button>
+      <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Resume Bullet Builder</button>
+    </div>`;
+
+  const condensed = `
+    <div class="app-card-inner app-card-split" style="display:flex;gap:14px;align-items:flex-start">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
+            <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(app.company)}</span>
+            ${badge(app.stage,STAGE_COL[app.stage]||'amber')}
+            ${isPriority?`<span style="font-size:10px;color:var(--amber)">⭐</span>`:''}
+          </div>
+          <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
+          ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
+          ${app.netContact&&app.netContact!=='—'
+            ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
+            : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
+          ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px;font-weight:500">→ ${nextLine}</div>`:''}
+          ${updatedLabel?`<div style="font-size:11px;margin-top:2px">${updatedLabel}</div>`:''}
+        </div>
+        <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
+          ${isGuest()
+            ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
+            : `${sel(`stg-${app.id}`,STAGES,app.stage)}
+            <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
+            <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
+            <button onclick="state.appEditing=${app.id};render('tracker')" style="font-size:11px">Edit</button>
+            <button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>
+            <button onclick="delApp(${app.id})" style="font-size:11px;color:var(--muted);border-color:var(--brd)">Archive</button>`}
+        </div>
+      </div>
+      ${aiGrid}
+    </div>`;
+
+  const expanded = isExpanded ? `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
+      ${app.reqNum&&app.reqNum!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">req #:</span> ${esc(app.reqNum)}</div>`:''}
+      ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
+      ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${isGuest()?'<span class="redacted">'+esc(gaps)+'</span>':esc(gaps)}</div>`:''}
+      ${(app.actLog&&app.actLog.length) ? `
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--navy-border)">
+          <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
+          ${app.actLog.slice(-5).reverse().map(e=>`
+            <div style="display:flex;gap:8px;font-size:10px;color:var(--faint);margin-bottom:2px">
+              <span style="color:var(--muted);white-space:nowrap">${e.date||''}</span>
+              <span>${esc(e.note||'')}</span>
+            </div>`).join('')}
+        </div>` : ''}
+    </div>` : '';
+
+  return `<div style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid ${borderCol};background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
+    ${condensed}${expanded}
+  </div>`;
+}
+
 function renderTracker(el) {
   const HIDDEN_STAGES = ['Rejected','Ghosted'];
 
@@ -2074,49 +2188,7 @@ function renderTracker(el) {
         <div style="font-size:10px;color:var(--amber);letter-spacing:.09em;text-transform:uppercase;font-weight:600">⭐ High Priority (${topPriority.length}/10)</div>
         ${topPriority.length>=10 ? `<span style="font-size:11px;color:var(--red);font-weight:500">⚑ At limit</span>` : ''}
       </div>
-      ${topPriority.map(a => {
-        const isExp = state.appExpanded && state.appExpanded['top_'+a.id];
-        const borderCol = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[a.stage]||'var(--amber)';
-        const cardBg = STAGE_CARD_BG[a.stage]||'var(--card-default)';
-        const details = [a.salary&&pill(a.salary),a.location&&pill(a.location),fitPill(a)].filter(Boolean).join('');
-        const nextLine = [a.nextStep,a.nextDate].filter(s=>s&&s!=='—').map(esc).join(' → ');
-        const keyReqs = a.keyReqs&&a.keyReqs!=='—'?a.keyReqs:'';
-        const gaps = a.gaps||a.notes||'';
-        return `<div style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid var(--amber);background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
-          <div class="app-card-inner" style="display:flex;flex-direction:column;gap:8px">
-            <div style="flex:1;min-width:0">
-              <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
-                <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(a.company)}</span>
-                ${badge(a.stage,STAGE_COL[a.stage]||'amber')}
-              </div>
-              <div style="color:var(--muted);margin-bottom:5px;font-size:12px">${esc(a.role||'')}</div>
-              ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
-              ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px">→ ${nextLine}</div>`:''}
-            </div>
-            <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
-              ${sel('stg-top-'+a.id,STAGES,a.stage)}
-              <button onclick="setAppStage(${a.id},document.getElementById('stg-top-${a.id}').value)" style="font-size:11px">Save</button>
-              <button onclick="toggleHighPriority(${a.id})" title="Remove from high priority" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)">⭐</button>
-              <button onclick="openProfilePanel(${a.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Profile</button>
-              <button onclick="state.appEditing=${a.id};render('tracker')" style="font-size:11px">Edit</button>
-              <button onclick="toggleExpandTop(${a.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExp?'▴ Details':'▾ Details'}</button>
-            </div>
-          </div>
-          ${isExp && (keyReqs||gaps||(a.actLog&&a.actLog.length)) ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
-            ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
-            ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${esc(gaps)}</div>`:''}
-            ${(a.actLog&&a.actLog.length) ? `
-              <div style="padding-top:6px;border-top:1px solid var(--navy-border)">
-                <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
-                ${a.actLog.slice(-5).reverse().map(e=>`
-                  <div style="display:flex;gap:8px;font-size:10px;color:var(--faint);margin-bottom:2px">
-                    <span style="color:var(--muted);white-space:nowrap">${e.date||''}</span>
-                    <span>${esc(e.note||'')}</span>
-                  </div>`).join('')}
-              </div>` : ''}
-          </div>` : ''}
-        </div>`;
-      }).join('')}
+      ${topPriority.map(a => renderAppCard(a, true)).join('')}
     </div>` : '';
 
   // ── Unified filter row: All + stages with entries + category filters + Archived ──
@@ -2148,113 +2220,7 @@ function renderTracker(el) {
     </div>` : '';
 
   // ── Application cards ──────────────────────────────────────────────────────
-  const cards = list.map(app => {
-    if(state.appEditing===app.id) {
-      return `<div class="card" style="margin-bottom:8px;border-left:3px solid var(--amber)">
-        <div style="font-size:12px;font-weight:500;color:var(--amber);margin-bottom:10px">Editing: ${esc(app.company)}</div>
-        ${appFormHTML(`e-${app.id}`,app)}
-        <div class="row" style="margin-top:10px">
-          <button class="amber" onclick="saveEdit(${app.id})">Save changes</button>
-          <button onclick="state.appEditing=null;render('tracker')">Cancel</button>
-        </div>
-      </div>`;
-    }
-
-    const isExpanded   = state.appExpanded && state.appExpanded[app.id];
-    const borderCol    = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[app.stage]||'var(--brd2)';
-    const cardBg       = STAGE_CARD_BG[app.stage]||'var(--card-default)';
-
-    // Heat tag: saved role sitting >28 days
-    let heatTag = '';
-    if(app.stage === 'Saved' && app.savedAt) {
-      const daysSaved = Math.floor((Date.now() - new Date(app.savedAt).getTime()) / 86400000);
-      if(daysSaved >= 28) {
-        const heatCol = daysSaved >= 56 ? '#E85D3A' : 'var(--amber)';
-        const heatBg  = daysSaved >= 56 ? 'rgba(232,93,58,0.12)' : 'var(--amber-bg)';
-        const heatBrd = daysSaved >= 56 ? 'rgba(232,93,58,0.35)' : 'var(--amber-dim)';
-        heatTag = `<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:${heatBg};border:1px solid ${heatBrd};color:${heatCol};font-weight:600;white-space:nowrap">⏰ ${daysSaved}d saved</span>`;
-      }
-    }
-
-    const details      = [
-      app.salary && pill(esc(app.salary)),
-      app.location && pill(esc(app.location)),
-      app.fit && fitPill(app),
-      heatTag
-    ].filter(Boolean).join('');
-    const contactLine  = [app.contact,app.netContact].filter(s=>s&&s!=='—')
-      .map(s => isGuest() ? `<span class="redacted">${esc(s)}</span>` : esc(s)).join(' · ');
-    const nextLine     = isGuest()
-      ? [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(s=>`<span class="redacted">${esc(s)}</span>`).join(' → ')
-      : [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(esc).join(' → ');
-    const keyReqs      = app.keyReqs&&app.keyReqs!=='—'?app.keyReqs:'';
-    const gaps         = app.gaps||app.notes||'';
-    const netRel       = app.netRel&&app.netRel!=='—'?app.netRel:'';
-    const STAGE_CSS_COL = {Saved:'var(--teal)',Applied:'var(--blue)','Coffee / Networking':'var(--green)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)'};
-    const stageColor = STAGE_CSS_COL[app.stage] || 'var(--amber)';
-    const updatedLabel = app.updatedAt
-      ? `<span style="font-weight:600;color:var(--tx2)">${esc(app.stage)}</span> <span style="color:${stageColor}">${app.updatedAt.slice(0,10)}</span>`
-      : '';
-    const isHigh       = app.priority==='High';
-
-    const aiGrid = isGuest() ? '' : `
-      <div class="app-card-ai-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:0 0 auto;align-self:flex-start">
-        <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Company Profile</button>
-        <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Interview Prep</button>
-        <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Cover Letter Support</button>
-        <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Resume Bullet Builder</button>
-      </div>`;
-
-    const condensed = `
-      <div class="app-card-inner app-card-split" style="display:flex;gap:14px;align-items:flex-start">
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
-          <div style="flex:1;min-width:0">
-            <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
-              <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(app.company)}</span>
-              ${badge(app.stage,STAGE_COL[app.stage]||'amber')}
-            </div>
-            <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
-            ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
-            ${app.netContact&&app.netContact!=='—'
-              ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
-              : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
-            ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px;font-weight:500">→ ${nextLine}</div>`:''}
-            ${updatedLabel?`<div style="font-size:11px;margin-top:2px">${updatedLabel}</div>`:''}
-          </div>
-          <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
-            ${isGuest()
-              ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
-              : `${sel(`stg-${app.id}`,STAGES,app.stage)}
-              <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
-              <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
-              <button onclick="state.appEditing=${app.id};render('tracker')" style="font-size:11px">Edit</button>
-              <button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>
-              <button onclick="delApp(${app.id})" style="font-size:11px;color:var(--muted);border-color:var(--brd)">Archive</button>`}
-          </div>
-        </div>
-        ${aiGrid}
-      </div>`;
-
-    const expanded = isExpanded ? `
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
-        ${app.reqNum&&app.reqNum!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">req #:</span> ${esc(app.reqNum)}</div>`:''}
-        ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
-        ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${isGuest()?'<span class="redacted">'+esc(gaps)+'</span>':esc(gaps)}</div>`:''}
-        ${(app.actLog&&app.actLog.length) ? `
-          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--navy-border)">
-            <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
-            ${app.actLog.slice(-5).reverse().map(e=>`
-              <div style="display:flex;gap:8px;font-size:10px;color:var(--faint);margin-bottom:2px">
-                <span style="color:var(--muted);white-space:nowrap">${e.date||''}</span>
-                <span>${esc(e.note||'')}</span>
-              </div>`).join('')}
-          </div>` : ''}
-      </div>` : '';
-
-    return `<div style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid ${borderCol};background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
-      ${condensed}${expanded}
-    </div>`;
-  }).join('');
+  const cards = list.map(app => renderAppCard(app, false)).join('');
 
   const HIDDEN_STAGES_ALL = ['Rejected','Ghosted'];
   let totalApps    = state.apps.length;
@@ -2362,12 +2328,6 @@ function toggleHighPriority(id) {
 function toggleExpand(id) {
   if(!state.appExpanded) state.appExpanded={};
   state.appExpanded[id] = !state.appExpanded[id];
-  render('tracker');
-}
-
-function toggleExpandTop(id) {
-  if(!state.appExpanded) state.appExpanded={};
-  state.appExpanded['top_'+id] = !state.appExpanded['top_'+id];
   render('tracker');
 }
 
