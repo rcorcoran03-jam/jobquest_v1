@@ -593,6 +593,10 @@
     /* Actions row: full width on mobile */
     .app-card-actions { width: 100% !important; }
     .app-card-actions select { max-width: 100% !important; }
+    /* App card: stack the AI action grid below the main content on mobile
+       instead of squeezing it into a narrow right column */
+    .app-card-split { flex-direction: column !important; }
+    .app-card-ai-grid { width: 100% !important; }
     /* Job boards grid: stack to single column on mobile */
     .job-boards-grid { grid-template-columns: 1fr !important; }
 
@@ -2193,33 +2197,42 @@ function renderTracker(el) {
       : '';
     const isHigh       = app.priority==='High';
 
+    const aiGrid = isGuest() ? '' : `
+      <div class="app-card-ai-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:0 0 auto;align-self:flex-start">
+        <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Company Profile</button>
+        <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Interview Prep</button>
+        <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Cover Letter Support</button>
+        <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Resume Bullet Builder</button>
+      </div>`;
+
     const condensed = `
-      <div class="app-card-inner" style="display:flex;flex-direction:column;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
-            <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(app.company)}</span>
-            ${badge(app.stage,STAGE_COL[app.stage]||'amber')}
+      <div class="app-card-inner app-card-split" style="display:flex;gap:14px;align-items:flex-start">
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
+              <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(app.company)}</span>
+              ${badge(app.stage,STAGE_COL[app.stage]||'amber')}
+            </div>
+            <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
+            ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
+            ${app.netContact&&app.netContact!=='—'
+              ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
+              : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
+            ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px;font-weight:500">→ ${nextLine}</div>`:''}
+            ${updatedLabel?`<div style="font-size:11px;margin-top:2px">${updatedLabel}</div>`:''}
           </div>
-          <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
-          ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
-          ${app.netContact&&app.netContact!=='—'
-            ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
-            : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
-          ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px;font-weight:500">→ ${nextLine}</div>`:''}
-          ${updatedLabel?`<div style="font-size:11px;margin-top:2px">${updatedLabel}</div>`:''}
+          <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
+            ${isGuest()
+              ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
+              : `${sel(`stg-${app.id}`,STAGES,app.stage)}
+              <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
+              <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
+              <button onclick="state.appEditing=${app.id};render('tracker')" style="font-size:11px">Edit</button>
+              <button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>
+              <button onclick="delApp(${app.id})" style="font-size:11px;color:var(--muted);border-color:var(--brd)">Archive</button>`}
+          </div>
         </div>
-        <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
-          ${isGuest()
-            ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
-            : `${sel(`stg-${app.id}`,STAGES,app.stage)}
-            <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
-            <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
-            <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Profile</button>
-            <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Prep</button>
-            <button onclick="state.appEditing=${app.id};render('tracker')" style="font-size:11px">Edit</button>
-            <button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>
-            <button onclick="delApp(${app.id})" style="font-size:11px;color:var(--muted);border-color:var(--brd)">Archive</button>`}
-        </div>
+        ${aiGrid}
       </div>`;
 
     const expanded = isExpanded ? `
@@ -2227,10 +2240,6 @@ function renderTracker(el) {
         ${app.reqNum&&app.reqNum!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">req #:</span> ${esc(app.reqNum)}</div>`:''}
         ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
         ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${isGuest()?'<span class="redacted">'+esc(gaps)+'</span>':esc(gaps)}</div>`:''}
-        ${isGuest() ? '' : `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-          <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Cover Letter</button>
-          <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Resume Bullets</button>
-        </div>`}
         ${(app.actLog&&app.actLog.length) ? `
           <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--navy-border)">
             <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
