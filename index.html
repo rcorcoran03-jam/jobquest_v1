@@ -746,6 +746,13 @@ function getProfile() {
 function saveProfile(p) { localStorage.setItem(PROFILE_KEY, JSON.stringify({...EMPTY_PROFILE, ...p})); }
 function hasProfile() { return !!getProfile(); }
 
+// True when this device has real data (a profile) and/or an active cloud
+// connection that sample/demo data could clobber. loadExampleData() is
+// reachable even for existing users via openSetupGuide()'s "guide mode",
+// which reopens the wizard's Welcome screen regardless of profile state —
+// this guard is the actual backstop against overwriting a live setup.
+function hasRealDataAtRisk() { return hasProfile() || !!(state.ghToken && state.ghGistId); }
+
 function salaryStr() {
   const p = getProfile() || EMPTY_PROFILE;
   const k = v => { const n = String(v).replace(/[^0-9]/g,''); return n ? '$'+n+'K' : ''; };
@@ -5501,6 +5508,9 @@ function renderSetupWizard() {
         <button onclick="saveWizardProfile()" class="amber" style="font-size:13px;padding:10px 22px;font-weight:600">${editing ? 'Save changes' : 'Save & continue →'}</button>
         ${editing
           ? `<button onclick="closeSetupWizard();render(state.tab||'board')" style="font-size:12px">Cancel</button>`
+          : hasRealDataAtRisk()
+          ? `<span style="font-size:11px;color:var(--faint);font-style:italic">Sample data is unavailable here — you already have real data on this device.</span>
+             <button onclick="closeSetupWizard();render(state.tab||'board')" style="font-size:12px">Close</button>`
           : `<button onclick="loadExampleData()" style="font-size:12px;color:var(--blue);border-color:var(--blue);background:var(--blue-bg)">Load example data</button>
              <button onclick="skipSetupForNow()" style="font-size:12px;color:var(--faint)">Skip for now →</button>`}
         <span style="font-size:11px;color:var(--faint)">Name and at least one target title are required to save.</span>
@@ -5522,7 +5532,7 @@ function renderSetupWizard() {
             <span style="display:inline-block;width:16px;height:1px;background:var(--rose-deep)"></span>your personal job-search OS
           </div>
           <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:42px;font-weight:400;font-style:italic;color:#F4F8FC;margin:0;line-height:1.08;letter-spacing:-.02em;max-width:600px">Run your whole job search in one place.</h1>
-          <button onclick="startDemoTour()" title="Open a fully populated demo — nothing saved" style="position:absolute;bottom:14px;right:16px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--jade);background:var(--jade-pale);border:1px solid var(--jade-border);border-radius:999px;padding:4px 11px;cursor:pointer;z-index:2">▶ view live demo</button>
+          ${!hasRealDataAtRisk() ? `<button onclick="startDemoTour()" title="Open a fully populated demo — nothing saved" style="position:absolute;bottom:14px;right:16px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--jade);background:var(--jade-pale);border:1px solid var(--jade-border);border-radius:999px;padding:4px 11px;cursor:pointer;z-index:2">▶ view live demo</button>` : ''}
         </div>
         <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:24px;color:var(--tx);line-height:1.2;margin:0 0 14px;padding-left:20px;max-width:680px">Built by you, for you, <span style="color:var(--gold)">with Claude.</span></div>
         <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;padding-left:20px;max-width:680px">
@@ -5553,8 +5563,8 @@ function renderSetupWizard() {
 
         <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
           <button onclick="wzGotoSetup()" class="amber" style="font-size:14px;padding:12px 26px;font-weight:600">Get started →</button>
-          <button onclick="startDemoTour()" style="font-size:13px;padding:11px 20px;font-weight:600;color:var(--sky-blue-light);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">▶ Take a live tour</button>
-          <span style="font-size:12px;color:var(--faint);flex-basis:100%">Build your own, or take the tour first — explore a fully populated app with sample roles, contacts, and tools. No signup, nothing saved.</span>
+          ${!hasRealDataAtRisk() ? `<button onclick="startDemoTour()" style="font-size:13px;padding:11px 20px;font-weight:600;color:var(--sky-blue-light);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">▶ Take a live tour</button>
+          <span style="font-size:12px;color:var(--faint);flex-basis:100%">Build your own, or take the tour first — explore a fully populated app with sample roles, contacts, and tools. No signup, nothing saved.</span>` : `<span style="font-size:12px;color:var(--faint);flex-basis:100%">You already have real data on this device, so the live tour is hidden here to protect it — open this app in a private/incognito window to preview the demo safely.</span>`}
         </div>
       </div>`;
     wz.style.display = 'block';
@@ -5728,6 +5738,10 @@ function skipSetupForNow() {
 }
 
 function loadExampleData() {
+  if (hasRealDataAtRisk()) {
+    alert("You already have a real profile and/or cloud sync connected on this device. Loading sample data here would risk overwriting your live data once it syncs.\n\nTo preview the demo safely, open this app in a private/incognito browser window instead.");
+    return false;
+  }
   const EXAMPLE_PROFILE = {
     name:'Dario Naharis',
     titles:'Senior Product Manager / Sr. Manager, Product',
@@ -5755,6 +5769,7 @@ function loadExampleData() {
   localStorage.setItem('example_loaded', '1');   // lets Sync offer "Clear sample data"
   closeSetupWizard();
   initApp();
+  return true;
 }
 
 // Remove the seeded sample dataset (profile + apps + contacts) loaded via
@@ -5778,7 +5793,7 @@ function clearSampleData() {
 // demo and does NOT set setup_skipped — so exiting drops the user straight back
 // to the welcome screen with nothing persisted as "their" setup.
 function startDemoTour() {
-  loadExampleData();                       // seeds profile + apps + contacts, boots app
+  if (!loadExampleData()) return;          // blocked — real data/cloud already on this device
   localStorage.setItem('jq_demo', '1');    // mark this as a tour, not a real setup
   localStorage.removeItem('setup_skipped');// don't treat the tour as "skipped setup"
   localStorage.removeItem('setup_banner_dismissed');
