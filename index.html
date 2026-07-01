@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.1  (polish: welcome headline lifted     ║
-║  to DM Serif Display; body copy left-aligned with card rail)                 ║
+║  JOBQUEST — Starter Edition  ·  v1.3.7  (applications: Cover Letter +        ║
+║  Resume Bullet AI builders)                                                  ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -137,6 +137,43 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_7  Applications tab: Cover Letter + Resume Bullet AI builders. (1)      ║
+║          Data capture: saveAnalyzedCard() now persists the full pasted JD    ║
+║          as app.jdText (previously discarded); readWizardInputs() now        ║
+║          persists résumé paste as profile.resumeText. New optional           ║
+║          profile.coverLetterSample for voice-matching. (2) Generalized the   ║
+║          Company Profile streaming panel (openProfilePanel/buildProfile)     ║
+║          into a shared runBuilderPanel()/streamIntoBuilderPanel() pair,      ║
+║          reused by two new builders. (3) Cover Letter Builder                ║
+║          (openCoverLetterPanel) generates a scannable outline of points to   ║
+║          hit, not a full letter — optionally matches the user's own past     ║
+║          writing voice if a sample is saved. (4) Resume Bullet Builder       ║
+║          (openResumeBulletPanel) generates 3-5 tailored bullets strictly     ║
+║          from the user's real résumé text, no fabricated metrics. (5) Both   ║
+║          fall back to an inline paste screen (in the same panel shell) when  ║
+║          jdText/resumeText is missing, and persist what's pasted so it's a   ║
+║          one-time cost per app/profile. (6) New gold "✦ Cover Letter" /      ║
+║          "✦ Resume Bullets" buttons in each app card's expanded section.     ║
+║  v1_3_6  Networking card/form UX + color-system pass. (1) "Contact           ║
+║          Initiated" date field now labeled with a hint that it drives        ║
+║          warmth, not the activity log. (2) Activity-log entries: tiny        ║
+║          pencil icon replaced with a rose "edit" link; the edit modal now    ║
+║          lets you change the logged activity type, not just the note.        ║
+║          (3) "edit contact" moved from the Activity sub-header to right      ║
+║          below the expand/collapse toggle, shown only when expanded.         ║
+║          (4) Color system: gold now means "Claude prompt trigger" (Ask       ║
+║          button recolored gold w/ brighter outline), rose now means "needs   ║
+║          user input" (empty-state "+set" button recolored rose). (5) Cold    ║
+║          contacts: base dim raised 0.62→0.82, and dimming is now skipped     ║
+║          entirely once a cold card is expanded, so the activity log —       ║
+║          where the user should act — always renders at full opacity.        ║
+║  v1_3_5  Networking relationship tag. (1) Added "Referral" as a relationship   ║
+║          option (REL_COL) alongside Connection/Alumni/Recruiter/Cold           ║
+║          Outreach, for contacts who gave a warm intro/referral — teal to      ║
+║          echo the Warm heat pill. (2) Contact-form relationship dropdown now   ║
+║          offers Referral. (3) The relationship pill on each contact card is   ║
+║          now sized to match the Warm/Nudge/Cold heat pill (10px, 1px 7px      ║
+║          padding, 8px radius) instead of the larger global .badge size.       ║
 ║  v1_3_4  HQ board launcher condensed + restyled. (1) QUICK_LAUNCHES reduced     ║
 ║          from 4 generic groups to 2: Primary search (LinkedIn/Indeed/           ║
 ║          Glassdoor) and Parallel path (Wellfound/We Work Remotely/Built In/     ║
@@ -178,9 +215,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.4">
+<meta name="jq-version" content="1.3.7">
 <meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-06-30">
+<meta name="jq-date" content="2026-07-01">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -543,6 +580,12 @@
     /* Job boards grid: stack to single column on mobile */
     .job-boards-grid { grid-template-columns: 1fr !important; }
 
+    /* Sync page import/export cards: stack to single column on mobile — the
+       2-col grid's items default to min-width:auto, which was letting long
+       content (file inputs, header rows) force the grid wider than the
+       viewport and bleed off the right edge. */
+    .sync-io-grid { grid-template-columns: 1fr !important; }
+
     /* Networking cards: stack Who · Last · Next · Actions vertically on a phone */
     .net-row { flex-wrap: wrap; }
     .net-row > div { flex: 1 1 100% !important; width: 100% !important; border-left: none !important; border-right: none !important; padding-left: 0 !important; padding-right: 0 !important; }
@@ -677,7 +720,8 @@ const PROFILE_KEY = 'jq_profile';
 const EMPTY_PROFILE = {
   name:'', titles:'', focus:'', salaryMin:'', salaryMax:'', location:'',
   workMode:'', noReloc:'', yearsExp:'', background:'', specialties:'',
-  education:'', idealSignals:'', redFlagSignals:'', honestGaps:'', portfolioUrl:''
+  education:'', idealSignals:'', redFlagSignals:'', honestGaps:'', portfolioUrl:'',
+  resumeText:'', coverLetterSample:'', coverLetterSampleAsked:false
 };
 function getProfile() {
   try { const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); return p ? {...EMPTY_PROFILE, ...p} : null; }
@@ -766,7 +810,7 @@ const POM_TASKS = [
   'Follow up on an application',
 ];
 
-const REL_COL = {Connection:'amber',Alumni:'blue','Cold Outreach':'purple',Recruiter:'green'};
+const REL_COL = {Connection:'amber',Alumni:'blue','Cold Outreach':'purple',Recruiter:'green',Referral:'teal'};
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 
@@ -812,7 +856,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.4';
+const APP_VERSION = '1.3.7';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1068,7 +1112,7 @@ function render(tab) {
 const h = (tag, attrs='', inner='') => `<${tag} ${attrs}>${inner}</${tag}>`;
 const div = (cls, inner) => `<div class="${cls}">${inner}</div>`;
 const secHead = (title, subtitle='', eyebrow='') => `<div class="sec-head">${eyebrow?`<div class="sec-eyebrow">${eyebrow}</div>`:''}<h1>${title}</h1>${subtitle?`<div style="font-family:'DM Serif Display',Georgia,serif;font-size:14px;font-style:italic;color:var(--sky-blue-light);margin-top:2px">${subtitle}</div>`:''}<div class="bar"></div></div>`;
-const badge = (label, color) => `<span class="badge ${color}">${label}</span>`;
+const badge = (label, color, extraStyle='') => `<span class="badge ${color}"${extraStyle?` style="${extraStyle}"`:''}>${label}</span>`;
 const pill = label => `<span class="pill">${esc(label)}</span>`;
 const fitPill = (app) => {
   if (!app.fit) return '';
@@ -2103,6 +2147,10 @@ function renderTracker(el) {
         ${app.reqNum&&app.reqNum!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">req #:</span> ${esc(app.reqNum)}</div>`:''}
         ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
         ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${isGuest()?'<span class="redacted">'+esc(gaps)+'</span>':esc(gaps)}</div>`:''}
+        ${isGuest() ? '' : `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Cover Letter</button>
+          <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Resume Bullets</button>
+        </div>`}
         ${(app.actLog&&app.actLog.length) ? `
           <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--navy-border)">
             <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
@@ -2293,26 +2341,57 @@ function copyPrepPrompt(id) {
   setTimeout(()=>t.remove(),2500);
 }
 
-// ── COMPANY PROFILE PANEL ─────────────────────────────────────────────────────
+// ── AI BUILDER PANEL (shared by Company Profile, Cover Letter, Resume Bullets) ─
+
+const BUILDER_TEXTAREA_STYLE = 'width:100%;font-size:12px;padding:8px;border:1px solid var(--brd2);border-radius:6px;background:var(--surf2);color:var(--tx);resize:vertical;box-sizing:border-box;margin-bottom:10px';
 
 function openProfilePanel(id) {
   const app = state.apps.find(a=>a.id===id); if(!app) return;
-  state.profilePanelApp = app;
-  state.profilePanelText = '';
-
-  document.getElementById('profile-panel-title').textContent = app.company;
-  document.getElementById('profile-panel-sub').textContent = app.role || '';
-  document.getElementById('profile-copy-btn').style.display = 'none';
-  document.getElementById('profile-panel-content').innerHTML =
-    `<div class="profile-loading"><span class="spin"></span>Researching ${esc(app.company)}…</div>`;
-  document.getElementById('profile-panel').classList.add('open');
-  document.getElementById('profile-overlay').classList.add('open');
-  buildProfile(app);
+  runBuilderPanel(app.company, app.role||'', `Researching ${esc(app.company)}…`, () => buildProfile(app));
 }
 
 function closeProfilePanel() {
   document.getElementById('profile-panel').classList.remove('open');
   document.getElementById('profile-overlay').classList.remove('open');
+}
+
+// Opens the shared panel in its loading state and kicks off genFn(), which is
+// expected to stream its result in via streamIntoBuilderPanel() or render its
+// own follow-up screen (e.g. a paste-fallback prompt).
+function runBuilderPanel(title, sub, loadingLabel, genFn) {
+  state.profilePanelText = '';
+  document.getElementById('profile-panel-title').textContent = title;
+  document.getElementById('profile-panel-sub').textContent = sub;
+  document.getElementById('profile-copy-btn').style.display = 'none';
+  document.getElementById('profile-panel-content').innerHTML =
+    `<div class="profile-loading"><span class="spin"></span>${loadingLabel}</div>`;
+  document.getElementById('profile-panel').classList.add('open');
+  document.getElementById('profile-overlay').classList.add('open');
+  genFn();
+}
+
+function renderBuilderMarkdown(t) {
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--tx)">$1</strong>')
+    .replace(/^(#{1,3}) (.+)$/gm, (_,h,txt) => `<div class="profile-section-head" style="margin-top:${h.length===1?'0':'14px'}">${txt}</div>`)
+    .replace(/^[-•] (.+)$/gm, '<div style="padding:2px 0 2px 10px;color:var(--muted);font-size:12px;line-height:1.7;border-left:2px solid var(--brd);margin:2px 0">$1</div>')
+    .split('\n').map(line => line.startsWith('<')||!line.trim() ? line : `<p style="font-size:12px;color:var(--muted);line-height:1.7;margin:3px 0">${line}</p>`).join('\n');
+}
+
+async function streamIntoBuilderPanel(prompt, failLabel) {
+  try {
+    await claudeStream(prompt, t => {
+      state.profilePanelText = t;
+      const content = document.getElementById('profile-panel-content');
+      if(!content) return;
+      content.innerHTML = renderBuilderMarkdown(t);
+    });
+    document.getElementById('profile-copy-btn').style.display = 'block';
+  } catch(e) {
+    const content = document.getElementById('profile-panel-content');
+    if(content) content.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px">${esc(failLabel)} failed: ${esc(e.message)}<br><br>Make sure your Cloudflare deployment is live with <code>ANTHROPIC_API_KEY</code> set in its environment variables.</div>`;
+  }
 }
 
 async function buildProfile(app) {
@@ -2337,30 +2416,152 @@ Use web search to research this company. Produce a concise, scannable profile:
 
 Be specific throughout. If PE-backed, flag what that means strategically. Flag if the company has had recent layoffs or funding challenges.`;
 
-  try {
-    await claudeStream(prompt, t => {
-      state.profilePanelText = t;
-      const content = document.getElementById('profile-panel-content');
-      if(!content) return;
-      const html = t
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--tx)">$1</strong>')
-        .replace(/^(#{1,3}) (.+)$/gm, (_,h,txt) => `<div class="profile-section-head" style="margin-top:${h.length===1?'0':'14px'}">${txt}</div>`)
-        .replace(/^[-•] (.+)$/gm, '<div style="padding:2px 0 2px 10px;color:var(--muted);font-size:12px;line-height:1.7;border-left:2px solid var(--brd);margin:2px 0">$1</div>')
-        .split('\n').map(line => line.startsWith('<')||!line.trim() ? line : `<p style="font-size:12px;color:var(--muted);line-height:1.7;margin:3px 0">${line}</p>`).join('\n');
-      content.innerHTML = html;
-    });
-    document.getElementById('profile-copy-btn').style.display = 'block';
-  } catch(e) {
-    const content = document.getElementById('profile-panel-content');
-    if(content) content.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px">Profile generation failed: ${esc(e.message)}<br><br>Make sure your Cloudflare deployment is live with <code>ANTHROPIC_API_KEY</code> set in its environment variables.</div>`;
-  }
+  await streamIntoBuilderPanel(prompt, 'Profile generation');
 }
 
 function copyProfile() {
   navigator.clipboard?.writeText(state.profilePanelText);
   const btn = document.getElementById('profile-copy-btn');
   if(btn){ btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy',1500); }
+}
+
+// ── COVER LETTER BUILDER ──────────────────────────────────────────────────────
+
+function openCoverLetterPanel(id) {
+  const app = state.apps.find(a=>a.id===id); if(!app) return;
+  if (!app.jdText) return promptForJdText(app, 'coverLetter');
+  const p = getProfile();
+  if (!p?.coverLetterSample && !p?.coverLetterSampleAsked) return promptForCoverLetterSample(id);
+  runBuilderPanel(`Cover letter — ${app.company}`, app.role||'', 'Building talking points…', () => buildCoverLetterPoints(app));
+}
+
+async function buildCoverLetterPoints(app) {
+  const p = getProfile();
+  const styleNote = p?.coverLetterSample
+    ? `\n\nWRITING VOICE SAMPLE (match this tone, sentence rhythm, and word choice — do NOT reuse its content or claims):\n${p.coverLetterSample}`
+    : '';
+  const prompt = `You are a career coach helping ${profileName()} plan a cover letter for this role. Candidate background: ${profileBackground()}
+
+Company: ${app.company}
+Role: ${app.role || ''}
+Context: ${app.gaps || app.notes || ''}
+
+JOB DESCRIPTION:
+${app.jdText}
+${styleNote}
+
+Do NOT write a full cover letter. Produce a scannable outline of what to hit:
+
+**🎯 Opening hook** — 1-2 angle options to open with, tied to this specific company/role
+**🗣️ Main points** — 3-4 specific points bridging the candidate's background to this JD's actual language and requirements (quote or paraphrase specific JD phrases where useful)
+**⚡ What to lead with** — given the role and stage, which point matters most and why
+**✍️ Closing note** — how to close without sounding generic
+
+Be specific — reference concrete experience and concrete JD requirements, not generic advice.`;
+
+  await streamIntoBuilderPanel(prompt, 'Cover letter points');
+}
+
+// ── RESUME BULLET BUILDER ─────────────────────────────────────────────────────
+
+function openResumeBulletPanel(id) {
+  const app = state.apps.find(a=>a.id===id); if(!app) return;
+  if (!app.jdText) return promptForJdText(app, 'resumeBullets');
+  if (!getProfile()?.resumeText) return promptForResumeText(id);
+  runBuilderPanel(`Resume bullets — ${app.company}`, app.role||'', 'Drafting bullets…', () => buildResumeBullets(app));
+}
+
+async function buildResumeBullets(app) {
+  const p = getProfile();
+  const prompt = `You are a resume writer helping ${profileName()} tailor bullets for this specific role. Only use accomplishments that appear in the résumé text below — do not invent metrics, titles, or achievements that aren't there.
+
+Company: ${app.company}
+Role: ${app.role || ''}
+
+JOB DESCRIPTION:
+${app.jdText}
+
+CANDIDATE'S RÉSUMÉ:
+${p.resumeText}
+
+Produce 3-5 tailored, quantified resume bullets for this application:
+- Pull directly from real accomplishments in the résumé above
+- Reframe language and keywords to match this JD only where the underlying experience genuinely supports it
+- Keep any numbers/metrics exactly as stated in the résumé — never fabricate or round up
+- Standard resume bullet format, one per line, starting with a strong action verb
+
+If the résumé doesn't support a strong claim for a requirement in the JD, skip it rather than stretching the truth.`;
+
+  await streamIntoBuilderPanel(prompt, 'Resume bullets');
+}
+
+// ── SHARED PASTE-FALLBACK SCREENS (rendered inside the same panel shell) ──────
+
+function promptForJdText(app, kind) {
+  document.getElementById('profile-panel-title').textContent = app.company;
+  document.getElementById('profile-panel-sub').textContent = app.role || '';
+  document.getElementById('profile-copy-btn').style.display = 'none';
+  document.getElementById('profile-panel-content').innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Paste this role's job description — it'll be saved to the card so you won't need to paste it again.</div>
+    <textarea id="builder-jd-paste" rows="8" placeholder="Paste job description text…" style="${BUILDER_TEXTAREA_STYLE}"></textarea>
+    <button class="amber" onclick="saveJdTextAndContinue(${app.id},'${kind}')" style="width:100%;padding:8px 0;font-size:12px">Save &amp; continue</button>
+  `;
+  document.getElementById('profile-panel').classList.add('open');
+  document.getElementById('profile-overlay').classList.add('open');
+}
+
+function saveJdTextAndContinue(id, kind) {
+  const text = (document.getElementById('builder-jd-paste')?.value || '').trim();
+  if (!text) { showToast('Paste the job description first.'); return; }
+  const idx = state.apps.findIndex(a=>a.id===id); if(idx===-1) return;
+  state.apps[idx].jdText = text;
+  save();
+  if (kind === 'coverLetter') openCoverLetterPanel(id); else openResumeBulletPanel(id);
+}
+
+function promptForResumeText(appId) {
+  document.getElementById('profile-panel-title').textContent = 'Add your résumé';
+  document.getElementById('profile-panel-sub').textContent = 'Used to draft honest, tailored bullets — saved to your profile for reuse.';
+  document.getElementById('profile-copy-btn').style.display = 'none';
+  document.getElementById('profile-panel-content').innerHTML = `
+    <textarea id="builder-resume-paste" rows="10" placeholder="Paste résumé text…" style="${BUILDER_TEXTAREA_STYLE}"></textarea>
+    <button class="amber" onclick="saveResumeTextAndContinue(${appId})" style="width:100%;padding:8px 0;font-size:12px">Save &amp; continue</button>
+  `;
+  document.getElementById('profile-panel').classList.add('open');
+  document.getElementById('profile-overlay').classList.add('open');
+}
+
+function saveResumeTextAndContinue(appId) {
+  const text = (document.getElementById('builder-resume-paste')?.value || '').trim();
+  if (!text) { showToast('Paste your résumé first.'); return; }
+  saveProfile({...getProfile(), resumeText: text});
+  openResumeBulletPanel(appId);
+}
+
+function promptForCoverLetterSample(appId) {
+  document.getElementById('profile-panel-title').textContent = 'Match your writing voice? (optional)';
+  document.getElementById('profile-panel-sub').textContent = "Paste a cover letter you're happy with — we'll match its tone, not its content. Saved for reuse.";
+  document.getElementById('profile-copy-btn').style.display = 'none';
+  document.getElementById('profile-panel-content').innerHTML = `
+    <textarea id="builder-cl-sample-paste" rows="8" placeholder="Paste a past cover letter…" style="${BUILDER_TEXTAREA_STYLE}"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="amber" onclick="saveCoverLetterSampleAndContinue(${appId})" style="flex:1;padding:8px 0;font-size:12px">Save &amp; continue</button>
+      <button onclick="skipCoverLetterSample(${appId})" style="font-size:12px">Skip</button>
+    </div>
+  `;
+  document.getElementById('profile-panel').classList.add('open');
+  document.getElementById('profile-overlay').classList.add('open');
+}
+
+function saveCoverLetterSampleAndContinue(appId) {
+  const text = (document.getElementById('builder-cl-sample-paste')?.value || '').trim();
+  saveProfile({...getProfile(), coverLetterSample: text, coverLetterSampleAsked: true});
+  openCoverLetterPanel(appId);
+}
+
+function skipCoverLetterSample(appId) {
+  saveProfile({...getProfile(), coverLetterSampleAsked: true});
+  openCoverLetterPanel(appId);
 }
 
 
@@ -3324,9 +3525,13 @@ function renderNetwork(el) {
         ${inp(`${prefix}-co`,     c.company||'', 'Company')}
         ${inp(`${prefix}-role`,   c.role||'',    'Their role')}
         ${inp(`${prefix}-source`, c.source||'',  'Referral source (optional)')}
-        ${sel(`${prefix}-rel`,    ['Connection','Alumni','Recruiter','Cold Outreach'], c.rel||'Connection')}
-        <input id="${prefix}-last" type="date" value="${esc(c.last||'')}" style="width:100%">
+        ${sel(`${prefix}-rel`,    ['Connection','Referral','Alumni','Recruiter','Cold Outreach'], c.rel||'Connection')}
+        <div>
+          <div style="font-size:9px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Contact Initiated</div>
+          <input id="${prefix}-last" type="date" value="${esc(c.last||'')}" style="width:100%">
+        </div>
       </div>
+      <div style="font-size:10px;color:var(--faint);margin:-4px 0 8px;font-style:italic">Sets the contact's warmth clock — doesn't change the activity log.</div>
       ${inp(`${prefix}-notes`, c.notes||'', 'Notes — context, how you know them')}
       <div style="font-size:10px;color:var(--amber);letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin:10px 0 6px">Next action</div>
       <div class="g2" style="margin-bottom:8px">
@@ -3400,7 +3605,7 @@ function renderNetwork(el) {
         ${isGuest()?'':(nextOverdue?`<span style="font-size:9px;color:var(--rose)">⚠ ${nextDays}d overdue</span>`:nextSoon?`<span style="font-size:9px;color:var(--amber)">${nextDays===0?'today':'in '+(-nextDays)+'d'}</span>`:'')}
         ${c.nextNote&&!isGuest()?`<span style="font-size:10px;color:var(--faint);line-height:1.3">${esc(c.nextNote)}</span>`:(c.nextNote&&isGuest()?`<span class="redacted" style="font-size:10px">${esc(c.nextNote)}</span>`:'')}
         ${isGuest()?'':`<button onclick="clearNextAction(${c.id})" style="font-size:9px;color:var(--faint);background:none;border:none;padding:0;text-align:left;cursor:pointer;text-decoration:underline">clear</button>`}
-      ` : (isGuest()?`<span style="font-size:10px;color:var(--faint)">—</span>`:`<button onclick="openActivityEditor(${c.id})" style="font-size:10px;color:var(--amber);background:var(--gold-pale);border:1px solid var(--gold-border);border-radius:5px;padding:3px 0;text-align:center">+ set</button>`)}
+      ` : (isGuest()?`<span style="font-size:10px;color:var(--faint)">—</span>`:`<button onclick="openActivityEditor(${c.id})" style="font-size:10px;color:var(--rose);background:var(--rose-pale);border:1px solid var(--rose-border);border-radius:5px;padding:3px 0;text-align:center">+ set</button>`)}
     </div>`;
 
     // Activity log — condensed rows, pencil edit per entry
@@ -3411,7 +3616,7 @@ function renderNetwork(el) {
         <span style="font-size:11px;color:${at.col};flex-shrink:0">${at.label}</span>
         ${entry.note ? `<span style="font-size:11px;color:var(--faint);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"> — ${esc(entry.note)}</span>` : `<span style="flex:1"></span>`}
         <span style="font-size:10px;color:var(--faint);flex-shrink:0;white-space:nowrap">${fmtDate(entry.date)}</span>
-        ${isGuest()?'':`<button onclick="openNoteEdit(${c.id},${i})" style="font-size:10px;color:var(--faint);background:none;border:none;padding:0 0 0 2px;cursor:pointer;flex-shrink:0" title="Edit note">✏</button>`}
+        ${isGuest()?'':`<button onclick="openNoteEdit(${c.id},${i})" style="font-size:10px;color:var(--rose);background:none;border:none;padding:0 0 0 6px;cursor:pointer;flex-shrink:0;text-decoration:underline" title="Edit this activity">edit</button>`}
       </div>`;
     }).join('');
 
@@ -3427,13 +3632,12 @@ function renderNetwork(el) {
         <div style="padding:8px 0;border-top:1px solid var(--brd)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:9px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase">Activity</div>
-            ${isGuest()?'':`<button onclick="state.netEditing=${c.id};state.netShowAdd=false;render('network')" style="font-size:10px;color:var(--faint);background:none;border:none;padding:0;cursor:pointer">edit contact</button>`}
           </div>
           <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:3px;margin-bottom:6px" onclick="event.stopPropagation()">
             <button onclick="openActivityEditor(${c.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale);padding:5px 12px;font-weight:600;border-radius:6px;white-space:nowrap">+ Log</button>
             <button onclick="copyNetPrompt('nudge','${c.id}')" class="tag" style="font-size:10px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale);padding:4px 4px;text-align:center;border-radius:20px">Nudge</button>
             <button onclick="copyNetPrompt('update','${c.id}')" class="tag" style="font-size:10px;padding:4px 4px;text-align:center;border-radius:20px">Update</button>
-            <button onclick="copyNetPrompt('referral','${c.id}')" class="tag" style="font-size:10px;color:var(--rose);border-color:var(--rose-border);background:var(--rose-pale);padding:4px 4px;text-align:center;border-radius:20px">Ask</button>
+            <button onclick="copyNetPrompt('referral','${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 4px;text-align:center;border-radius:20px">Ask</button>
           </div>
           ${actLog || `<div style="font-size:11px;color:var(--faint);font-style:italic">No activity yet.</div>`}
         </div>
@@ -3441,19 +3645,20 @@ function renderNetwork(el) {
       </div>` : '';
 
 
-    return `<div class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold?'0.62':'1'}">
+    return `<div class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
       <div class="net-row" style="display:flex;gap:0;align-items:stretch">
         <!-- LEFT: who -->\
         <div style="flex:1;min-width:0;padding-right:10px;cursor:pointer" onclick="state.netExpanded=state.netExpanded||{};state.netExpanded[${c.id}]=!state.netExpanded[${c.id}];render('network')">
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:3px">
             <span style="font-size:13px;font-weight:600;color:var(--tx)">${esc(c.name)}</span>
             ${heatBadge}
-            ${badge(c.rel, REL_COL[c.rel]||'blue')}
+            ${badge(c.rel, REL_COL[c.rel]||'blue', 'padding:1px 7px;font-size:10px;border-radius:8px;font-weight:500')}
             <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'star')" title="${c.star?'Remove High Priority':'Mark High Priority'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.star?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.star?'1':'0.25'}'">⭐</button>
             <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'champion')" title="${c.champion?'Remove Champion':'Mark as Champion'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.champion?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.champion?'1':'0.25'}'">🏆</button>
           </div>
           <div style="color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${[c.role,c.company].filter(Boolean).map(esc).join(' · ')}</div>
           <div style="margin-top:4px;font-size:11px;color:var(--sky-blue);font-weight:500">${isExpanded?'▲ collapse':'▼ expand'}</div>
+          ${isExpanded && !isGuest() ? `<button onclick="event.stopPropagation();state.netEditing=${c.id};state.netShowAdd=false;render('network')" style="margin-top:4px;font-size:10px;color:var(--faint);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline">edit contact</button>` : ''}
         </div>
         <!-- MIDDLE: last contact -->
         ${midCol}
@@ -3627,7 +3832,8 @@ function openNoteEdit(contactId, entryIdx) {
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px';
   m.innerHTML = `
     <div style="background:var(--surf);border:1px solid var(--brd2);border-radius:12px;width:100%;max-width:420px;padding:22px;position:relative">
-      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:12px">Edit note</div>
+      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:12px">Edit activity</div>
+      <div style="margin-bottom:8px">${sel('note-edit-type', ACTIVITY_TYPES.map(a=>({v:a.key,l:`${a.icon} ${a.label}`})), entry.type||'')}</div>
       ${ta('note-edit-field', entry.note||'', 'What happened?', 3)}
       <div class="row" style="margin-top:12px">
         <button style="background:var(--sky-blue);color:#fff;border-color:var(--sky-blue)" onclick="saveNoteEdit(${contactId},${entryIdx})">Save note</button>
@@ -3642,6 +3848,7 @@ function saveNoteEdit(contactId, entryIdx) {
   const idx = state.contacts.findIndex(x=>x.id===contactId); if(idx===-1) return;
   const entry = (state.contacts[idx].activityLog||[])[entryIdx]; if(!entry) return;
   entry.note = (document.getElementById('note-edit-field')?.value || '').trim();
+  entry.type = document.getElementById('note-edit-type')?.value || entry.type;
   const m = document.getElementById('note-edit-modal'); if(m) m.remove();
   save(); render('network');
   showToast('Note saved ✓');
@@ -4444,7 +4651,7 @@ function renderSync(el) {
     </p>
 
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px">
+    <div class="sync-io-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:8px">
 
       <!-- TOP-LEFT: Export Applications -->
       <div class="card" style="border:1px solid var(--sky-blue-mid);background:linear-gradient(135deg,var(--sky-blue-pale) 0%,transparent 60%);display:flex;flex-direction:column;gap:12px">
@@ -4959,7 +5166,10 @@ function readWizardInputs() {
     salaryMin:f('wz-salmin'), salaryMax:f('wz-salmax'), location:f('wz-location'), workMode:f('wz-workmode'),
     noReloc:f('wz-noreloc'), background:f('wz-background'), specialties:f('wz-specialties'),
     education:f('wz-education'), idealSignals:f('wz-ideal'), redFlagSignals:f('wz-redflags'),
-    honestGaps:f('wz-gaps'), portfolioUrl:f('wz-portfolio')
+    honestGaps:f('wz-gaps'), portfolioUrl:f('wz-portfolio'),
+    // wz-resume is a paste-to-draft scratch field, never pre-filled — don't let
+    // leaving it blank on a re-edit wipe out a previously saved résumé.
+    resumeText:f('wz-resume') || (getProfile()?.resumeText || '')
   };
 }
 
@@ -5662,6 +5872,7 @@ function saveAnalyzedCard() {
     fitSource:  r.fitScore ? 'claude' : '',
     keyReqs:    r.matchCriteria || '',
     gaps:       notes,
+    jdText:     analyzeState.input || '',
     stage:      'Saved',
     priority:   r.fitScore >= 8 ? 'High' : r.fitScore >= 6 ? 'Medium' : 'Low',
     date:       now.slice(0,10),
