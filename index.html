@@ -137,6 +137,16 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_4  HQ board launcher condensed + restyled. (1) QUICK_LAUNCHES reduced     ║
+║          from 4 generic groups to 2: Primary search (LinkedIn/Indeed/           ║
+║          Glassdoor) and Parallel path (Wellfound/We Work Remotely/Built In/     ║
+║          Y Combinator). (2) launchCard + My Links rebuilt with a section-       ║
+║          header row (label left, "Open all" button right) so Open all never     ║
+║          orphans on its own line regardless of board count. (3) Board/link      ║
+║          buttons restyled as larger chips matching the v4 reference look.       ║
+║          (4) openAllCustomLinks() added — My Links now has its own Open all.    ║
+║          (5) APP_VERSION constant (drove navbar/footer badge) was stale at      ║
+║          1.3.1 — brought in sync with the file version.                         ║
 ║  v1_3_3  HQ board launcher redesign + security hardening. (1) My Links card     ║
 ║          added — user enters label + URL, persisted in localStorage, renders     ║
 ║          as buttons with × remove; now sits first in the launcher section.       ║
@@ -168,9 +178,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.3">
+<meta name="jq-version" content="1.3.4">
 <meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-06-29">
+<meta name="jq-date" content="2026-06-30">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -802,7 +812,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.4';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1154,61 +1164,6 @@ async function claudeJSON(prompt) {
   return JSON.parse(text.slice(s,e+1));
 }
 
-async function generatePipelineNarrative() {
-  const btn     = document.getElementById('narr-btn');
-  const loading = document.getElementById('narr-loading');
-  const output  = document.getElementById('narr-output');
-  const textEl  = document.getElementById('narr-text');
-  if (!btn) return;
-
-  const apps    = state.apps || [];
-  const HIDDEN  = ['Rejected','Ghosted'];
-  const weekAgo = Date.now() - 7*24*60*60*1000;
-
-  const stageCounts = {};
-  STAGES.forEach(s => { stageCounts[s] = apps.filter(a => a.stage === s).length; });
-  const appliedCount = stageCounts['Applied'] || 0;
-  const interviewCt  = (stageCounts['Phone Screen']||0) + (stageCounts['Interview']||0) + (stageCounts['Final Round']||0);
-  const activeApps   = apps.filter(a => !HIDDEN.includes(a.stage)).length;
-  const highPriCt    = apps.filter(a => a.priority === 'High' && !HIDDEN.includes(a.stage)).length;
-  const recentCt     = apps.filter(a => a.updatedAt && new Date(a.updatedAt).getTime() > weekAgo).length;
-  const responseRate = appliedCount > 0 ? Math.round(interviewCt / appliedCount * 100) : 0;
-  const today        = new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-
-  const prompt = `You are helping a job seeker write a weekly status paragraph for their job search.
-
-Pipeline snapshot — ${today}:
-• Saved / Queue: ${stageCounts['Saved']||0}
-• Coffee / Networking: ${stageCounts['Coffee / Networking']||0}
-• Applied: ${appliedCount}
-• Phone Screen: ${stageCounts['Phone Screen']||0}
-• Interview: ${stageCounts['Interview']||0}
-• Final Round: ${stageCounts['Final Round']||0}
-• Offer: ${stageCounts['Offer']||0}
-• Rejected: ${stageCounts['Rejected']||0}  |  Ghosted: ${stageCounts['Ghosted']||0}
-Active roles: ${activeApps}  |  Response rate: ${responseRate}%  |  High priority: ${highPriCt}  |  Updated this week: ${recentCt}
-
-Write ONE paragraph (3–5 sentences) summarizing where this job search stands this week. Be encouraging but honest. Note where momentum is building, which stage has the most activity, and what deserves focus in the coming week. Write in first-person as if the job seeker is narrating their own status to a trusted mentor. Flowing prose only — no bullet points, no headers, no lists.`;
-
-  btn.disabled = true;
-  loading.style.display = 'inline';
-  output.style.display = 'none';
-  textEl.textContent = '';
-
-  await claudeStream(prompt, full => {
-    output.style.display = 'block';
-    textEl.textContent = full;
-  });
-
-  loading.style.display = 'none';
-  btn.disabled = false;
-}
-
-function copyNarrative() {
-  const t = document.getElementById('narr-text');
-  if (!t) return;
-  navigator.clipboard.writeText(t.innerText).then(() => showToast('Paragraph copied to clipboard'));
-}
 
 async function adzunaSearch({q,where,salary,days,page=1,perPage=20}) {
   const p = new URLSearchParams({
@@ -2208,18 +2163,6 @@ function renderTracker(el) {
       <button onclick="openAnalyzeModalWithText(document.getElementById('tracker-jd-quick').value)" style="width:100%;font-size:12px;background:var(--gold);color:#fff;border-color:var(--gold);padding:8px 0;font-weight:600">⚡ Analyze JD</button>
       <div style="font-size:10px;color:rgba(201,150,26,0.6);margin-top:6px;text-align:center;letter-spacing:.02em">powered by claude · ~15 seconds · no data stored</div>
     </div>
-  </div>
-  <div style="margin-top:14px;background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.25);border-top:3px solid var(--purple);border-radius:8px;padding:14px">
-    <div style="font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">✦ Pipeline Narrative</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-      <button id="narr-btn" onclick="generatePipelineNarrative()" style="font-size:12px;background:var(--purple);color:#fff;border-color:var(--purple);padding:7px 14px;font-weight:600">✦ Generate weekly status</button>
-      <span id="narr-loading" style="display:none;font-size:11px;color:var(--muted);font-style:italic">Writing…</span>
-    </div>
-    <div id="narr-output" style="display:none">
-      <pre id="narr-text" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.6;color:var(--tx);margin:0 0 8px 0;padding:10px;background:rgba(124,58,237,0.05);border-radius:6px;border:1px solid rgba(124,58,237,0.15)"></pre>
-      <button onclick="copyNarrative()" style="font-size:11px;padding:5px 12px;color:var(--purple);border-color:var(--purple);background:transparent">Copy paragraph</button>
-    </div>
-    <div style="font-size:10px;color:rgba(124,58,237,0.45);margin-top:6px;letter-spacing:.02em">powered by claude · plain-language summary · not stored</div>
   </div>`;
 
   const appSecHead = `
