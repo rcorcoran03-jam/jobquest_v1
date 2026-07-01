@@ -3499,9 +3499,24 @@ function resetPlank() {
   render('pomodoro');
 }
 
-const NET_FILTER_DEFAULT = {view:'all', source:'', sort:'smart'};
+const NET_FILTER_DEFAULT = {view:'all', source:'', search:'', sort:'smart'};
 if(!state.netFilter) state.netFilter = {...NET_FILTER_DEFAULT};
 if(!state.netFilter.sort) state.netFilter.sort = 'smart';
+
+// Debounced live-search for the network filter row. A full render() on every
+// keystroke would recreate the input and drop focus/cursor position, so this
+// batches renders and restores both afterward.
+let _netSearchDebounce = null;
+function updateNetSearch(el) {
+  const selStart = el.selectionStart, selEnd = el.selectionEnd;
+  state.netFilter.search = el.value;
+  clearTimeout(_netSearchDebounce);
+  _netSearchDebounce = setTimeout(() => {
+    render('network');
+    const fresh = document.getElementById('net-search-input');
+    if (fresh) { fresh.focus(); fresh.setSelectionRange(selStart, selEnd); }
+  }, 180);
+}
 
 const ACTIVITY_TYPES = [
   {key:'message',  label:'Sent message',  icon:'💬', col:'var(--sky-blue)'},
@@ -3586,6 +3601,7 @@ function renderNetwork(el) {
   if(filt.view==='nudge') filtered = filtered.filter(c=>c.heat==='nudge');
   if(filt.view==='cold')  filtered = filtered.filter(c=>c.heat==='cold');
   if(filt.source) filtered = filtered.filter(c=>(c.source||'').toLowerCase().includes(filt.source.toLowerCase()));
+  if(filt.search) { const q = filt.search.toLowerCase(); filtered = filtered.filter(c=>(c.name||'').toLowerCase().includes(q) || (c.company||'').toLowerCase().includes(q)); }
 
   // Sort — 'smart' sections: Champions → Stars (top 10) → warmth; 'name' A–Z; 'recent' last-contacted desc
   const heatOrder = {new:0,warm:1,nudge:2,cold:3};
@@ -3856,10 +3872,15 @@ function renderNetwork(el) {
       <button class="tag ${(filt.sort||'smart')==='smart'?'on':''}" onclick="state.netFilter.sort='smart';render('network')" style="font-size:10px">Warmth</button>
       <button class="tag ${filt.sort==='name'?'on':''}" onclick="state.netFilter.sort='name';render('network')" style="font-size:10px">A–Z</button>
       <button class="tag ${filt.sort==='recent'?'on':''}" onclick="state.netFilter.sort='recent';render('network')" style="font-size:10px">Recent</button>
-      ${sources.length ? `<select onchange="state.netFilter.source=this.value;render('network')" style="font-size:11px;padding:4px 8px;flex:0 0 auto;margin-left:4px">
+      ${sources.length ? `<select onchange="state.netFilter.source=this.value;render('network')" class="tag ${filt.source?'on':''}" style="font-size:10px;padding:4px 9px;width:auto;flex:0 0 auto;cursor:pointer">
         <option value="">All sources</option>
         ${sources.map(s=>`<option value="${esc(s)}" ${filt.source===s?'selected':''}>${esc(s)}</option>`).join('')}
       </select>` : ''}
+      <div class="tag ${filt.search?'on':''}" style="display:flex;align-items:center;gap:4px;padding:3px 10px 3px 11px;cursor:text" onclick="document.getElementById('net-search-input').focus()">
+        <span style="font-size:10px;opacity:.65">🔍</span>
+        <input id="net-search-input" type="text" placeholder="Search name / company…" value="${esc(filt.search||'')}" oninput="updateNetSearch(this)" onclick="event.stopPropagation()" style="border:none;background:none;outline:none;font-size:11px;color:inherit;width:130px;padding:0">
+        ${filt.search ? `<span onclick="event.stopPropagation();state.netFilter.search='';render('network')" style="cursor:pointer;opacity:.6;font-size:11px;padding-left:2px">✕</span>` : ''}
+      </div>
       ${!total && !isGuest() ? `<button style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;margin-left:auto" onclick="state.netShowAdd=!state.netShowAdd;state.netEditing=null;render('network')">+ Add contact</button>` : ''}
     </div>
 
