@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.7  (applications: Cover Letter +        ║
-║  Resume Bullet AI builders)                                                  ║
+║  JOBQUEST — Starter Edition  ·  v1.3.8  (networking: inline AI generation +  ║
+║  Meeting Prep + Re-engage)                                                   ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -137,6 +137,22 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_8  Networking tab: inline AI generation + two new prompt types. (1)     ║
+║          copyNetPrompt() (clipboard-copy) replaced by genNetMsg(type,id),     ║
+║          mirroring genRefMsg()'s claudeStream-into-the-card pattern.          ║
+║          Nudge/Update/Ask now stream inline into a gold-bordered draft box    ║
+║          (c.draftMsg/c.draftType) with Copy + Regenerate, instead of          ║
+║          copying a prompt to paste elsewhere. (2) claudeStream() takes an     ║
+║          optional {webSearch} param that adds the web_search tool (same      ║
+║          spec already used by runAnalyze()) to the request. (3) New          ║
+║          genMeetingPrep() — only offered when a contact has an upcoming      ║
+║          Next action — synthesizes activity history, notes, and live         ║
+║          company/industry news into a markdown-rendered prep brief. (4) New  ║
+║          "Re-engage" prompt type, only offered on cold contacts, tone        ║
+║          plainly acknowledges the contact gap instead of a chipper nudge.    ║
+║          (5) Action row switched from a fixed 4-col grid to flex-wrap to     ║
+║          fit the new conditional buttons; all AI-trigger buttons render      ║
+║          gold, consistent with the gold=Claude-prompt convention.            ║
 ║  v1_3_7  Applications tab: Cover Letter + Resume Bullet AI builders. (1)      ║
 ║          Data capture: saveAnalyzedCard() now persists the full pasted JD    ║
 ║          as app.jdText (previously discarded); readWizardInputs() now        ║
@@ -215,7 +231,7 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.7">
+<meta name="jq-version" content="1.3.8">
 <meta name="jq-base" content="24">
 <meta name="jq-date" content="2026-07-01">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -856,7 +872,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.7';
+const APP_VERSION = '1.3.8';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1182,9 +1198,11 @@ function friendlyClaudeError(status, raw, isHtml) {
   return raw;
 }
 
-async function claudeStream(prompt, onChunk) {
+async function claudeStream(prompt, onChunk, {webSearch=false}={}) {
   let resp;
-  try { resp = await claudePost({model:CLAUDE_MODEL,max_tokens:1000,stream:true,messages:[{role:'user',content:prompt}]}); }
+  const body = {model:CLAUDE_MODEL,max_tokens:1000,stream:true,messages:[{role:'user',content:prompt}]};
+  if (webSearch) body.tools = [{type:'web_search_20250305', name:'web_search'}];
+  try { resp = await claudePost(body); }
   catch(e) { showToast(e.message); return ''; }
   const reader = resp.body.getReader(), dec = new TextDecoder();
   let full = '';
@@ -3633,12 +3651,26 @@ function renderNetwork(el) {
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div style="font-size:9px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase">Activity</div>
           </div>
-          <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:3px;margin-bottom:6px" onclick="event.stopPropagation()">
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px" onclick="event.stopPropagation()">
             <button onclick="openActivityEditor(${c.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale);padding:5px 12px;font-weight:600;border-radius:6px;white-space:nowrap">+ Log</button>
-            <button onclick="copyNetPrompt('nudge','${c.id}')" class="tag" style="font-size:10px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale);padding:4px 4px;text-align:center;border-radius:20px">Nudge</button>
-            <button onclick="copyNetPrompt('update','${c.id}')" class="tag" style="font-size:10px;padding:4px 4px;text-align:center;border-radius:20px">Update</button>
-            <button onclick="copyNetPrompt('referral','${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 4px;text-align:center;border-radius:20px">Ask</button>
+            <button onclick="genNetMsg('nudge','${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 10px;text-align:center;border-radius:20px">Nudge</button>
+            <button onclick="genNetMsg('update','${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 10px;text-align:center;border-radius:20px">Update</button>
+            <button onclick="genNetMsg('referral','${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 10px;text-align:center;border-radius:20px">Ask</button>
+            ${isCold ? `<button onclick="genNetMsg('reengage','${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 10px;text-align:center;border-radius:20px">Re-engage</button>` : ''}
+            ${hasNext ? `<button onclick="genMeetingPrep('${c.id}')" class="tag" style="font-size:10px;color:var(--amber);border:1.5px solid var(--gold);background:var(--gold-pale);padding:4px 10px;text-align:center;border-radius:20px">✦ Meeting Prep</button>` : ''}
           </div>
+          ${c.draftMsg && c.draftMsg!=='...' ? `<div style="margin-bottom:8px;padding:10px 12px;border-radius:6px;background:var(--gold-pale);border:1px solid var(--gold-border);font-size:12px;color:var(--tx);line-height:1.7;white-space:pre-wrap">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="color:var(--amber);font-size:11px">${DRAFT_TYPE_LABELS[c.draftType]||'draft'}</span>
+              <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
+                <button onclick="${c.draftType==='meetingprep'?`genMeetingPrep('${c.id}')`:`genNetMsg('${c.draftType}','${c.id}')`}" style="font-size:10px;padding:2px 8px">↻ Regenerate</button>
+                <button onclick="navigator.clipboard?.writeText(document.getElementById('ndraft-${c.id}').textContent);this.textContent='Copied!'" style="font-size:10px;padding:2px 8px">Copy</button>
+              </div>
+            </div>${c.draftType==='meetingprep'
+              ? `<div id="ndraft-${c.id}">${renderBuilderMarkdown(c.draftMsg)}</div>`
+              : `<span id="ndraft-${c.id}">${esc(c.draftMsg)}</span>`}
+          </div>`
+          : c.draftMsg==='...' ? `<div class="row" style="margin-bottom:8px"><span class="spin"></span><span style="font-size:12px;color:var(--muted)">Writing ${DRAFT_TYPE_LABELS[c.draftType]||'draft'}…</span></div>` : ''}
           ${actLog || `<div style="font-size:11px;color:var(--faint);font-style:italic">No activity yet.</div>`}
         </div>
 
@@ -3932,7 +3964,14 @@ function clearNextAction(contactId) {
   showToast('Next action cleared');
 }
 
-function copyNetPrompt(type, id) {
+const DRAFT_TYPE_LABELS = {
+  nudge:'nudge draft', referral:'referral ask draft', update:'update draft',
+  reengage:'re-engage draft', meetingprep:'meeting prep brief'
+};
+
+// v21: inline AI generation for contact drafts — replaces the old clipboard-copy
+// flow (copyNetPrompt), mirroring genRefMsg()'s stream-into-the-card pattern.
+async function genNetMsg(type, id) {
   const c = state.contacts.find(x=>String(x.id)===String(id)); if(!c) return;
   let prompt = '';
   const lastAct = c.activityLog?.[0];
@@ -3944,15 +3983,58 @@ function copyNetPrompt(type, id) {
     prompt = `Write a concise, warm referral request (4-5 sentences) from ${profileName()} to ${c.name}${c.company?' at '+c.company:''}. The sender is actively looking for new roles. Background: ${profileBackground()} Context: ${c.notes||'professional connection'}. Ask if they'd be willing to refer them or flag relevant openings. Acknowledge the relationship first — don't be transactional.`;
   } else if(type === 'update') {
     prompt = `Write a brief update message (3-4 sentences) from ${profileName()} to ${c.name}${c.company?' at '+c.company:''}. Share a relevant update on their job search — something genuine and brief. ${lastContext} Context: ${c.notes||'professional connection'}. Sender's background: ${profileBackground()} Make it feel like a natural check-in, not a status report.`;
+  } else if(type === 'reengage') {
+    const days = daysAgo(c.last);
+    const gapLine = days!==null ? `It has been about ${days} days since last contact.` : `There is no recorded recent contact.`;
+    prompt = `Write a short re-engagement message (3-4 sentences) from ${profileName()} to ${c.name}${c.company?' at '+c.company:''}. ${gapLine} Plainly acknowledge the gap — something like "it's been a while" — rather than pretending this is a normal check-in cadence. Do NOT open with a chipper "hope you're doing well" as if no time has passed. Context: ${c.notes||'professional connection'}. Sender's background: ${profileBackground()} Keep it low-pressure and easy to ignore or reply to.`;
   }
+  if (!prompt) return;
 
-  navigator.clipboard?.writeText(prompt);
-  const t = document.createElement('div');
-  const typeLabel = {nudge:'Nudge',referral:'Referral ask',update:'Update'}[type]||type;
-  t.textContent = `📋 ${typeLabel} prompt copied — paste in Claude chat`;
-  Object.assign(t.style,{position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:getComputedStyle(document.documentElement).getPropertyValue('--sky-blue-pale').trim(),border:`1px solid ${getComputedStyle(document.documentElement).getPropertyValue('--sky-blue-mid').trim()}`,color:getComputedStyle(document.documentElement).getPropertyValue('--sky-blue').trim(),padding:'8px 18px',borderRadius:'8px',fontSize:'12px',zIndex:'9999',fontFamily:'Avenir Next,system-ui,sans-serif'});
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 2500);
+  state.contacts = state.contacts.map(x=>x.id===c.id?{...x,draftMsg:'...',draftType:type}:x);
+  render('network');
+  const full = await claudeStream(prompt, t => {
+    state.contacts = state.contacts.map(x=>x.id===c.id?{...x,draftMsg:t,draftType:type}:x);
+    render('network');
+  });
+  state.contacts = state.contacts.map(x=>x.id===c.id?{...x,draftMsg:full,draftType:type}:x);
+  save(); render('network');
+}
+
+// v21: Meeting Prep brief — only offered when a contact has an upcoming Next
+// action. Synthesizes activity history + notes + live company/industry news.
+async function genMeetingPrep(id) {
+  const c = state.contacts.find(x=>String(x.id)===String(id)); if(!c) return;
+  const history = (c.activityLog||[]).slice(0,6)
+    .map(e=>`- ${e.date}: ${e.type}${e.note?' — '+e.note:''}`).join('\n') || 'No logged activity yet.';
+  const nt = nextTypeMeta(c.nextType);
+  const nextLine = c.next ? `${nt.label} on ${c.next}${c.nextNote?' — '+c.nextNote:''}.` : 'Upcoming touch not yet dated.';
+
+  const prompt = `You are helping ${profileName()} prepare for an upcoming ${c.nextType==='meeting'?'meeting':'touchpoint'} with ${c.name}${c.company?' ('+(c.role||'')+' at '+c.company+')':''}. Sender's background: ${profileBackground()}
+
+UPCOMING: ${nextLine}
+
+ACTIVITY HISTORY:
+${history}
+
+NOTES: ${c.notes||'professional connection'}
+
+Use web search for current industry and company news relevant to ${c.company||'this contact'}. Produce a concise, scannable prep brief:
+
+**🗣️ What you talked about last time** — summarize from the activity history above
+**📌 What to bring up** — 2-3 specific threads to follow up on, grounded in the history/notes
+**📰 Current company/industry news** — anything relevant since you last spoke
+**❓ A good question to ask** — one specific, natural question for this touchpoint
+
+Be specific and brief — this is a pre-meeting skim, not an essay.`;
+
+  state.contacts = state.contacts.map(x=>x.id===c.id?{...x,draftMsg:'...',draftType:'meetingprep'}:x);
+  render('network');
+  const full = await claudeStream(prompt, t => {
+    state.contacts = state.contacts.map(x=>x.id===c.id?{...x,draftMsg:t,draftType:'meetingprep'}:x);
+    render('network');
+  }, {webSearch:true});
+  state.contacts = state.contacts.map(x=>x.id===c.id?{...x,draftMsg:full,draftType:'meetingprep'}:x);
+  save(); render('network');
 }
 
 // ── COMPANY TARGETS ───────────────────────────────────────────────────────────
