@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.9  (applications hero: KPI top row +    ║
-║  side-by-side gold AI panels)                                                ║
+║  JOBQUEST — Starter Edition  ·  v1.3.10  (HQ Daily Brief: forced tool-use    ║
+║  action plan + analyzer prompt caching)                                      ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -137,6 +137,23 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
+║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
+║          compact client-built pipeline snapshot (apps/contacts with          ║
+║          staleness as day counts, focus stats) and returns 3-5 ranked        ║
+║          actions via FORCED CUSTOM TOOL USE (daily_brief tool +              ║
+║          tool_choice:{type:'tool'}) — guaranteed-schema structured output.   ║
+║          sanitizeBrief() clamps drift; result cached in localStorage         ║
+║          (jq_daily_brief) per day with ↻ Regenerate. Action cards carry      ║
+║          urgency colors (rose/gold/teal), rank medallions, staggered         ║
+║          fadeIn, and deep-link buttons (briefGo/flashCard; app & contact     ║
+║          cards gained DOM ids app-card-/net-card-<id>). Demo tour shows a    ║
+║          canned sample brief built from example data; empty pipelines get    ║
+║          a hint instead of the button. (2) runAnalyze system prompt now      ║
+║          sent as a block array with cache_control:{type:'ephemeral'} —      ║
+║          NOTE: silent no-op below sonnet-4-6's 2048-token cache floor        ║
+║          (typical profiles), activates for verbose ones; usage logged via    ║
+║          console.debug for observability.                                    ║
 ║  v1_3_9  Applications hero rearranged. (1) All five KPI tiles (formerly       ║
 ║          Total-tracked banner + 2x2 grid, left column) now form a single     ║
 ║          full-width top row (auto-fit grid, wraps on narrow screens).        ║
@@ -242,7 +259,7 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.9">
+<meta name="jq-version" content="1.3.10">
 <meta name="jq-base" content="24">
 <meta name="jq-date" content="2026-07-02">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -894,7 +911,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.9';
+const APP_VERSION = '1.3.10';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1248,6 +1265,199 @@ async function claudeJSON(prompt) {
   return JSON.parse(text.slice(s,e+1));
 }
 
+// ── DAILY BRIEF (HQ) ──────────────────────────────────────────────────────────
+// Forced tool use: the request carries a custom tool schema plus
+// tool_choice:{type:'tool'}, so the model MUST reply with a tool_use block that
+// conforms to the schema — structured output by contract, not prompt-and-pray.
+
+const DAILY_BRIEF_TOOL = {
+  name: 'daily_brief',
+  description: 'Return a prioritized action plan for the job seeker\'s day, computed from their live pipeline snapshot. Rank 3-5 concrete actions, most impactful first. Cite the specific data point (days stale, stage, contact warmth) in each "why".',
+  input_schema: {
+    type: 'object',
+    properties: {
+      date_summary: { type: 'string', description: 'One sentence (max ~120 chars) headline for today — energetic, specific to the data, no generic filler.' },
+      actions: {
+        type: 'array', minItems: 3, maxItems: 5,
+        items: {
+          type: 'object',
+          properties: {
+            rank:     { type: 'integer', minimum: 1, maximum: 5 },
+            title:    { type: 'string', description: 'Imperative action, max ~60 chars, name the company/contact' },
+            why:      { type: 'string', description: 'One sentence citing the concrete data point that makes this urgent' },
+            urgency:  { type: 'string', enum: ['high','medium','low'] },
+            category: { type: 'string', enum: ['application','networking','focus'] },
+            target:   {
+              type: 'object',
+              properties: {
+                tab:       { type: 'string', enum: ['tracker','network','pomodoro','board'] },
+                appId:     { type: 'number', description: 'id from the apps list, only when tab=tracker and the action is about one application' },
+                contactId: { type: 'number', description: 'id from the contacts list, only when tab=network' }
+              },
+              required: ['tab']
+            },
+            button_label: { type: 'string', description: 'Button text, imperative, max 24 chars, e.g. "Open Abbott card"' }
+          },
+          required: ['rank','title','why','urgency','category','target','button_label']
+        }
+      }
+    },
+    required: ['date_summary','actions']
+  }
+};
+
+const BRIEF_SYSTEM = 'You are the daily strategist inside JobQuest, a job-search command center. You receive a JSON snapshot of the user\'s live pipeline: applications (with days since last movement), networking contacts (with warmth and overdue next-actions), and today\'s focus stats. Choose the 3-5 highest-leverage actions for TODAY. Prioritize: (1) interview-stage apps needing prep or follow-up, (2) overdue next-actions on champions/starred contacts, (3) stale high-priority applications, (4) pipeline-building only if nothing is on fire. Every "why" must cite a specific number from the snapshot. Set target.appId/contactId to the exact id from the snapshot when the action is about one card. Be direct and motivating, never generic.';
+
+const BRIEF_KEY = 'jq_daily_brief';
+function briefTodayStr() { return new Date().toISOString().slice(0,10); }
+
+function getTodaysBrief() {
+  try {
+    const rec = JSON.parse(localStorage.getItem(BRIEF_KEY) || 'null');
+    return (rec && rec.date === briefTodayStr() && rec.brief) ? rec : null;
+  } catch { return null; }
+}
+
+// The model gets day counts, never raw dates — staleness math stays client-side.
+function buildBriefPayload() {
+  const days = d => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : null;
+  const HIDDEN = ['Rejected','Ghosted'];
+
+  const apps = state.apps
+    .filter(a => !HIDDEN.includes(a.stage))
+    .map(a => ({
+      id: a.id, company: a.company, role: a.role, stage: a.stage,
+      priority: a.priority || '', fit: a.fit || '',
+      daysSinceUpdate: days(a.updatedAt || a.date || a.savedAt),
+      nextStep: a.nextStep || '',
+      nextInDays: a.nextDate ? -days(a.nextDate) : null,   // negative = overdue
+      lastActivity: (a.actLog && a.actLog.length) ? a.actLog[a.actLog.length-1].note : ''
+    }))
+    .sort((a,b) => (b.priority==='High') - (a.priority==='High') || (b.daysSinceUpdate||0) - (a.daysSinceUpdate||0))
+    .slice(0, 25);
+
+  const contacts = (state.contacts || [])
+    .map(c => ({
+      id: c.id, name: c.name, company: c.company || '', rel: c.rel || '',
+      champion: !!c.champion, star: !!c.star,
+      daysSinceTouch: days(c.last),
+      nextAction: c.nextType || '', nextInDays: c.next ? -days(c.next) : null,
+      nextNote: (c.nextNote || '').slice(0, 80)
+    }))
+    .sort((a,b) => (b.champion - a.champion) || (b.star - a.star) || (b.daysSinceTouch||0) - (a.daysSinceTouch||0))
+    .slice(0, 20);
+
+  const ds = getDailyTaskState();
+  return {
+    today: briefTodayStr(),
+    profile: profileLine(),
+    apps,
+    contacts,
+    archived: { rejected: state.apps.filter(a=>a.stage==='Rejected').length,
+                ghosted:  state.apps.filter(a=>a.stage==='Ghosted').length },
+    focus: { tasksDoneToday: DAILY_TASKS_DEF.filter(t=>ds.done[t.id]).length,
+             tasksTotal: DAILY_TASKS_DEF.length,
+             sessionsToday: state.pomSessions, streakDays: getFocusStreak() }
+  };
+}
+
+// Defensive clamp on the tool_use input: forced tool_choice guarantees the shape,
+// this guarantees the app never renders a broken card even if a field drifts.
+function sanitizeBrief(input) {
+  const URG = ['high','medium','low'], CAT = ['application','networking','focus'],
+        TABS = ['tracker','network','pomodoro','board'];
+  const out = { date_summary: String(input?.date_summary || 'Your plan for today'), actions: [] };
+  (Array.isArray(input?.actions) ? input.actions : []).slice(0,5).forEach(a => {
+    if (!a || !a.title) return;
+    const t = a.target || {};
+    const appOk = t.appId != null && state.apps.some(x => x.id === Number(t.appId));
+    const ctOk  = t.contactId != null && (state.contacts||[]).some(x => x.id === Number(t.contactId));
+    out.actions.push({
+      rank: out.actions.length + 1,
+      title: String(a.title).slice(0,80),
+      why: String(a.why || '').slice(0,220),
+      urgency: URG.includes(a.urgency) ? a.urgency : 'medium',
+      category: CAT.includes(a.category) ? a.category : 'application',
+      target: { tab: TABS.includes(t.tab) ? t.tab : 'board',
+                appId: appOk ? Number(t.appId) : null,
+                contactId: ctOk ? Number(t.contactId) : null },
+      button_label: String(a.button_label || 'Go').slice(0,26)
+    });
+  });
+  return out;
+}
+
+async function generateDailyBrief() {
+  if (state.briefLoading) return;
+  state.briefLoading = true; render('board');
+  try {
+    const resp = await claudePost({
+      model: CLAUDE_MODEL,
+      max_tokens: 1500,
+      system: BRIEF_SYSTEM,
+      messages: [{ role: 'user', content: 'Pipeline snapshot:\n' + JSON.stringify(buildBriefPayload()) + '\n\nGenerate today\'s brief.' }],
+      tools: [DAILY_BRIEF_TOOL],
+      tool_choice: { type: 'tool', name: 'daily_brief' }
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
+    const block = (data.content || []).find(b => b.type === 'tool_use' && b.name === 'daily_brief');
+    if (!block) throw new Error('No brief returned');
+    const brief = sanitizeBrief(block.input);
+    localStorage.setItem(BRIEF_KEY, JSON.stringify({ date: briefTodayStr(), generatedAt: new Date().toISOString(), brief }));
+  } catch (e) { showToast(e.message); }
+  state.briefLoading = false;
+  render('board');
+}
+
+// Canned brief for the live tour — grounded in whatever example data is loaded,
+// so the deep links land on real cards without an API call.
+function demoBrief() {
+  const apps = state.apps || [], cts = state.contacts || [];
+  const a1 = apps.find(a => a.stage === 'Final Round') || apps.find(a => ['Phone Screen','Interview'].includes(a.stage)) || apps[0];
+  const a2 = apps.find(a => a !== a1 && a.priority === 'High') || apps.find(a => a !== a1);
+  const c1 = cts.find(c => c.champion) || cts.find(c => c.star) || cts[0];
+  const actions = [];
+  if (a1) actions.push({ rank: actions.length+1, title: `Prep for the ${a1.company} ${(a1.stage||'').toLowerCase()}`, why: `${a1.company} is at ${a1.stage} — the furthest-along application in this pipeline.`, urgency: 'high', category: 'application', target: { tab: 'tracker', appId: a1.id }, button_label: `Open ${a1.company}`.slice(0,24) });
+  if (c1) actions.push({ rank: actions.length+1, title: `Check in with ${c1.name}`, why: `${c1.name} is a ${c1.champion ? 'champion' : 'starred'} contact — keep the relationship warm.`, urgency: 'medium', category: 'networking', target: { tab: 'network', contactId: c1.id }, button_label: 'Open contact' });
+  if (a2) actions.push({ rank: actions.length+1, title: `Nudge ${a2.company}`, why: `High-priority application with no recent movement — a short follow-up keeps it alive.`, urgency: 'low', category: 'application', target: { tab: 'tracker', appId: a2.id }, button_label: `Open ${a2.company}`.slice(0,24) });
+  return { date_summary: 'A sample brief — with your own data, Claude ranks your real next moves.', actions };
+}
+
+function currentBrief() {
+  if (isDemo()) return demoBrief();
+  const rec = getTodaysBrief();
+  return rec ? rec.brief : null;
+}
+
+function briefGo(i) {
+  const brief = currentBrief(); if (!brief) return;
+  const a = brief.actions[i]; if (!a) return;
+  const t = a.target || { tab: 'board' };
+  if (t.tab === 'tracker') {
+    state.appFilter = 'all';
+    if (t.appId != null) { state.appExpanded = state.appExpanded || {}; state.appExpanded[t.appId] = true; }
+    showTab('tracker');
+    if (t.appId != null) flashCard('app-card-' + t.appId);
+  } else if (t.tab === 'network') {
+    state.netFilter = { view: 'all', source: '', sort: 'smart' };
+    if (t.contactId != null) { state.netExpanded = state.netExpanded || {}; state.netExpanded[t.contactId] = true; }
+    showTab('network');
+    if (t.contactId != null) flashCard('net-card-' + t.contactId);
+  } else showTab(t.tab === 'pomodoro' ? 'pomodoro' : 'board');
+}
+
+function flashCard(id) {
+  // setTimeout, not requestAnimationFrame — rAF never fires in a backgrounded
+  // window, which would swallow the scroll/flash entirely.
+  setTimeout(() => {
+    const el = document.getElementById(id); if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.transition = 'box-shadow .4s'; el.style.boxShadow = '0 0 0 2px var(--gold)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1600);
+  }, 60);
+}
+
 async function generatePipelineNarrative() {
   const btn     = document.getElementById('narr-btn');
   const loading = document.getElementById('narr-loading');
@@ -1569,6 +1779,77 @@ function launchDailyTaskTimer(task) {
 
 // ── HQ HERO — the new homepage landing section ────────────────────────────────
 
+// Daily Brief band — sits inside the HQ hero frame between the KPI strip and
+// the bottom split row. Three states: idle (generate button), loading, rendered
+// (ranked action cards with urgency colors + deep-link buttons).
+function renderDailyBriefPanel() {
+  const demo  = isDemo();
+  const brief = currentBrief();
+  const rec   = demo ? null : getTodaysBrief();
+  const empty = !demo && !(state.apps||[]).length && !((state.contacts||[]).length);
+
+  const shell = inner => `
+    <div style="border-left:1px solid rgba(91,160,210,0.20);border-right:1px solid rgba(91,160,210,0.20);border-bottom:1px solid rgba(91,160,210,0.10);background:rgba(201,138,14,0.06);padding:14px 20px">${inner}</div>`;
+  const header = right => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+        <span style="width:20px;height:1px;display:inline-block;background:var(--gold)"></span>✦ Daily Brief${demo ? ` <span style="font-size:9px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:8px;padding:1px 7px;letter-spacing:.05em;font-weight:500;text-transform:lowercase">sample</span>` : ''}
+      </div>
+      ${right || ''}
+    </div>`;
+  const footer = `<div style="font-size:10px;color:rgba(201,150,26,0.5);margin-top:8px;letter-spacing:.03em">powered by claude · ranked next actions via live tool call · ~10 sec</div>`;
+
+  if (state.briefLoading) {
+    return shell(header('') + `
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 0 6px">
+        <span class="spin"></span><span style="font-size:12px;color:#E8C97A;font-style:italic">Reading your pipeline…</span>
+      </div>`);
+  }
+
+  if (brief && brief.actions && brief.actions.length) {
+    const genAt = rec ? new Date(rec.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    const right = demo ? '' : `
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:rgba(201,150,26,0.5)">generated ${genAt}</span>
+        <button onclick="generateDailyBrief()" style="font-size:10px;color:#E8C97A;border:1px solid var(--gold-border);background:transparent;padding:3px 10px;border-radius:6px">↻ Regenerate</button>
+      </div>`;
+    const U_META = {
+      high:   { col: 'var(--rose)',       bg: 'rgba(196,96,122,0.10)', label: 'now'   },
+      medium: { col: '#E8C97A',           bg: 'rgba(201,138,14,0.10)', label: 'today' },
+      low:    { col: 'var(--teal-light)', bg: 'rgba(42,181,160,0.08)', label: 'soon'  }
+    };
+    const CAT_ICON = { application: '📌', networking: '🤝', focus: '⏱' };
+    const cards = brief.actions.map((a,i) => {
+      const U = U_META[a.urgency] || U_META.medium;
+      return `
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(10,22,36,0.55);border:1px solid var(--navy-border);border-left:3px solid ${U.col};border-radius:0 8px 8px 0;padding:10px 14px;animation:fadeIn .3s ease both;animation-delay:${i*70}ms">
+        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid rgba(201,138,14,0.45);background:rgba(201,138,14,0.10);color:#E8C97A;font-family:'DM Mono',monospace;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center">${a.rank}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${CAT_ICON[a.category]||'📌'} ${esc(a.title)}
+            <span style="font-size:9px;color:${U.col};background:${U.bg};border:1px solid ${U.col};border-radius:8px;padding:1px 7px;margin-left:6px;letter-spacing:.05em;text-transform:uppercase;vertical-align:1px">${U.label}</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5">${esc(a.why)}</div>
+        </div>
+        <button onclick="briefGo(${i})" style="flex-shrink:0;font-size:11px;font-weight:600;color:${U.col};border:1px solid ${U.col};background:transparent;border-radius:6px;padding:6px 12px;white-space:nowrap">${esc(a.button_label)} →</button>
+      </div>`;
+    }).join('');
+    return shell(header(right) + `
+      <div style="font-size:17px;font-style:italic;font-family:'DM Serif Display',Georgia,serif;color:var(--tx);margin:8px 0 12px">${esc(brief.date_summary)}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">${cards}</div>` + footer);
+  }
+
+  // Idle
+  return shell(`
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        ${header('')}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5">Claude reads your whole pipeline — every application, contact, and focus stat — and ranks your highest-leverage moves for today.</div>
+      </div>
+      ${empty
+        ? `<span style="font-size:11px;color:var(--faint);font-style:italic">Add a few applications or contacts first — the brief ranks what's already in your pipeline.</span>`
+        : `<button onclick="generateDailyBrief()" style="font-size:12px;background:var(--gold);color:#fff;border-color:var(--gold);padding:9px 18px;font-weight:600;flex-shrink:0">⚡ Generate today's brief</button>`}
+    </div>` + footer);
+}
+
 function renderHQHero() {
   const HIDDEN_STAGES = ['Rejected','Ghosted'];
   const apps = state.apps;
@@ -1701,6 +1982,9 @@ function renderHQHero() {
         </div>`;}).join('')}
       </div>
     </div>
+
+    <!-- Daily Brief band — Claude ranks today's next actions via forced tool call -->
+    ${renderDailyBriefPanel()}
 
     <!-- Bottom row: Analyze JD + Daily Focus -->
     <div class="board-hero-split" style="display:grid;border:1px solid rgba(91,160,210,0.20);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;background:var(--navy-mid)">
@@ -2154,7 +2438,7 @@ function renderAppCard(app, isPriority) {
         </div>` : ''}
     </div>` : '';
 
-  return `<div style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid ${borderCol};background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
+  return `<div id="app-card-${app.id}" style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid ${borderCol};background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
     ${condensed}${expanded}
   </div>`;
 }
@@ -3745,7 +4029,7 @@ function renderNetwork(el) {
       </div>` : '';
 
 
-    return `<div class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
+    return `<div id="net-card-${c.id}" class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
       <div class="net-row" style="display:flex;gap:0;align-items:stretch">
         <!-- LEFT: who -->\
         <div style="flex:1;min-width:0;padding-right:10px;cursor:pointer" onclick="state.netExpanded=state.netExpanded||{};state.netExpanded[${c.id}]=!state.netExpanded[${c.id}];render('network')">
@@ -5982,7 +6266,10 @@ ${input}`;
     const bodyPayload = {
       model: CLAUDE_MODEL,
       max_tokens: 1000,
-      system: buildAnalyzeSystem(),
+      // Cache the profile system prompt across back-to-back analyses. Silent
+      // no-op below the model's minimum cacheable prefix (2048 tokens on
+      // sonnet-4-6) — activates automatically for verbose profiles.
+      system: [{ type: 'text', text: buildAnalyzeSystem(), cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userPrompt }],
       // The proxy supports server-side web search for live company news.
       tools: [{ type: 'web_search_20250305', name: 'web_search' }]
@@ -6006,6 +6293,7 @@ ${input}`;
     }
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    console.debug('analyze usage', data.usage);
     const text = (data.content||[]).filter(b => b.type==='text').map(b=>b.text).join('').trim();
     // Strip markdown fences if present
     const clean = text.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
