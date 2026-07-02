@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.8  (networking: inline AI generation +  ║
-║  Meeting Prep + Re-engage)                                                   ║
+║  JOBQUEST — Starter Edition  ·  v1.3.9  (applications hero: KPI top row +    ║
+║  side-by-side gold AI panels)                                                ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -137,6 +137,17 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_9  Applications hero rearranged. (1) All five KPI tiles (formerly       ║
+║          Total-tracked banner + 2x2 grid, left column) now form a single     ║
+║          full-width top row (auto-fit grid, wraps on narrow screens).        ║
+║          (2) JD Analyzer (left) and Pipeline Narrative (right) sit side by   ║
+║          side beneath it (equal height, stacks below ~600px). (3) Narrative  ║
+║          recolored purple → gold to match the gold=Claude-prompt             ║
+║          convention — same panel chrome as the JD analyzer, differentiated  ║
+║          by an outline button, plus a one-line explainer of what it writes.  ║
+║          (4) App-card 2x2 AI action grid now stretches to full card height   ║
+║          (grid-auto-rows:1fr) under a small gold header row ("✦ ai tools ·  ║
+║          powered by claude") labeling the buttons as Anthropic-API features. ║
 ║  v1_3_8  Networking tab: inline AI generation + two new prompt types. (1)     ║
 ║          copyNetPrompt() (clipboard-copy) replaced by genNetMsg(type,id),     ║
 ║          mirroring genRefMsg()'s claudeStream-into-the-card pattern.          ║
@@ -231,9 +242,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.8">
+<meta name="jq-version" content="1.3.9">
 <meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-07-01">
+<meta name="jq-date" content="2026-07-02">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -883,7 +894,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.8';
+const APP_VERSION = '1.3.9';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -2086,11 +2097,14 @@ function renderAppCard(app, isPriority) {
   const isHigh       = app.priority==='High';
 
   const aiGrid = isGuest() ? '' : `
-    <div class="app-card-ai-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:0 0 auto;align-self:flex-start">
-      <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Company Profile</button>
-      <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Interview Prep</button>
-      <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Cover Letter Support</button>
-      <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Resume Bullet Builder</button>
+    <div class="app-card-ai-grid" style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;align-self:stretch">
+      <div style="font-size:9px;font-weight:700;color:rgba(201,150,26,0.75);letter-spacing:.08em;text-transform:uppercase;text-align:center;white-space:nowrap">✦ ai tools · powered by claude</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:6px;flex:1">
+        <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Company Profile</button>
+        <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Interview Prep</button>
+        <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Cover Letter Support</button>
+        <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Resume Bullet Builder</button>
+      </div>
     </div>`;
 
   const condensed = `
@@ -2238,46 +2252,41 @@ function renderTracker(el) {
     highPriCt    = 7;
   }
 
-  const dashAndJD = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;align-items:start">
-    <!-- LEFT: stats block -->
-    <div>
-      <!-- Total tracked — full width top -->
-      <div onclick="setAppFilter('all')" style="background:var(--sky-blue-pale);border:1px solid ${state.appFilter==='all'?'var(--sky-blue)':'rgba(0,0,0,0.06)'};border-radius:8px;padding:10px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:8px;${state.appFilter==='all'?'box-shadow:0 0 0 2px var(--sky-blue);':''}" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-        <div style="font-size:24px;font-weight:600;color:var(--sky-blue);line-height:1">${totalApps}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em">Total tracked</div>
-      </div>
-      <!-- 2x2 grid -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${[
-          {label:'Active Apps',       val:appliedCount, col:'var(--blue)',  bg:'var(--blue-bg)',   filter:'Applied'},
-          {label:'Saved / Queue', val:savedCount,   col:'var(--purple)',bg:'var(--purple-bg)', filter:'Saved'},
-          {label:'Interviewing',  val:interviewCt,  col:'var(--amber)', bg:'var(--amber-bg)',  filter:'Interview'},
-          {label:'High priority', val:highPriCt,    col:'var(--rose)',  bg:'var(--rose-pale)', filter:'priority'},
-        ].map(d=>`<div onclick="setAppFilter('${d.filter}')" style="background:${d.bg};border:1px solid ${state.appFilter===d.filter?d.col:'rgba(0,0,0,0.06)'};border-radius:8px;padding:10px 12px;text-align:center;cursor:pointer;transition:all .15s;${state.appFilter===d.filter?'box-shadow:0 0 0 2px '+d.col+';':''}" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-          <div style="font-size:20px;font-weight:600;color:${d.col};line-height:1">${d.val}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.03em">${d.label}</div>
-        </div>`).join('')}
-      </div>
-    </div>
-    <!-- RIGHT: Claude JD panel -->
+  const dashAndJD = `
+  <!-- KPI row — all five stats across the top -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px">
+    ${[
+      {label:'Total tracked', val:totalApps,    col:'var(--sky-blue)', bg:'var(--sky-blue-pale)', filter:'all'},
+      {label:'Active Apps',   val:appliedCount, col:'var(--blue)',     bg:'var(--blue-bg)',       filter:'Applied'},
+      {label:'Saved / Queue', val:savedCount,   col:'var(--purple)',   bg:'var(--purple-bg)',     filter:'Saved'},
+      {label:'Interviewing',  val:interviewCt,  col:'var(--amber)',    bg:'var(--amber-bg)',      filter:'Interview'},
+      {label:'High priority', val:highPriCt,    col:'var(--rose)',     bg:'var(--rose-pale)',     filter:'priority'},
+    ].map(d=>`<div onclick="setAppFilter('${d.filter}')" style="background:${d.bg};border:1px solid ${state.appFilter===d.filter?d.col:'rgba(0,0,0,0.06)'};border-radius:8px;padding:10px 12px;text-align:center;cursor:pointer;transition:all .15s;${state.appFilter===d.filter?'box-shadow:0 0 0 2px '+d.col+';':''}" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <div style="font-size:22px;font-weight:600;color:${d.col};line-height:1">${d.val}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.03em">${d.label}</div>
+    </div>`).join('')}
+  </div>
+  <!-- AI row — JD analyzer (filled gold) + Pipeline Narrative (outline gold) -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:18px;align-items:stretch">
     <div style="background:rgba(201,138,14,0.07);border:1px solid rgba(201,138,14,0.30);border-top:3px solid var(--gold);border-radius:8px;padding:14px">
       <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">✦ Analyze a Job Description</div>
       <textarea id="tracker-jd-quick" rows="3" placeholder="Paste JD text here — get fit score, red flags &amp; save to tracker…" style="width:100%;font-size:12px;margin-bottom:8px;background:rgba(201,138,14,0.06);border:1px solid rgba(201,138,14,0.30);border-radius:6px;color:var(--tx);resize:none;padding:7px 10px"></textarea>
       <button onclick="openAnalyzeModalWithText(document.getElementById('tracker-jd-quick').value)" style="width:100%;font-size:12px;background:var(--gold);color:#fff;border-color:var(--gold);padding:8px 0;font-weight:600">⚡ Analyze JD</button>
       <div style="font-size:10px;color:rgba(201,150,26,0.6);margin-top:6px;text-align:center;letter-spacing:.02em">powered by claude · ~15 seconds · no data stored</div>
     </div>
-  </div>
-  <div style="margin-top:14px;background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.25);border-top:3px solid var(--purple);border-radius:8px;padding:14px">
-    <div style="font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">✦ Pipeline Narrative</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-      <button id="narr-btn" onclick="generatePipelineNarrative()" style="font-size:12px;background:var(--purple);color:#fff;border-color:var(--purple);padding:7px 14px;font-weight:600">✦ Generate weekly status</button>
-      <span id="narr-loading" style="display:none;font-size:11px;color:var(--muted);font-style:italic">Writing…</span>
+    <div style="background:rgba(201,138,14,0.07);border:1px solid rgba(201,138,14,0.30);border-top:3px solid var(--gold);border-radius:8px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">✦ Pipeline Narrative</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">Turns your live pipeline stats into a short first-person status paragraph — where momentum is building and what to focus on next week. Ready to paste into a mentor check-in or weekly review.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <button id="narr-btn" onclick="generatePipelineNarrative()" style="font-size:12px;background:transparent;color:#E8C97A;border:1px solid var(--gold-border);padding:7px 14px;font-weight:600">✦ Generate weekly status</button>
+        <span id="narr-loading" style="display:none;font-size:11px;color:var(--muted);font-style:italic">Writing…</span>
+      </div>
+      <div id="narr-output" style="display:none">
+        <pre id="narr-text" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.6;color:var(--tx);margin:0 0 8px 0;padding:10px;background:rgba(201,138,14,0.05);border-radius:6px;border:1px solid rgba(201,138,14,0.15)"></pre>
+        <button onclick="copyNarrative()" style="font-size:11px;padding:5px 12px;color:#E8C97A;border-color:var(--gold-border);background:transparent">Copy paragraph</button>
+      </div>
+      <div style="font-size:10px;color:rgba(201,150,26,0.6);margin-top:6px;letter-spacing:.02em">powered by claude · plain-language summary · not stored</div>
     </div>
-    <div id="narr-output" style="display:none">
-      <pre id="narr-text" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.6;color:var(--tx);margin:0 0 8px 0;padding:10px;background:rgba(124,58,237,0.05);border-radius:6px;border:1px solid rgba(124,58,237,0.15)"></pre>
-      <button onclick="copyNarrative()" style="font-size:11px;padding:5px 12px;color:var(--purple);border-color:var(--purple);background:transparent">Copy paragraph</button>
-    </div>
-    <div style="font-size:10px;color:rgba(124,58,237,0.45);margin-top:6px;letter-spacing:.02em">powered by claude · plain-language summary · not stored</div>
   </div>`;
 
   const appSecHead = `
