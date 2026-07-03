@@ -137,32 +137,12 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
-║  v1_3_11 Focus tab hero: added a two-paragraph Welcome beneath the "Focus"    ║
-║          headline (focus section only). P1 frames why the tab exists and      ║
-║          the payoff of doing its activities intentionally; P2 nods to each    ║
-║          category (Focus/Wellness/Move, color-coded) and how they compound    ║
-║          into well-being — the ground that makes real focus possible.         ║
-║          Focus KPIs reworked: the per-section KPI strip is gone; each of the   ║
-║          three mini-nav titles now carries its OWN two KPIs (Focus:           ║
-║          sessions + day streak; Wellness: hydration + breath work; Move:      ║
-║          chair yoga + plank mins), all shown at once in each section's        ║
-║          color. Numbers are a rolling 7-DAY momentum total (new              ║
-║          jq_weekly_activity localStorage log via bumpWeekLog/getWeeklyStats)  ║
-║          rather than a daily count, captioned "rolling 7-day momentum".       ║
-║          HQ tab: new full-width "Recharge · Wellness & Movement" strip        ║
-║          (renderHQRechargeStrip) between the hero and the job-board           ║
-║          launcher — previews the Focus tab's Wellness/Move tools with the     ║
-║          weekly hydration/breath/chair-yoga/plank counters plus one-tap       ║
-║          deep-links (hqOpenFocus) that jump to the Focus tab with the right   ║
-║          section + card preselected.                                          ║
-║          Wellness section redesigned: dropped the 3-card Hydrate/Breathe/     ║
-║          Rest selector for a stacked layout with BREATHE as the centerpiece   ║
-║          (all four practices in a spacious 2x2 grid showing steps + est.      ║
-║          minutes, or the in-session guide expanded), a compact Hydrate cue    ║
-║          strip below it, and Rest last. New builders buildBreatheSection/     ║
-║          buildBreatheActive/buildHydrateSection/buildRestSection; breathe-    ║
-║          grid stacks to 1 col on mobile; hqOpenFocus scrolls to the           ║
-║          hydrate/rest anchors.                                                ║
+║  v1_3_11 Focus/HQ/Wellness pass. (1) Focus hero: two-paragraph Welcome copy;  ║
+║          plus per-section weekly KPIs under each mini-nav title (2 each,      ║
+║          rolling 7-day via jq_weekly_activity, replacing the KPI strip).      ║
+║          (2) HQ Recharge strip previews Wellness/Move tools w/ weekly         ║
+║          counters + deep-links. (3) Wellness redesigned around Breathe        ║
+║          (4-practice grid), compact Hydrate cue, Rest last.                   ║
 ║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
 ║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
 ║          compact client-built pipeline snapshot (apps/contacts with          ║
