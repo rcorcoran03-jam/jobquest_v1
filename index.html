@@ -142,6 +142,13 @@
 ║          the payoff of doing its activities intentionally; P2 nods to each    ║
 ║          category (Focus/Wellness/Move, color-coded) and how they compound    ║
 ║          into well-being — the ground that makes real focus possible.         ║
+║          Focus KPIs reworked: the per-section KPI strip is gone; each of the   ║
+║          three mini-nav titles now carries its OWN two KPIs (Focus:           ║
+║          sessions + day streak; Wellness: hydration + breath work; Move:      ║
+║          chair yoga + plank mins), all shown at once in each section's        ║
+║          color. Numbers are a rolling 7-DAY momentum total (new              ║
+║          jq_weekly_activity localStorage log via bumpWeekLog/getWeeklyStats)  ║
+║          rather than a daily count, captioned "rolling 7-day momentum".       ║
 ║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
 ║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
 ║          compact client-built pipeline snapshot (apps/contacts with          ║
@@ -1770,6 +1777,7 @@ function launchDailyTaskTimer(task) {
     if(state.pomSecs <= 0) {
       clearInterval(pomInterval); pomInterval = null; state.pomRunning = false;
       state.pomSessions++;
+      bumpWeekLog('focus');
       state.pomLog.push({task: state.pomTask, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), mins: task.pomMins});
       state.pomSecs = 0;
       render('pomodoro'); updateMiniTimer();
@@ -2952,10 +2960,38 @@ function renderPomodoro(el) {
     {key:'wellness', label:'Wellness', accent:'var(--teal)',     dim:'rgba(42,181,160,0.60)',  bdrDim:'rgba(42,181,160,0.22)',  pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)',  navBg:'rgba(47,158,110,0.10)'},
     {key:'move',     label:'Move',     accent:'var(--rose)',     dim:'rgba(196,96,122,0.60)',  bdrDim:'rgba(196,96,122,0.22)',  pale:'var(--rose-pale)',       brd:'var(--rose-border)',     navBg:'rgba(196,96,122,0.06)'},
   ];
-  const sectionNav = SNAV.map(s=>`
-    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:s.navBg};border-bottom:${section===s.key?`2px solid ${s.accent}`:`2px solid ${s.bdrDim}`};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:s.navBg}'">
-      <div style="font-size:14px;font-weight:700;color:${section===s.key?s.accent:s.dim};line-height:1;font-family:'DM Mono',monospace">${s.label}</div>
-    </div>`).join('');
+  // Weekly momentum stats (rolling 7 days) power the two KPIs shown beneath
+  // each mini-nav title — see getWeeklyStats(). Each section keeps its own
+  // color identity so all three read at a glance, selected or not.
+  const wk = getWeeklyStats();
+  const SECTION_KPIS = {
+    focus: [
+      {val: wk.focus,                                     label:'sessions'},
+      {val: streak>0 ? `🔥 ${streak}` : '—', label:'day streak'},
+    ],
+    wellness: [
+      {val: wk.water>0 ? `💧 ${wk.water}` : '—', label:'hydration'},
+      {val: wk.breath,                                          label:'breath work'},
+    ],
+    move: [
+      {val: wk.chair,                                       label:'chair yoga'},
+      {val: wk.plankMin>0 ? `${wk.plankMin}m` : '—',   label:'plank'},
+    ],
+  };
+  const sectionNav = SNAV.map(s=>{
+    const on = section===s.key;
+    const kps = SECTION_KPIS[s.key] || [];
+    return `
+    <div onclick="switchSection('${s.key}')" style="padding:11px 8px 12px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${on?s.pale:s.navBg};border-bottom:${on?`2px solid ${s.accent}`:`2px solid ${s.bdrDim}`};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${on?s.pale:s.navBg}'">
+      <div style="font-size:14px;font-weight:700;color:${on?s.accent:s.dim};line-height:1;font-family:'DM Mono',monospace;margin-bottom:10px">${s.label}</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        ${kps.map(k=>`<div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:700;color:${s.accent};line-height:1;font-family:'DM Mono',monospace">${k.val}</div>
+          <div style="font-size:8px;color:var(--faint);margin-top:4px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.label}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
 
   // ── Hero meta per section ───────────────────────────────────────────────────
   const heroAccent = SNAV.find(s=>s.key===section)?.accent || 'var(--amber)';
@@ -2972,38 +3008,10 @@ function renderPomodoro(el) {
       <p style="margin:0;font-size:12.5px;line-height:1.65;color:#9FBBD4">Each corner does its part: <strong style="color:var(--amber);font-weight:600">Focus</strong> protects deep, uninterrupted work; <strong style="color:var(--teal);font-weight:600">Wellness</strong> keeps you hydrated, rested, and breathing; <strong style="color:var(--rose);font-weight:600">Move</strong> loosens the stillness before it hardens into fatigue. Tend all three and they compound into overall well-being — the ground that finally makes real focus possible.</p>
     </div>` : '';
 
-  // ── KPI strip (per-section — matches HQ dashboard style) ────────────────────
-  const lastWaterMin = hydration.lastTs ? Math.round((Date.now()-hydration.lastTs)/60000) : null;
-  // Wellness KPIs
-  const breathDone = state.pomBreathTheme==='' && state.pomBreathStep>0 ? 1 : 0;
-  const wellnessActivities = (hydration.glasses>0?1:0) + (breathDone) + (state.pomRestSecs>0&&state.pomRestSecs<20*60?1:0);
-  const waterStatus = lastWaterMin===null ? '—' : lastWaterMin<2 ? 'just now' : lastWaterMin>45 ? `${lastWaterMin}m ⚠` : `${lastWaterMin}m`;
-  // Move KPIs
-  const moveActivities = state.pomMoveSessionsDone || 0;
-  const moveActive = state.pomMoveCard ? 1 : 0;
-  const kpiItems = section==='focus' ? [
-    {val:state.pomSessions,                              label:'sessions',  col:'var(--sky-blue-light)'},
-    {val:streak>0?`\uD83D\uDD25 ${streak}`:'—',         label:'streak',    col:'var(--amber)'},
-    {val:score.label.split(' ')[0],                      label:'score',     col:score.color},
-    {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'hydration', col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--sky-blue-light)'},
-  ] : section==='wellness' ? [
-    {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'water',     col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--teal)'},
-    {val:waterStatus,                                    label:'last sip',  col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--faint)'},
-    {val:wellnessActivities,                             label:'done today',col:'var(--teal)'},
-    {val:state.pomSessions>0?`\uD83D\uDD25 ${state.pomSessions}`:'—', label:'focus sessions', col:'var(--sky-blue-light)'},
-  ] : [
-    {val:moveActivities>0?`\uD83D\uDCAA ${moveActivities}`:(moveActive?'active':'—'), label:'moves done',  col:'var(--rose)'},
-    {val:state.pomMoveCard ? (state.pomMoveCard.charAt(0).toUpperCase()+state.pomMoveCard.slice(1)) : '—', label:'active move', col:'var(--rose)'},
-    {val:state.pomMoveStep>0?`step ${state.pomMoveStep+1}`:'—',                        label:'progress',   col:'var(--rose)'},
-    {val:state.pomSessions>0?state.pomSessions:'—',                                    label:'sessions',   col:'var(--faint)'},
-  ];
-  const focusKpis = `
-    <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:repeat(4,1fr)">
-      ${kpiItems.map(k=>`<div style="padding:9px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.05)">
-        <div style="font-size:15px;font-weight:700;color:${k.col};line-height:1;font-family:'DM Mono',monospace">${k.val}</div>
-        <div style="font-size:9px;color:var(--faint);margin-top:3px;letter-spacing:.04em;text-transform:uppercase">${k.label}</div>
-      </div>`).join('')}
-    </div>`;
+  // Thin caption clarifying the KPIs above are a rolling weekly total, not today's grind.
+  const weeklyCaption = `
+    <div style="background:rgba(8,18,30,0.55);border-top:1px solid rgba(91,160,210,0.10);padding:5px 8px;text-align:center;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">◷ rolling 7-day momentum</div>`;
+
 
   // ── Break picker ────────────────────────────────────────────────────────────
   const lastMood = state.pomLog.length ? (state.pomLog[state.pomLog.length-1].mood||'') : '';
@@ -3173,7 +3181,7 @@ function renderPomodoro(el) {
       <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid rgba(91,160,210,0.10)">
         ${sectionNav}
       </div>
-      ${focusKpis}
+      ${weeklyCaption}
     </div>
     ${section==='focus' ? focusContent : section==='wellness' ? buildWellnessContent() : buildMoveContent()}
   </div>`;
@@ -3214,6 +3222,7 @@ function togglePom() {
           clearInterval(pomInterval); pomInterval=null; state.pomRunning=false;
           if(state.pomMode===0) {
             state.pomSessions++;
+            bumpWeekLog('focus');
             state.pomLog.push({task:state.pomCustomTask||state.pomTask,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),mins:[25,5,15][state.pomMode]});
             updateFocusStreak();
             state.pomBreakPicker=true;
@@ -3324,6 +3333,7 @@ function logWater() {
   h.glasses = (h.glasses||0) + 1;
   h.lastTs = Date.now();
   localStorage.setItem('hydration', JSON.stringify(h));
+  bumpWeekLog('water');
   render('pomodoro');
 }
 
@@ -3331,6 +3341,42 @@ function clearWater() {
   const today = new Date().toISOString().slice(0,10);
   localStorage.setItem('hydration', JSON.stringify({date:today, glasses:0, lastTs:null}));
   render('pomodoro');
+}
+
+// ── WEEKLY MOMENTUM LOG ─────────────────────────────────────────────────────
+// A single localStorage key ('jq_weekly_activity') holds per-day counters keyed
+// by activity: {focus, breath, chair, water, plankMin}. The Focus tab mini-nav
+// KPIs sum the trailing 7 days to show momentum rather than the daily grind.
+// clearWater intentionally does NOT decrement the weekly water tally — it only
+// resets today's on-screen glass tracker.
+
+function getWeekLog() {
+  try { return JSON.parse(localStorage.getItem('jq_weekly_activity') || '{}') || {}; }
+  catch(e) { return {}; }
+}
+
+function bumpWeekLog(key, amt) {
+  amt = amt || 1;
+  const log = getWeekLog();
+  const today  = new Date().toISOString().slice(0,10);
+  const cutoff = new Date(Date.now()-6*86400000).toISOString().slice(0,10);
+  if (!log[today]) log[today] = {};
+  log[today][key] = (log[today][key]||0) + amt;
+  Object.keys(log).forEach(d => { if (d < cutoff) delete log[d]; });
+  try { localStorage.setItem('jq_weekly_activity', JSON.stringify(log)); } catch(e) {}
+}
+
+function getWeeklyStats() {
+  const log = getWeekLog();
+  const cutoff = new Date(Date.now()-6*86400000).toISOString().slice(0,10);
+  const sum = {focus:0, breath:0, chair:0, water:0, plankMin:0};
+  Object.keys(log).forEach(d => {
+    if (d >= cutoff) {
+      const day = log[d] || {};
+      Object.keys(sum).forEach(k => { sum[k] += (day[k]||0); });
+    }
+  });
+  return sum;
 }
 
 // ── PARKING LOT ───────────────────────────────────────────────────────────────
@@ -3596,6 +3642,15 @@ function buildMoveContent() {
     </div>`;
 }
 
+// Completing a guided Move flow (chair yoga / walk / body scan). Only chair
+// yoga feeds its own weekly KPI; all count toward the generic session tally.
+function finishMoveGuide() {
+  if (state.pomMoveCard === 'chair') bumpWeekLog('chair');
+  state.pomMoveSessionsDone = (state.pomMoveSessionsDone||0) + 1;
+  state.pomMoveCard = ''; state.pomMoveStep = 0;
+  render('pomodoro');
+}
+
 function buildStepGuide(steps, col, pale, brd) {
   const stepIdx = Math.min(state.pomMoveStep||0, steps.length-1);
   const step = steps[stepIdx];
@@ -3610,7 +3665,7 @@ function buildStepGuide(steps, col, pale, brd) {
         ${stepIdx>0 ? `<button onclick="state.pomMoveStep--;render('pomodoro')" style="font-size:12px">\u2190 Back</button>` : ''}
         ${stepIdx<total-1
           ? `<button onclick="state.pomMoveStep++;render('pomodoro')" style="flex:1;font-size:12px;background:${pale};border-color:${brd};color:${col};font-weight:600">Next \u2192</button>`
-          : `<button onclick="state.pomMoveSessionsDone=(state.pomMoveSessionsDone||0)+1;state.pomMoveCard='';state.pomMoveStep=0;render('pomodoro')" style="flex:1;font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green);font-weight:600">Done \u2713</button>`}
+          : `<button onclick="finishMoveGuide()" style="flex:1;font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green);font-weight:600">Done \u2713</button>`}
       </div>
     </div>`;
 }
@@ -3670,6 +3725,7 @@ function toggleBreathTimer() {
         } else {
           clearInterval(breathInterval); breathInterval=null;
           state.pomBreathRunning=false; state.pomBreathTheme=''; state.pomBreathStep=0; state.pomBreathStepSecs=0;
+          bumpWeekLog('breath');
           showToast('\uD83C\uDF2C Breathwork complete \u2014 carry this with you.');
           render('pomodoro');
         }
@@ -3758,6 +3814,9 @@ function togglePlank() {
         } else {
           clearInterval(plankInterval); plankInterval=null; state.pomPlankRunning=false; state.pomPlankSecs=0;
           state.pomMoveSessionsDone=(state.pomMoveSessionsDone||0)+1;
+          const _plv = state.pomPlankLevel||'beginner';
+          const _plankMin = Math.round(PLANK_LEVELS[_plv].rounds.reduce((a,r)=>a+r.work,0)/60);
+          bumpWeekLog('plankMin', _plankMin);
           showToast('\uD83D\uDCAA Challenge complete! Core activated.'); render('pomodoro');
         }
       } else {
