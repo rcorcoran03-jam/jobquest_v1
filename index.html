@@ -137,6 +137,11 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
+║  v1_3_11 Focus tab hero: added a two-paragraph Welcome beneath the "Focus"    ║
+║          headline (focus section only). P1 frames why the tab exists and      ║
+║          the payoff of doing its activities intentionally; P2 nods to each    ║
+║          category (Focus/Wellness/Move, color-coded) and how they compound    ║
+║          into well-being — the ground that makes real focus possible.         ║
 ║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
 ║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
 ║          compact client-built pipeline snapshot (apps/contacts with          ║
@@ -259,9 +264,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.10">
+<meta name="jq-version" content="1.3.11">
 <meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-07-02">
+<meta name="jq-date" content="2026-07-03">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -911,7 +916,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.10';
+const APP_VERSION = '1.3.11';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -2960,6 +2965,13 @@ function renderPomodoro(el) {
     : 'yoga \u00b7 walk \u00b7 scan \u00b7 plank';
   const starFill  = section==='focus' ? '#F5A623' : section==='wellness' ? '#2AB5A0' : '#C4607A';
 
+  // ── Welcome copy (focus section only — the tab's landing view) ───────────────
+  const welcomeBlock = section==='focus' ? `
+    <div style="margin-top:14px;max-width:660px;display:flex;flex-direction:column;gap:9px">
+      <p style="margin:0;font-size:12.5px;line-height:1.65;color:#C9DEEF">Welcome. A job search is a marathon you mostly run alone — this is the room you step into to look after the person running it. A few minutes spent here <em>on purpose</em>, rather than on autopilot, pay back as steadier attention, less burnout, and momentum that outlasts any single application.</p>
+      <p style="margin:0;font-size:12.5px;line-height:1.65;color:#9FBBD4">Each corner does its part: <strong style="color:var(--amber);font-weight:600">Focus</strong> protects deep, uninterrupted work; <strong style="color:var(--teal);font-weight:600">Wellness</strong> keeps you hydrated, rested, and breathing; <strong style="color:var(--rose);font-weight:600">Move</strong> loosens the stillness before it hardens into fatigue. Tend all three and they compound into overall well-being — the ground that finally makes real focus possible.</p>
+    </div>` : '';
+
   // ── KPI strip (per-section — matches HQ dashboard style) ────────────────────
   const lastWaterMin = hydration.lastTs ? Math.round((Date.now()-hydration.lastTs)/60000) : null;
   // Wellness KPIs
@@ -3155,6 +3167,7 @@ function renderPomodoro(el) {
             <span style="display:inline-block;width:12px;height:1px;background:${heroAccent}"></span>${heroSub}
           </div>
           <div style="font-size:46px;font-weight:400;color:#F4F8FC;line-height:1;letter-spacing:-.02em;font-style:italic;font-family:'DM Serif Display',Georgia,serif">${heroTitle}</div>
+          ${welcomeBlock}
         </div>
       </div>
       <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid rgba(91,160,210,0.10)">
