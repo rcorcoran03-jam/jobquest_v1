@@ -155,6 +155,14 @@
 ║          weekly hydration/breath/chair-yoga/plank counters plus one-tap       ║
 ║          deep-links (hqOpenFocus) that jump to the Focus tab with the right   ║
 ║          section + card preselected.                                          ║
+║          Wellness section redesigned: dropped the 3-card Hydrate/Breathe/     ║
+║          Rest selector for a stacked layout with BREATHE as the centerpiece   ║
+║          (all four practices in a spacious 2x2 grid showing steps + est.      ║
+║          minutes, or the in-session guide expanded), a compact Hydrate cue    ║
+║          strip below it, and Rest last. New builders buildBreatheSection/     ║
+║          buildBreatheActive/buildHydrateSection/buildRestSection; breathe-    ║
+║          grid stacks to 1 col on mobile; hqOpenFocus scrolls to the           ║
+║          hydrate/rest anchors.                                                ║
 ║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
 ║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
 ║          compact client-built pipeline snapshot (apps/contacts with          ║
@@ -645,6 +653,10 @@
     .app-card-ai-grid { width: 100% !important; }
     /* Job boards grid: stack to single column on mobile */
     .job-boards-grid { grid-template-columns: 1fr !important; }
+
+    /* Breathe practice grid: stack to single column so the four cards get full
+       width on a phone instead of overflowing the 2-col layout. */
+    .breathe-grid { grid-template-columns: 1fr !important; }
 
     /* Sync page import/export cards: stack to single column on mobile — the
        2-col grid's items default to min-width:auto, which was letting long
@@ -1914,9 +1926,13 @@ function renderHQRechargeStrip() {
 // preselected, so a click on a Recharge action lands on the live tool.
 function hqOpenFocus(section, card) {
   state.pomSection = section || 'focus';
-  if (section === 'wellness') state.pomWellnessCard = card || '';
-  else if (section === 'move') { state.pomMoveCard = card || ''; state.pomMoveStep = 0; }
+  if (section === 'move') { state.pomMoveCard = card || ''; state.pomMoveStep = 0; }
   showTab('pomodoro');
+  // Wellness stacks its tools; scroll to the requested one (Breathe is already
+  // at the top of the section, so only hydrate/rest need a nudge).
+  if (section === 'wellness' && (card === 'hydrate' || card === 'rest')) {
+    requestAnimationFrame(()=>document.getElementById('wellness-'+card)?.scrollIntoView({behavior:'smooth',block:'center'}));
+  }
 }
 
 function renderHQHero() {
@@ -3526,81 +3542,53 @@ function switchSection(s) {
 // ── WELLNESS SECTION BUILDERS ─────────────────────────────────────────────────
 
 function buildWellnessContent() {
-  const sel = state.pomWellnessCard || '';
-  const cards = [
-    {id:'hydrate', icon:'\uD83D\uDCA7', label:'Hydrate', desc:'Daily water tracker'},
-    {id:'breathe', icon:'\uD83C\uDF2C', label:'Breathe', desc:'Guided meditation'},
-    {id:'rest',    icon:'\uD83D\uDCA4', label:'Rest',    desc:'20-min nap \u00b7 surrender series'},
-  ];
-  const cardRow = cards.map(c=>`
-    <div onclick="state.pomWellnessCard='${sel===c.id?'':c.id}';render('pomodoro')" style="flex:1;padding:14px;border:1px solid ${sel===c.id?'rgba(42,181,160,0.45)':'rgba(255,255,255,0.08)'};border-radius:10px;background:${sel===c.id?'rgba(42,181,160,0.10)':'rgba(255,255,255,0.03)'};cursor:pointer;transition:all .15s;text-align:center">
-      <div style="font-size:26px;margin-bottom:6px">${c.icon}</div>
-      <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--teal-light)':'var(--muted)'}">${c.label}</div>
-      <div style="font-size:10px;color:var(--faint);margin-top:3px;line-height:1.4">${c.desc}</div>
-    </div>`).join('');
-
-  let expanded = '';
-  if (sel==='hydrate') expanded = buildHydrateContent();
-  else if (sel==='breathe') expanded = buildBreatheContent();
-  else if (sel==='rest') expanded = buildRestContent();
-
+  // Wellness stacks its tools vertically now, with Breathe as the centerpiece
+  // (mirroring how the Focus mini-tab gives its primary tool room), hydration
+  // cues in the middle, and Rest at the end.
   return `
-    <div style="border:1px solid rgba(42,181,160,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
-      <div style="display:flex;gap:10px;${sel?'margin-bottom:16px':''}">${cardRow}</div>
-      ${expanded}
+    <div style="border:1px solid rgba(42,181,160,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px;display:flex;flex-direction:column;gap:24px">
+      ${buildBreatheSection()}
+      ${buildHydrateSection()}
+      ${buildRestSection()}
     </div>`;
 }
 
-function buildHydrateContent() {
-  const h = getHydrationState();
-  const lastMin = h.lastTs ? Math.round((Date.now()-h.lastTs)/60000) : null;
-  const warn = lastMin!==null && lastMin>45;
-  const status = lastMin===null ? 'No water logged yet' : lastMin<2 ? 'Just now \u2713' : warn ? `${lastMin}m ago \u26a0` : `${lastMin}m ago`;
-  return `
-    <div style="border:1px solid rgba(91,160,210,0.15);border-radius:10px;background:rgba(8,18,30,0.40);padding:18px">
-      <div style="display:flex;gap:20px;align-items:center;margin-bottom:14px">
-        <div style="text-align:center;min-width:60px">
-          <div style="font-size:52px;font-weight:600;color:var(--tx);font-family:var(--mono);line-height:1">${h.glasses}</div>
-          <div style="font-size:10px;color:var(--faint);margin-top:2px">glasses</div>
-        </div>
-        <div style="flex:1">
-          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--teal)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
-          <div style="font-size:11px;color:${warn?'var(--amber)':'var(--muted)'}">Goal: 8 glasses \u00b7 ${status}</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px">
-          <div style="font-size:10px;color:var(--faint);margin-bottom:4px">Why it matters</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5">Even mild dehydration impacts focus, memory, and mood. Your brain is 75% water.</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px">
-          <div style="font-size:10px;color:var(--faint);margin-bottom:4px">Simple rhythm</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5">One glass at session start + end. One with each meal. That\u2019s your 8.</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="logWater()" style="flex:1;font-size:12px;background:var(--teal-pale);border-color:var(--teal-border);color:var(--teal-light)">+ Glass</button>
-        ${h.glasses>0?`<button onclick="clearWater()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Reset</button>`:''}
-      </div>
-    </div>`;
-}
-
-function buildBreatheContent() {
+// Breathe — the headline Wellness tool. All four guided practices get generous
+// space in a 2x2 grid (steps + est. minutes on each), or the active session
+// expands to fill the section once a practice is chosen.
+function buildBreatheSection() {
   const themeId = state.pomBreathTheme || '';
-  if (!themeId) {
-    return `<div>
-      <div style="font-size:10px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Choose a practice</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${BREATH_THEMES.map(t=>`
-          <div onclick="startBreathTheme('${t.id}')" style="padding:14px;border:1px solid ${t.brd};border-radius:10px;background:${t.pale};cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='0.82'" onmouseout="this.style.opacity='1'">
-            <div style="font-size:22px;margin-bottom:6px">${t.icon}</div>
-            <div style="font-size:13px;font-weight:600;color:${t.color};margin-bottom:4px">${t.label}</div>
-            <div style="font-size:11px;color:var(--faint);line-height:1.45">${t.desc}</div>
-          </div>`).join('')}
+  const header = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="width:20px;height:1px;display:inline-block;background:var(--teal)"></span>
+      <span style="font-size:12px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;text-transform:uppercase">🌬 Breathe</span>
+      <span style="font-size:11px;color:var(--faint);font-style:italic">${themeId ? 'in session' : "four guided practices for the moment you're in"}</span>
+    </div>`;
+  if (themeId) return `<div>${header}${buildBreatheActive()}</div>`;
+  const cards = BREATH_THEMES.map(t=>{
+    const mins = Math.max(1, Math.round(t.steps.reduce((a,x)=>a+x.secs,0)/60));
+    return `
+    <div onclick="startBreathTheme('${t.id}')" style="padding:18px;border:1px solid ${t.brd};border-radius:12px;background:${t.pale};cursor:pointer;transition:transform .15s,border-color .15s;display:flex;flex-direction:column;min-height:138px" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='${t.color}'" onmouseout="this.style.transform='none';this.style.borderColor='${t.brd}'">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+        <span style="font-size:28px;line-height:1">${t.icon}</span>
+        <span style="font-size:15px;font-weight:600;color:${t.color}">${t.label}</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);line-height:1.5;flex:1">${t.desc}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+        <span style="font-size:9.5px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase">${t.steps.length} steps · ~${mins} min</span>
+        <span style="font-size:11px;font-weight:600;color:${t.color}">Begin →</span>
       </div>
     </div>`;
-  }
-  const theme = BREATH_THEMES.find(t=>t.id===themeId);
+  }).join('');
+  return `<div>${header}
+    <div class="breathe-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${cards}</div>
+  </div>`;
+}
+
+// The in-session breathing guide — larger, calmer typography than the old
+// card-expanded version, since it now owns the top of the Wellness section.
+function buildBreatheActive() {
+  const theme = BREATH_THEMES.find(t=>t.id===state.pomBreathTheme);
   const stepIdx = state.pomBreathStep || 0;
   const step = theme.steps[stepIdx];
   const secs = state.pomBreathStepSecs || step.secs;
@@ -3608,26 +3596,69 @@ function buildBreatheContent() {
   const m = Math.floor(secs/60), s = secs%60;
   const timeStr = m>0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
   return `
-    <div style="border:1px solid ${theme.brd};border-radius:10px;background:${theme.pale};padding:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px">${theme.icon}</span>
-          <span style="font-size:13px;font-weight:600;color:${theme.color}">${theme.label}</span>
+    <div style="border:1px solid ${theme.brd};border-radius:12px;background:${theme.pale};padding:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:24px">${theme.icon}</span>
+          <span style="font-size:16px;font-weight:600;color:${theme.color}">${theme.label}</span>
         </div>
-        <button onclick="closeBreath()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;text-decoration:underline">\u2190 Back</button>
+        <button onclick="closeBreath()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;text-decoration:underline">← All practices</button>
       </div>
-      <div style="display:flex;gap:3px;margin-bottom:14px">${theme.steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?theme.color:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
-      <div style="font-size:11px;color:${theme.color};letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Step ${stepIdx+1} of ${theme.steps.length} \u00b7 ${step.label}</div>
-      <div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:16px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:32px;font-weight:600;color:${theme.color};font-family:var(--mono);min-width:52px" id="breath-timer">${timeStr}</div>
+      <div style="display:flex;gap:3px;margin-bottom:16px">${theme.steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?theme.color:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
+      <div style="font-size:11px;color:${theme.color};letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Step ${stepIdx+1} of ${theme.steps.length} · ${step.label}</div>
+      <div style="font-size:17px;color:var(--tx);line-height:1.75;margin-bottom:20px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-size:38px;font-weight:600;color:${theme.color};font-family:var(--mono);min-width:62px" id="breath-timer">${timeStr}</div>
         <div style="flex:1;display:flex;gap:8px">
           <button onclick="toggleBreathTimer()" style="flex:1;font-size:12px;background:${isRunning?'rgba(255,255,255,0.06)':theme.pale};border-color:${theme.brd};color:${theme.color};font-weight:600">${isRunning?'Pause':secs===step.secs?'Begin':'Resume'}</button>
           ${stepIdx<theme.steps.length-1
-            ? `<button onclick="nextBreathStep()" style="font-size:12px">Next \u2192</button>`
-            : `<button onclick="closeBreath()" style="font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green)">Done \u2713</button>`}
+            ? `<button onclick="nextBreathStep()" style="font-size:12px">Next →</button>`
+            : `<button onclick="closeBreath()" style="font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green)">Done ✓</button>`}
         </div>
       </div>
+    </div>`;
+}
+
+// Hydration is now a compact cue below Breathe: counter, progress, quick add.
+function buildHydrateSection() {
+  const h = getHydrationState();
+  const lastMin = h.lastTs ? Math.round((Date.now()-h.lastTs)/60000) : null;
+  const warn = lastMin!==null && lastMin>45;
+  const status = lastMin===null ? 'none logged yet' : lastMin<2 ? 'just now ✓' : warn ? `${lastMin}m ago ⚠` : `${lastMin}m ago`;
+  return `
+    <div id="wellness-hydrate">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="width:20px;height:1px;display:inline-block;background:var(--teal)"></span>
+        <span style="font-size:12px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;text-transform:uppercase">💧 Hydrate</span>
+        <span style="font-size:11px;color:${warn?'var(--amber)':'var(--faint)'};font-style:italic">last sip ${status}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;border:1px solid rgba(91,160,210,0.15);border-radius:10px;background:rgba(8,18,30,0.40);padding:14px 16px;flex-wrap:wrap">
+        <div style="display:flex;align-items:baseline;gap:5px;min-width:60px">
+          <span style="font-size:34px;font-weight:600;color:var(--tx);font-family:var(--mono);line-height:1">${h.glasses}</span>
+          <span style="font-size:12px;color:var(--faint)">/ 8</span>
+        </div>
+        <div style="flex:1;min-width:170px">
+          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--teal)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.45">One glass at each session's start and end, one with every meal — that's your 8. Mild dehydration quietly saps focus and mood.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">
+          <button onclick="logWater()" style="font-size:12px;background:var(--teal-pale);border-color:var(--teal-border);color:var(--teal-light);white-space:nowrap;padding:8px 18px">+ Glass</button>
+          ${h.glasses>0?`<button onclick="clearWater()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Reset</button>`:''}
+        </div>
+      </div>
+    </div>`;
+}
+
+// Rest closes the section — the 20-minute surrender series.
+function buildRestSection() {
+  return `
+    <div id="wellness-rest">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="width:20px;height:1px;display:inline-block;background:var(--blue)"></span>
+        <span style="font-size:12px;font-weight:700;color:var(--blue);letter-spacing:.05em;text-transform:uppercase">💤 Rest</span>
+        <span style="font-size:11px;color:var(--faint);font-style:italic">a guided wind-down</span>
+      </div>
+      ${buildRestContent()}
     </div>`;
 }
 
