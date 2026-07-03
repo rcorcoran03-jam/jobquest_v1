@@ -149,6 +149,12 @@
 ║          color. Numbers are a rolling 7-DAY momentum total (new              ║
 ║          jq_weekly_activity localStorage log via bumpWeekLog/getWeeklyStats)  ║
 ║          rather than a daily count, captioned "rolling 7-day momentum".       ║
+║          HQ tab: new full-width "Recharge · Wellness & Movement" strip        ║
+║          (renderHQRechargeStrip) between the hero and the job-board           ║
+║          launcher — previews the Focus tab's Wellness/Move tools with the     ║
+║          weekly hydration/breath/chair-yoga/plank counters plus one-tap       ║
+║          deep-links (hqOpenFocus) that jump to the Focus tab with the right   ║
+║          section + card preselected.                                          ║
 ║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
 ║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
 ║          compact client-built pipeline snapshot (apps/contacts with          ║
@@ -1863,6 +1869,56 @@ function renderDailyBriefPanel() {
     </div>` + footer);
 }
 
+// HQ "Recharge" strip — a full-width band between the hero and the job-board
+// launcher that previews the Focus tab's Wellness & Move tools. Surfaces the
+// rolling 7-day momentum counters and one-tap deep-links into each key activity.
+function renderHQRechargeStrip() {
+  const wk = getWeeklyStats();
+  const kpis = [
+    {icon:'💧', val: wk.water,                          label:'hydration',   col:'var(--teal-light)'},
+    {icon:'🌬', val: wk.breath,                         label:'breath work', col:'var(--teal-light)'},
+    {icon:'🧘', val: wk.chair,                          label:'chair yoga',  col:'var(--rose)'},
+    {icon:'💪', val: wk.plankMin>0?`${wk.plankMin}m`:0, label:'plank',       col:'var(--rose)'},
+  ];
+  const kpiRow = kpis.map(k=>`
+    <div style="flex:1;min-width:78px;text-align:center;padding:8px 6px;background:rgba(8,18,30,0.35);border:1px solid rgba(255,255,255,0.06);border-radius:8px">
+      <div style="font-size:16px;font-weight:700;color:${k.col};line-height:1;font-family:'DM Mono',monospace">${k.icon} ${k.val}</div>
+      <div style="font-size:8.5px;color:var(--faint);margin-top:4px;letter-spacing:.04em;text-transform:uppercase">${k.label}</div>
+    </div>`).join('');
+  const actions = [
+    {section:'wellness', card:'breathe', icon:'🌬', label:'Breathe',    col:'var(--teal-light)', brd:'var(--teal-border)', bg:'rgba(42,181,160,0.10)'},
+    {section:'wellness', card:'hydrate', icon:'💧', label:'Hydrate',    col:'var(--teal-light)', brd:'var(--teal-border)', bg:'rgba(42,181,160,0.10)'},
+    {section:'move',     card:'chair',   icon:'🧘', label:'Chair yoga', col:'var(--rose)',       brd:'var(--rose-border)', bg:'var(--rose-pale)'},
+    {section:'move',     card:'plank',   icon:'💪', label:'Plank',      col:'var(--rose)',       brd:'var(--rose-border)', bg:'var(--rose-pale)'},
+  ];
+  const actionRow = actions.map(a=>`
+    <button onclick="hqOpenFocus('${a.section}','${a.card}')" style="flex:1;min-width:110px;font-size:12px;font-weight:600;color:${a.col};border:1px solid ${a.brd};background:${a.bg};border-radius:8px;padding:9px 10px;white-space:nowrap">${a.icon} ${a.label} →</button>`).join('');
+
+  return `
+  <div style="margin:0;border:1px solid rgba(42,181,160,0.22);border-radius:12px;overflow:hidden;background:linear-gradient(135deg,rgba(42,181,160,0.06) 0%,rgba(196,96,122,0.06) 100%)">
+    <div style="padding:14px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="font-size:11px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+          <span style="width:20px;height:1px;display:inline-block;background:var(--teal)"></span>✦ Recharge · Wellness &amp; Movement
+        </div>
+        <button onclick="hqOpenFocus('focus')" style="font-size:10px;color:var(--teal-light);border:1px solid var(--teal-border);background:transparent;padding:3px 10px;border-radius:6px">Open Focus tab →</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">A search runs on your focus reserves. Top them back up — hydrate, breathe, move — so the deep work stays sustainable. <span style="color:var(--faint)">Counters are your rolling 7-day momentum.</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${kpiRow}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${actionRow}</div>
+    </div>
+  </div>`;
+}
+
+// Deep-link from HQ into the Focus tab with a section (and optionally a card)
+// preselected, so a click on a Recharge action lands on the live tool.
+function hqOpenFocus(section, card) {
+  state.pomSection = section || 'focus';
+  if (section === 'wellness') state.pomWellnessCard = card || '';
+  else if (section === 'move') { state.pomMoveCard = card || ''; state.pomMoveStep = 0; }
+  showTab('pomodoro');
+}
+
 function renderHQHero() {
   const HIDDEN_STAGES = ['Rejected','Ghosted'];
   const apps = state.apps;
@@ -2114,7 +2170,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + `
+  el.innerHTML = setupBanner() + renderHQHero() + renderHQRechargeStrip() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
