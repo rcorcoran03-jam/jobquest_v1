@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.12  (Guided practice Play mode:         ║
-║  narrated voiceover + light ambient music, mute always present)              ║
+║  JOBQUEST — Starter Edition  ·  v1.3.13  (import reads priority + fit;       ║
+║  full cloud sync; demo dates stay current)                                   ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -52,7 +52,7 @@
 ║          "This guide will show you how to:" with short verb-first labels     ║
 ║          (Host code on GitHub / Deploy to Cloudflare / Develop your profile  ║
 ║          / Connect a private cloud backup); step 4 marked "start using the   ║
-║          live tool here".                                                     ║
+║          live tool here".                                                    ║
 ║  v1_2_11 welcome + setup polish. (1) Anthropic API cost row now carries a    ║
 ║          light-yellow "Suggested" pill and folds in the "not required"       ║
 ║          note; the standalone AI-is-optional line is removed. (2) Welcome    ║
@@ -61,24 +61,24 @@
 ║          (3) Per-step disclosure flattened to one tier: "See more" reveals   ║
 ║          the full walkthrough at once. (4) Per-step Collapse removed; a      ║
 ║          single "Collapse all detail" button sits bottom-right of the card,  ║
-║          mirroring "Expand all detail" top-right. (5) "← Back to welcome"     ║
-║          added left of Expand-all.                                            ║
+║          mirroring "Expand all detail" top-right. (5) "← Back to welcome"    ║
+║          added left of Expand-all.                                           ║
 ║  v1_2_12 step 1 now shows a visual ASCII file-tree of the repo structure     ║
 ║          (your-repo/ → index.html, README.md, functions/api/claude.js) in    ║
 ║          the full-detail view, so the layout to replicate is seen, not just  ║
-║          described.                                                           ║
-║  v1_2_13 (1) welcome hero gains a "▶ Take a live tour" button beside Get      ║
+║          described.                                                          ║
+║  v1_2_13 (1) welcome hero gains a "▶ Take a live tour" button beside Get     ║
 ║          started — loads the app fully populated with sample data so the     ║
 ║          payoff is visible before any signup. Tour is flagged jq_demo (not   ║
 ║          setup_skipped); a rose tour banner offers Build my own → and Exit   ║
-║          tour. (2) Wizard split into THREE sequential stages: welcome →       ║
-║          setup (deploy + API guide ONLY, steps 1–3, no profile fields) →      ║
-║          profile (the builder). Profile build is gated behind a "My app is    ║
-║          live — build my profile →" button so nobody starts entering data     ║
-║          before deployment. Manual mode is still reachable, but as a quiet    ║
-║          escape link, not the prominent first-step path. (3) Stage changes    ║
-║          now scroll the wizard back to the top (wzScrollTop) — fixes Get      ║
-║          started landing mid-page on the next screen.                         ║
+║          tour. (2) Wizard split into THREE sequential stages: welcome →      ║
+║          setup (deploy + API guide ONLY, steps 1–3, no profile fields) →     ║
+║          profile (the builder). Profile build is gated behind a "My app is   ║
+║          live — build my profile →" button so nobody starts entering data    ║
+║          before deployment. Manual mode is still reachable, but as a quiet   ║
+║          escape link, not the prominent first-step path. (3) Stage changes   ║
+║          now scroll the wizard back to the top (wzScrollTop) — fixes Get     ║
+║          started landing mid-page on the next screen.                        ║
 ║  v1_2_14 added a small green "▶ view live demo" pill in the bottom-right       ║
 ║          corner of the welcome hero banner — a third entry point into the      ║
 ║          live tour (calls startDemoTour), alongside the hero buttons.          ║
@@ -111,13 +111,13 @@
 ║          while the flag is set and not in the live tour.                         ║
 ║  v1_2_19 wizard chevron nav + sample-data re-entry. A Welcome › Setup ›      ║
 ║          Profile chevron breadcrumb replaces the scattered "← Back" buttons  ║
-║          across all three wizard stages — completed stages clickable (sky-    ║
-║          blue), active stage amber, future stages dimmed but reachable.       ║
-║          The "exploring with sample data" board banner gains a primary        ║
-║          "Set up my own →" amber CTA (calls openSetupGuide → Welcome          ║
-║          screen) alongside the existing "Clear sample data" link, so          ║
-║          anyone who loaded example data from the Profile builder can find     ║
-║          their way back into the setup flow without hunting.                  ║
+║          across all three wizard stages — completed stages clickable (sky-   ║
+║          blue), active stage amber, future stages dimmed but reachable.      ║
+║          The "exploring with sample data" board banner gains a primary       ║
+║          "Set up my own →" amber CTA (calls openSetupGuide → Welcome         ║
+║          screen) alongside the existing "Clear sample data" link, so         ║
+║          anyone who loaded example data from the Profile builder can find    ║
+║          their way back into the setup flow without hunting.                 ║
 ║  v1_2_18 authorship: added MIT LICENSE to the repo, a credit line in this        ║
 ║          header (rides along with every fork), a README footer linking back      ║
 ║          to ryan-corcoran.com, and a subtle "built by Ryan Corcoran · MIT        ║
@@ -136,53 +136,66 @@
 ║          timed long-break countdown), hyperfocus warning after 4+ sessions,     ║
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
-║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator). ║
-║  v1_3_12 Guided-practice Play mode + audio. (1) Chair Yoga, Walk, Body        ║
-║          Scan now auto-advance on each step's suggested time (Play/Pause),    ║
-║          matching Breathe. (2) New jqAudio module: browser-voice narration    ║
-║          of each cue + a very light Web-Audio ambient pad that fades in       ║
-║          after ~30s. (3) 🔊/🔇 toggle in every session header (persisted        ║
-║          via wellness_muted) — muted Play runs fully silent.                  ║
-║  v1_3_11 Focus/HQ/Wellness pass. (1) Focus hero: two-paragraph Welcome copy;  ║
-║          plus per-section weekly KPIs under each mini-nav title (2 each,      ║
-║          rolling 7-day via jq_weekly_activity, replacing the KPI strip).      ║
-║          (2) HQ Recharge strip previews Wellness/Move tools w/ weekly         ║
-║          counters + deep-links. (3) Wellness redesigned around Breathe        ║
-║          (4-practice grid), compact Hydrate cue, Rest last.                   ║
-║  v1_3_10 HQ Daily Brief + prompt caching. (1) New Daily Brief band on the     ║
-║          HQ hero (between KPI strip and JD/Focus row): Claude reads a        ║
-║          compact client-built pipeline snapshot (apps/contacts with          ║
-║          staleness as day counts, focus stats) and returns 3-5 ranked        ║
-║          actions via FORCED CUSTOM TOOL USE (daily_brief tool +              ║
-║          tool_choice:{type:'tool'}) — guaranteed-schema structured output.   ║
-║          sanitizeBrief() clamps drift; result cached in localStorage         ║
-║          (jq_daily_brief) per day with ↻ Regenerate. Action cards carry      ║
-║          urgency colors (rose/gold/teal), rank medallions, staggered         ║
-║          fadeIn, and deep-link buttons (briefGo/flashCard; app & contact     ║
-║          cards gained DOM ids app-card-/net-card-<id>). Demo tour shows a    ║
-║          canned sample brief built from example data; empty pipelines get    ║
-║          a hint instead of the button. (2) runAnalyze system prompt now      ║
-║          sent as a block array with cache_control:{type:'ephemeral'} —      ║
-║          NOTE: silent no-op below sonnet-4-6's 2048-token cache floor        ║
-║          (typical profiles), activates for verbose ones; usage logged via    ║
-║          console.debug for observability.                                    ║
-║  v1_3_9  Applications hero rearranged. (1) All five KPI tiles (formerly       ║
-║          Total-tracked banner + 2x2 grid, left column) now form a single     ║
-║          full-width top row (auto-fit grid, wraps on narrow screens).        ║
-║          (2) JD Analyzer (left) and Pipeline Narrative (right) sit side by   ║
-║          side beneath it (equal height, stacks below ~600px). (3) Narrative  ║
-║          recolored purple → gold to match the gold=Claude-prompt             ║
-║          convention — same panel chrome as the JD analyzer, differentiated  ║
-║          by an outline button, plus a one-line explainer of what it writes.  ║
-║          (4) App-card 2x2 AI action grid now stretches to full card height   ║
-║          (grid-auto-rows:1fr) under a small gold header row ("✦ ai tools ·  ║
-║          powered by claude") labeling the buttons as Anthropic-API features. ║
-║  v1_3_8  Networking tab: inline AI generation + two new prompt types. (1)     ║
-║          copyNetPrompt() (clipboard-copy) replaced by genNetMsg(type,id),     ║
-║          mirroring genRefMsg()'s claudeStream-into-the-card pattern.          ║
-║          Nudge/Update/Ask now stream inline into a gold-bordered draft box    ║
-║          (c.draftMsg/c.draftType) with Copy + Regenerate, instead of          ║
-║          copying a prompt to paste elsewhere. (2) claudeStream() takes an     ║
+║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator).║
+║  v1_3_13 Demo dates stay fresh. EXAMPLE_APPS/CONTACTS are authored against   ║
+║          DEMO_ANCHOR_DATE (2026-06-20); loadExampleData shifts every date by ║
+║          anchor → today, and refreshDemoDates() rolls them forward on each   ║
+║          later tour visit (jq_demo_dates_as_of). Champions read warm and next║
+║          steps land this week whenever the tour is opened. The roll-forward  ║
+║          runs in the tour only, never on a real build. Edwards note reworded ║
+║          to match the anchor.                                                ║
+║  v1_3_12 Cloud sync covers everything that should travel. Gist payload v3    ║
+║          adds prefs (profile, custom links, today's daily checklist), and    ║
+║          applyCloudData() now restores tasks + referrals too. Connecting a   ║
+║          new device to a Gist with data pulls all of it, so AI features work ║
+║          right away. Older v2 Gists never blank local settings. Profile,     ║
+║          link, and checklist edits trigger a sync via syncPrefsSoon(), gated ║
+║          on state.dataLoaded so the wizard can't back up the empty startup   ║
+║          state over real data. Credentials, focus streak, hydration stay     ║
+║          device-only. New localISODate(); daily checklist resets at local    ║
+║          midnight instead of UTC.                                            ║
+║  v1_3_11 Import reads 'Priority: X | Fit: Y' from the start of Notes into    ║
+║          the real fields (parseNotesPrefix). A real Priority/Fit column wins.║
+║          Notes-derived values only fill gaps: a priority set in JobQuest     ║
+║          and any fit already on the card are kept; analyzer fit scores are   ║
+║          never replaced. Fit normalized ('7.0' → '7'). Cards hide the prefix ║
+║          in display (stripNotesPrefix); stored notes are unchanged.          ║
+║  v1_3_10 import rebuild + deletion. (1) parseCSVRows(): RFC 4180 parser.     ║
+║          The old one split on newlines before reading quotes, so every       ║
+║          multi-line Notes cell became extra junk cards (321 rows → 1,056).   ║
+║          Handles CRLF + BOM; contact import uses it too. (2) Import now opens║
+║          a preview (buildImportPlan) before writing anything, with two       ║
+║          modes: Add net new, or Replace with this file. Replace keeps        ║
+║          JobQuest-only fields on matched cards (fit, jdText, actLog, etc.).  ║
+║          (3) Matching: Notion Page URL → Job Link → company + role; each     ║
+║          card claimed once, so 41 roles at one company no longer collapse.   ║
+║          (4) Column aliases: Status (mapped to stages), Notes, Job Link,     ║
+║          Page URL, Follow-up Date, Created. Export adds Notes / Job Link /   ║
+║          Page URL so files round-trip. (5) Undo snapshot before every        ║
+║          import and bulk delete, restorable from Sync. (6) Delete            ║
+║          permanently in the edit form; Select mode with select-all-in-       ║
+║          view, bulk archive, bulk delete. (7) Expanded cards show Job        ║
+║          posting / Notion page links and imported notes.                     ║
+║  v1_3_9  bug-fix pass. (1) Removed the duplicate doCloudSetup(); the         ║
+║          survivor re-renders Sync when connecting from Sync, and hands off   ║
+║          to the board from the first-run cloud screen. (2) claudeStream()    ║
+║          buffers partial SSE lines across network chunks (text was being     ║
+║          dropped), treats mid-stream error events as failures, and takes an  ║
+║          optional onError hook. Builder panels now show the error instead    ║
+║          of spinning forever, and keep any partial text. (3) Company Profile ║
+║          now actually enables web_search (the prompt asked for it, the       ║
+║          request never sent the tool). (4) High-priority filter showed       ║
+║          non-High apps; it now shows High apps and the pinned strip steps    ║
+║          aside while it's active. HQ 'High Pri' KPI lands on that filter.    ║
+║          (5) New INTERVIEW_STAGES constant + 'interviewing' filter covering  ║
+║          Phone Screen / Interview / Final Round, used by both KPI counts     ║
+║          and both Interview tiles so counts and filters can't drift.         ║
+║  v1_3_8  Networking tab: inline AI generation + two new prompt types. (1)    ║
+║          copyNetPrompt() (clipboard-copy) replaced by genNetMsg(type,id),    ║
+║          mirroring genRefMsg()'s claudeStream-into-the-card pattern.         ║
+║          Nudge/Update/Ask now stream inline into a gold-bordered draft box   ║
+║          (c.draftMsg/c.draftType) with Copy + Regenerate, instead of         ║
+║          copying a prompt to paste elsewhere. (2) claudeStream() takes an    ║
 ║          optional {webSearch} param that adds the web_search tool (same      ║
 ║          spec already used by runAnalyze()) to the request. (3) New          ║
 ║          genMeetingPrep() — only offered when a contact has an upcoming      ║
@@ -193,7 +206,7 @@
 ║          (5) Action row switched from a fixed 4-col grid to flex-wrap to     ║
 ║          fit the new conditional buttons; all AI-trigger buttons render      ║
 ║          gold, consistent with the gold=Claude-prompt convention.            ║
-║  v1_3_7  Applications tab: Cover Letter + Resume Bullet AI builders. (1)      ║
+║  v1_3_7  Applications tab: Cover Letter + Resume Bullet AI builders. (1)     ║
 ║          Data capture: saveAnalyzedCard() now persists the full pasted JD    ║
 ║          as app.jdText (previously discarded); readWizardInputs() now        ║
 ║          persists résumé paste as profile.resumeText. New optional           ║
@@ -225,11 +238,11 @@
 ║          where the user should act — always renders at full opacity.        ║
 ║  v1_3_5  Networking relationship tag. (1) Added "Referral" as a relationship   ║
 ║          option (REL_COL) alongside Connection/Alumni/Recruiter/Cold           ║
-║          Outreach, for contacts who gave a warm intro/referral — teal to      ║
+║          Outreach, for contacts who gave a warm intro/referral — teal to     ║
 ║          echo the Warm heat pill. (2) Contact-form relationship dropdown now   ║
-║          offers Referral. (3) The relationship pill on each contact card is   ║
-║          now sized to match the Warm/Nudge/Cold heat pill (10px, 1px 7px      ║
-║          padding, 8px radius) instead of the larger global .badge size.       ║
+║          offers Referral. (3) The relationship pill on each contact card is  ║
+║          now sized to match the Warm/Nudge/Cold heat pill (10px, 1px 7px     ║
+║          padding, 8px radius) instead of the larger global .badge size.      ║
 ║  v1_3_4  HQ board launcher condensed + restyled. (1) QUICK_LAUNCHES reduced     ║
 ║          from 4 generic groups to 2: Primary search (LinkedIn/Indeed/           ║
 ║          Glassdoor) and Parallel path (Wellfound/We Work Remotely/Built In/     ║
@@ -271,9 +284,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.12">
+<meta name="jq-version" content="1.3.13">
 <meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-07-03">
+<meta name="jq-date" content="2026-10-21">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -633,16 +646,8 @@
     /* Actions row: full width on mobile */
     .app-card-actions { width: 100% !important; }
     .app-card-actions select { max-width: 100% !important; }
-    /* App card: stack the AI action grid below the main content on mobile
-       instead of squeezing it into a narrow right column */
-    .app-card-split { flex-direction: column !important; }
-    .app-card-ai-grid { width: 100% !important; }
     /* Job boards grid: stack to single column on mobile */
     .job-boards-grid { grid-template-columns: 1fr !important; }
-
-    /* Breathe practice grid: stack to single column so the four cards get full
-       width on a phone instead of overflowing the 2-col layout. */
-    .breathe-grid { grid-template-columns: 1fr !important; }
 
     /* Sync page import/export cards: stack to single column on mobile — the
        2-col grid's items default to min-width:auto, which was letting long
@@ -777,6 +782,21 @@ function isGuest() { return false; }
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
+// ── DATES ─────────────────────────────────────────────────────────────────────
+// Local calendar date as YYYY-MM-DD. toISOString() is UTC, which in US time
+// zones flips to "tomorrow" in the evening.
+function localISODate(d = new Date()) {
+  return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+function shiftISODate(s, days) {
+  const [y,m,dd] = s.slice(0,10).split('-').map(Number);
+  return new Date(Date.UTC(y, m-1, dd + days)).toISOString().slice(0,10) + s.slice(10);
+}
+function daysBetweenISO(a, b) {
+  const t = s => { const [y,m,d] = s.slice(0,10).split('-').map(Number); return Date.UTC(y,m-1,d); };
+  return Math.round((t(b) - t(a)) / 86400000);
+}
+
 // ── USER PROFILE ──────────────────────────────────────────────────────────────
 // Captured by the first-run setup wizard, stored in localStorage.
 // The on-screen identity and every AI prompt are derived from this object.
@@ -791,15 +811,16 @@ function getProfile() {
   try { const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); return p ? {...EMPTY_PROFILE, ...p} : null; }
   catch { return null; }
 }
-function saveProfile(p) { localStorage.setItem(PROFILE_KEY, JSON.stringify({...EMPTY_PROFILE, ...p})); }
+// {sync:false} is for seeding sample data, which must never reach a Gist.
+function saveProfile(p, {sync=true}={}) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify({...EMPTY_PROFILE, ...p}));
+  if (sync) syncPrefsSoon();
+}
+// Settings changes ride the normal debounced save, but only once apps and
+// contacts are loaded. The wizard can run before initApp(); saving then would
+// back up the empty startup state over real data.
+function syncPrefsSoon() { if (state.dataLoaded && !isDemo()) save(); }
 function hasProfile() { return !!getProfile(); }
-
-// True when this device has real data (a profile) and/or an active cloud
-// connection that sample/demo data could clobber. loadExampleData() is
-// reachable even for existing users via openSetupGuide()'s "guide mode",
-// which reopens the wizard's Welcome screen regardless of profile state —
-// this guard is the actual backstop against overwriting a live setup.
-function hasRealDataAtRisk() { return hasProfile() || !!(state.ghToken && state.ghGistId); }
 
 function salaryStr() {
   const p = getProfile() || EMPTY_PROFILE;
@@ -865,6 +886,8 @@ const PRESETS = [
 ];
 
 const STAGES = ['Saved','Coffee / Networking','Applied','Phone Screen','Interview','Final Round','Offer','Rejected','Ghosted'];
+// Stages that count as "interviewing" in KPIs and the Interviewing filter.
+const INTERVIEW_STAGES = ['Phone Screen','Interview','Final Round'];
 const STAGE_COL = {Saved:'teal',Applied:'blue','Coffee / Networking':'green','Phone Screen':'amber',Interview:'amber','Final Round':'green',Offer:'green',Rejected:'red',Ghosted:'purple'};
 const STAGE_CARD_BG = {
   Saved:'var(--card-saved)', Applied:'var(--card-applied)',
@@ -888,6 +911,38 @@ const REL_COL = {Connection:'amber',Alumni:'blue','Cold Outreach':'purple',Recru
 const DEFAULT_APPS = [];
 
 // Neutral sample data — loaded only when the user clicks "Load example data".
+// Dates are authored as if today were DEMO_ANCHOR_DATE. When the data is
+// seeded (and on each later visit to the tour) every date shifts by the gap
+// between that anchor and the real today, so the pipeline always reads as
+// active: champions warm, nudges due, next steps this week.
+const DEMO_ANCHOR_DATE = '2026-06-20';
+const DEMO_SHIFT_KEY   = 'jq_demo_dates_as_of';
+function shiftRecordDates(list, days) {
+  if (!days) return list;
+  return list.map(r => {
+    const o = {...r};
+    Object.keys(o).forEach(k => {
+      if (typeof o[k] === 'string' && /^\d{4}-\d{2}-\d{2}/.test(o[k])) o[k] = shiftISODate(o[k], days);
+    });
+    if (Array.isArray(o.actLog)) o.actLog = o.actLog.map(e => (e && /^\d{4}-\d{2}-\d{2}/.test(e.date||'')) ? {...e, date: shiftISODate(e.date, days)} : e);
+    return o;
+  });
+}
+// Called from initApp during the live tour only: rolls dates forward to today.
+// "Load example data" outside the tour shifts once at seed time and then
+// leaves dates alone, because the user may be adding real records alongside.
+function refreshDemoDates() {
+  if (!isDemo()) return;
+  const asOf = localStorage.getItem(DEMO_SHIFT_KEY);
+  const today = localISODate();
+  if (!asOf || asOf === today) return;
+  const days = daysBetweenISO(asOf, today);
+  state.apps     = shiftRecordDates(state.apps, days);
+  state.contacts = shiftRecordDates(state.contacts, days);
+  localStorage.setItem('apps_backup',     JSON.stringify(state.apps));
+  localStorage.setItem('contacts_backup', JSON.stringify(state.contacts));
+  localStorage.setItem(DEMO_SHIFT_KEY, today);
+}
 const EXAMPLE_APPS = [
   // ── Active — got a response (~20%) ────────────────────────────────────────
   {id:1,  company:'Abbott',                  role:'Sr. PM – Cardiac Rhythm Mgmt',       stage:'Final Round',         priority:'High',   date:'2026-04-15', salary:'$145–175K', location:'Hybrid, Arden Hills MN',   notes:'CRM portfolio. Strong clinical device angle. Panel debrief this week.',       fit:'9'},
@@ -905,7 +960,7 @@ const EXAMPLE_APPS = [
   // ── Saved ─────────────────────────────────────────────────────────────────
   {id:11, company:'Stryker',                 role:'Sr. PM – Surgical Navigation',       stage:'Saved',               priority:'Normal', date:'',           salary:'$150–180K', location:'Remote',                    notes:'Surgical robotics PM scope. Hold until Abbott round resolves.',               fit:'7'},
   // ── Archived ─────────────────────────────────────────────────────────────
-  {id:12, company:'Edwards Lifesciences',    role:'PM – Structural Heart',              stage:'Ghosted',             priority:'Normal', date:'2026-03-20', salary:'',          location:'Remote',                    notes:'Applied 8 weeks ago. No reply. No salary range posted — red flag.',           fit:'6'},
+  {id:12, company:'Edwards Lifesciences',    role:'PM – Structural Heart',              stage:'Ghosted',             priority:'Normal', date:'2026-03-20', salary:'',          location:'Remote',                    notes:'Applied about 3 months ago. No reply. No salary range posted — red flag.',           fit:'6'},
 ];
 
 const DEFAULT_CONTACTS = [];
@@ -927,7 +982,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.12';
+const APP_VERSION = '1.3.13';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -950,7 +1005,7 @@ let state = {
   jobHidden: [],    // per-session hidden posting IDs (resets on new search)
   jobSaved: {},
   analyzed: {}, analyzing: {},
-  appFilter: 'all', appEditing: null, appShowAdd: false, appSort: 'updated', appExpanded: {},
+  appFilter: 'all', appEditing: null, appShowAdd: false, appSort: 'updated', appExpanded: {}, appSelectMode: false, appSelected: {},
   coverCo: '', coverTone: 'professional', coverJD: '', coverOut: '', coverLoading: false,
   intRole: '', intCo: '', intQtype: 'behavioral', intQs: [], intAns: {}, intFb: {}, intLoading: false, intFbLoading: {},
   pomMode: 0, pomSecs: 25*60, pomTotal: 25*60, pomRunning: false,
@@ -958,7 +1013,7 @@ let state = {
   pomIntention: '', pomEnergy: '', pomParked: [],
   pomBreakPicker: false, pomHyperfocusAck: false,
   pomWellnessTab: 'hydrate', pomMoveTipIdx: 0,
-  pomSection: 'focus', pomWellnessCard: '', pomMoveCard: '', pomMoveStep: 0, pomMoveSecs: 0, pomMoveRunning: false, pomMoveSessionsDone: 0,
+  pomSection: 'focus', pomWellnessCard: '', pomMoveCard: '', pomMoveStep: 0, pomMoveSessionsDone: 0,
   pomBreathTheme: '', pomBreathStep: 0, pomBreathStepSecs: 0, pomBreathRunning: false,
   pomRestSecs: 0, pomRestRunning: false,
   pomPlankLevel: 'beginner', pomPlankRound: 0, pomPlankPhase: 'work', pomPlankSecs: 0, pomPlankRunning: false,
@@ -985,140 +1040,6 @@ let pomInterval = null;
 let breathInterval = null;
 let restInterval = null;
 let plankInterval = null;
-let moveInterval = null;
-
-// ── GUIDED-PRACTICE AUDIO ─────────────────────────────────────────────────────
-// Shared by Breathe + Move. All client-side: narration via the browser's built-in
-// speechSynthesis, and a very light ambient pad synthesized with the Web Audio API
-// that fades in ~30s into a session. No files, no network, no API key. A single
-// mute flag (persisted) gates both — a muted Play runs fully silent.
-const jqAudio = {
-  // Default to silent: sessions play with no audio until the user opts in via the
-  // speaker control. Their choice is then remembered.
-  muted: JSON.parse(localStorage.getItem('wellness_muted') || 'true'),
-  ctx: null, master: null, oscs: [], lfo: null, musicTimer: null, active: false,
-
-  // Called from a Play/Pause onclick (a user gesture — required to unlock audio).
-  start() {
-    this.active = true;
-    if (this.muted) return;
-    this._ensureCtx();
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-    // Light music fades in after ~30s; guard against double-scheduling on resume.
-    if (!this.musicTimer && !this.oscs.length) {
-      this.musicTimer = setTimeout(() => { this.musicTimer = null; this._startMusic(); }, 30000);
-    }
-  },
-
-  // Speak a cue when its slide becomes active. Cancels any in-flight utterance so
-  // steps never overlap. No-op when muted or when speech synthesis is unavailable.
-  speak(text) {
-    if (this.muted || !text || !('speechSynthesis' in window)) return;
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(String(text));
-      u.rate = 0.92; u.pitch = 1; u.volume = 1;
-      const v = this._voice();
-      if (v) u.voice = v;
-      speechSynthesis.speak(u);
-    } catch (e) { /* speech unsupported — stay silent */ }
-  },
-
-  // Tear down at the end of / on leaving a session: stop narration, fade the pad
-  // out, and free the oscillators. Safe to call repeatedly.
-  stop() {
-    this.active = false;
-    if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (e) {} }
-    if (this.musicTimer) { clearTimeout(this.musicTimer); this.musicTimer = null; }
-    this._stopMusic();
-  },
-
-  // The always-present control. Persists preference; a live session is muted or
-  // unmuted immediately.
-  toggleMute() {
-    this.muted = !this.muted;
-    localStorage.setItem('wellness_muted', JSON.stringify(this.muted));
-    if (this.muted) {
-      if ('speechSynthesis' in window) { try { speechSynthesis.cancel(); } catch (e) {} }
-      if (this.musicTimer) { clearTimeout(this.musicTimer); this.musicTimer = null; }
-      this._stopMusic();
-    } else if (this.active) {
-      this.start();  // re-arm the fade-in for the rest of the session
-    }
-    render('pomodoro');
-  },
-
-  _ensureCtx() {
-    if (this.ctx) return;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    this.ctx = new AC();
-    this.master = this.ctx.createGain();
-    this.master.gain.value = 0;
-    this.master.connect(this.ctx.destination);
-  },
-
-  // Two softly-detuned sine oscillators through a gentle lowpass, with a slow LFO
-  // swelling the gain like a breath. Kept very quiet (peak ~0.045).
-  _startMusic() {
-    if (this.muted || !this.active) return;
-    this._ensureCtx();
-    if (!this.ctx || this.oscs.length) return;
-    const t = this.ctx.currentTime;
-    const lp = this.ctx.createBiquadFilter();
-    lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 0.4;
-    lp.connect(this.master);
-    [110, 110 * 1.5].forEach((f, i) => {
-      const o = this.ctx.createOscillator();
-      o.type = 'sine';
-      o.frequency.value = f;
-      o.detune.value = i === 0 ? -4 : 4;  // gentle beating
-      o.connect(lp); o.start();
-      this.oscs.push(o);
-    });
-    // slow gain swell
-    const lfo = this.ctx.createOscillator();
-    const lfoGain = this.ctx.createGain();
-    lfo.frequency.value = 0.08; lfoGain.gain.value = 0.012;
-    lfo.connect(lfoGain); lfoGain.connect(this.master.gain);
-    lfo.start(); this.lfo = lfo;
-    // fade master in over 4s
-    this.master.gain.cancelScheduledValues(t);
-    this.master.gain.setValueAtTime(0.0001, t);
-    this.master.gain.linearRampToValueAtTime(0.033, t + 4);
-  },
-
-  _stopMusic() {
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    try {
-      this.master.gain.cancelScheduledValues(t);
-      this.master.gain.setValueAtTime(this.master.gain.value, t);
-      this.master.gain.linearRampToValueAtTime(0.0001, t + 0.6);
-    } catch (e) {}
-    const oscs = this.oscs, lfo = this.lfo;
-    this.oscs = []; this.lfo = null;
-    setTimeout(() => {
-      oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch (e) {} });
-      if (lfo) { try { lfo.stop(); lfo.disconnect(); } catch (e) {} }
-    }, 700);
-  },
-
-  _voice() {
-    if (!('speechSynthesis' in window)) return null;
-    const vs = speechSynthesis.getVoices() || [];
-    if (!vs.length) return null;
-    // Prefer a natural-sounding local English voice.
-    return vs.find(v => /en[-_]US/i.test(v.lang) && /(Samantha|Ava|Allison|Siri|Natural|Enhanced)/i.test(v.name))
-        || vs.find(v => /en[-_]US/i.test(v.lang) && v.localService)
-        || vs.find(v => /^en/i.test(v.lang))
-        || null;
-  },
-};
-// speechSynthesis populates voices asynchronously in some browsers.
-if ('speechSynthesis' in window) {
-  try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => jqAudio._voice(); } catch (e) {}
-}
 let saveTimer = null;  // debounce cloud saves
 let cloudDirty = false; // true when local has unsynced changes
 
@@ -1164,13 +1085,41 @@ async function ghRead() {
   return JSON.parse(raw);
 }
 
-// Write current apps+contacts+tasks+referrals to Gist (debounced)
+// Settings that live in their own localStorage keys but should follow you to
+// a second device. Credentials (gh_token, gist id) stay device-only on
+// purpose, and so do small per-device trackers (focus streak, hydration).
+const SYNC_PREF_KEYS = { profile: 'jq_profile', customLinks: 'custom_links', dailyTasks: 'daily_tasks' };
+
+function collectPrefs() {
+  const out = {};
+  Object.entries(SYNC_PREF_KEYS).forEach(([name, key]) => {
+    try { const v = JSON.parse(localStorage.getItem(key) || 'null'); if (v !== null) out[name] = v; } catch {}
+  });
+  return out;
+}
+
+// Applies cloud data to this device. Only keys present in the cloud copy are
+// written, so an older Gist (version 2, apps + contacts only) never blanks
+// local settings. Today's daily checklist only applies if it's for today.
+function applyCloudData(data) {
+  if (Array.isArray(data.apps))      state.apps      = data.apps;
+  if (Array.isArray(data.contacts))  state.contacts  = data.contacts;
+  if (Array.isArray(data.tasks))     state.tasks     = data.tasks;
+  if (Array.isArray(data.referrals)) state.referrals = data.referrals;
+  const prefs = data.prefs || {};
+  if (prefs.profile && typeof prefs.profile === 'object') localStorage.setItem(SYNC_PREF_KEYS.profile, JSON.stringify(prefs.profile));
+  if (Array.isArray(prefs.customLinks)) localStorage.setItem(SYNC_PREF_KEYS.customLinks, JSON.stringify(prefs.customLinks));
+  if (prefs.dailyTasks && prefs.dailyTasks.date === localISODate()) localStorage.setItem(SYNC_PREF_KEYS.dailyTasks, JSON.stringify(prefs.dailyTasks));
+}
+
+// Write everything that syncs to the Gist (debounced via save())
 async function ghWrite() {
   if (!state.ghToken || !state.ghGistId) return;
   const payload = {
     apps: state.apps, contacts: state.contacts,
     tasks: state.tasks, referrals: state.referrals,
-    version: 2, updatedAt: new Date().toISOString()
+    prefs: collectPrefs(),
+    version: 3, updatedAt: new Date().toISOString()
   };
   const resp = await fetch(`${GIST_API}/${state.ghGistId}`, {
     method: 'PATCH',
@@ -1274,8 +1223,12 @@ async function loadFromCloud() {
       setSyncStatus('✓ loaded local (newer than cloud) — will re-sync', false);
       save(); // push the newer local state back up to the cloud
     } else {
-      if (data.apps)    state.apps    = data.apps;
-      if (data.contacts) state.contacts = data.contacts;
+      applyCloudData(data);
+      // Mirror locally so the next offline load matches what came down.
+      localStorage.setItem('tasks', JSON.stringify(state.tasks));
+      localStorage.setItem('referrals', JSON.stringify(state.referrals));
+      localStorage.setItem('apps_backup', JSON.stringify(state.apps));
+      localStorage.setItem('contacts_backup', JSON.stringify(state.contacts));
       setSyncStatus('✓ loaded from cloud', false);
     }
   } catch(e) {
@@ -1291,9 +1244,6 @@ async function loadFromCloud() {
 // ── RENDER ROUTER ─────────────────────────────────────────────────────────────
 
 function showTab(tab) {
-  // Leaving the Focus tab ends any running guided practice + its audio. (Internal
-  // timer re-renders call render('pomodoro') directly, not showTab, so they're safe.)
-  if (tab !== 'pomodoro') stopGuidedSessions();
   state.tab = tab;
   document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
@@ -1390,19 +1340,40 @@ function friendlyClaudeError(status, raw, isHtml) {
   return raw;
 }
 
-async function claudeStream(prompt, onChunk, {webSearch=false}={}) {
+// onError(message) lets a caller render the failure in its own UI (e.g. a
+// builder panel). Without it, failures fall back to a toast. Either way the
+// function resolves to whatever text arrived ('' on an up-front failure), so
+// callers never hang on a spinner.
+async function claudeStream(prompt, onChunk, {webSearch=false, onError=null}={}) {
+  const fail = msg => { if (onError) onError(msg); else showToast(msg); };
   let resp;
   const body = {model:CLAUDE_MODEL,max_tokens:1000,stream:true,messages:[{role:'user',content:prompt}]};
   if (webSearch) body.tools = [{type:'web_search_20250305', name:'web_search'}];
   try { resp = await claudePost(body); }
-  catch(e) { showToast(e.message); return ''; }
+  catch(e) { fail(e.message); return ''; }
   const reader = resp.body.getReader(), dec = new TextDecoder();
-  let full = '';
-  while(true) {
-    const {done,value} = await reader.read(); if(done) break;
-    for(const line of dec.decode(value).split('\n').filter(l=>l.startsWith('data: '))) {
-      try { const j=JSON.parse(line.slice(6)); if(j.delta?.text){full+=j.delta.text;onChunk?.(full);} } catch{}
+  let full = '', buf = '';
+  // An SSE line can be split across two network chunks, so hold the trailing
+  // partial line in buf until its newline arrives.
+  const handleLine = line => {
+    if (!line.startsWith('data: ')) return;
+    let j; try { j = JSON.parse(line.slice(6)); } catch { return; }
+    if (j.type === 'error') { fail(friendlyClaudeError(0, j.error?.message || 'Stream error', false)); return; }
+    if (j.delta?.text) { full += j.delta.text; onChunk?.(full); }
+  };
+  try {
+    while(true) {
+      const {done,value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      lines.forEach(handleLine);
     }
+    buf += dec.decode();
+    if (buf) handleLine(buf);
+  } catch(e) {
+    fail('The AI response was interrupted: ' + e.message);
   }
   return full;
 }
@@ -1418,254 +1389,6 @@ async function claudeJSON(prompt) {
   return JSON.parse(text.slice(s,e+1));
 }
 
-// ── DAILY BRIEF (HQ) ──────────────────────────────────────────────────────────
-// Forced tool use: the request carries a custom tool schema plus
-// tool_choice:{type:'tool'}, so the model MUST reply with a tool_use block that
-// conforms to the schema — structured output by contract, not prompt-and-pray.
-
-const DAILY_BRIEF_TOOL = {
-  name: 'daily_brief',
-  description: 'Return a prioritized action plan for the job seeker\'s day, computed from their live pipeline snapshot. Rank 3-5 concrete actions, most impactful first. Cite the specific data point (days stale, stage, contact warmth) in each "why".',
-  input_schema: {
-    type: 'object',
-    properties: {
-      date_summary: { type: 'string', description: 'One sentence (max ~120 chars) headline for today — energetic, specific to the data, no generic filler.' },
-      actions: {
-        type: 'array', minItems: 3, maxItems: 5,
-        items: {
-          type: 'object',
-          properties: {
-            rank:     { type: 'integer', minimum: 1, maximum: 5 },
-            title:    { type: 'string', description: 'Imperative action, max ~60 chars, name the company/contact' },
-            why:      { type: 'string', description: 'One sentence citing the concrete data point that makes this urgent' },
-            urgency:  { type: 'string', enum: ['high','medium','low'] },
-            category: { type: 'string', enum: ['application','networking','focus'] },
-            target:   {
-              type: 'object',
-              properties: {
-                tab:       { type: 'string', enum: ['tracker','network','pomodoro','board'] },
-                appId:     { type: 'number', description: 'id from the apps list, only when tab=tracker and the action is about one application' },
-                contactId: { type: 'number', description: 'id from the contacts list, only when tab=network' }
-              },
-              required: ['tab']
-            },
-            button_label: { type: 'string', description: 'Button text, imperative, max 24 chars, e.g. "Open Abbott card"' }
-          },
-          required: ['rank','title','why','urgency','category','target','button_label']
-        }
-      }
-    },
-    required: ['date_summary','actions']
-  }
-};
-
-const BRIEF_SYSTEM = 'You are the daily strategist inside JobQuest, a job-search command center. You receive a JSON snapshot of the user\'s live pipeline: applications (with days since last movement), networking contacts (with warmth and overdue next-actions), and today\'s focus stats. Choose the 3-5 highest-leverage actions for TODAY. Prioritize: (1) interview-stage apps needing prep or follow-up, (2) overdue next-actions on champions/starred contacts, (3) stale high-priority applications, (4) pipeline-building only if nothing is on fire. Every "why" must cite a specific number from the snapshot. Set target.appId/contactId to the exact id from the snapshot when the action is about one card. Be direct and motivating, never generic.';
-
-const BRIEF_KEY = 'jq_daily_brief';
-function briefTodayStr() { return new Date().toISOString().slice(0,10); }
-
-function getTodaysBrief() {
-  try {
-    const rec = JSON.parse(localStorage.getItem(BRIEF_KEY) || 'null');
-    return (rec && rec.date === briefTodayStr() && rec.brief) ? rec : null;
-  } catch { return null; }
-}
-
-// The model gets day counts, never raw dates — staleness math stays client-side.
-function buildBriefPayload() {
-  const days = d => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : null;
-  const HIDDEN = ['Rejected','Ghosted'];
-
-  const apps = state.apps
-    .filter(a => !HIDDEN.includes(a.stage))
-    .map(a => ({
-      id: a.id, company: a.company, role: a.role, stage: a.stage,
-      priority: a.priority || '', fit: a.fit || '',
-      daysSinceUpdate: days(a.updatedAt || a.date || a.savedAt),
-      nextStep: a.nextStep || '',
-      nextInDays: a.nextDate ? -days(a.nextDate) : null,   // negative = overdue
-      lastActivity: (a.actLog && a.actLog.length) ? a.actLog[a.actLog.length-1].note : ''
-    }))
-    .sort((a,b) => (b.priority==='High') - (a.priority==='High') || (b.daysSinceUpdate||0) - (a.daysSinceUpdate||0))
-    .slice(0, 25);
-
-  const contacts = (state.contacts || [])
-    .map(c => ({
-      id: c.id, name: c.name, company: c.company || '', rel: c.rel || '',
-      champion: !!c.champion, star: !!c.star,
-      daysSinceTouch: days(c.last),
-      nextAction: c.nextType || '', nextInDays: c.next ? -days(c.next) : null,
-      nextNote: (c.nextNote || '').slice(0, 80)
-    }))
-    .sort((a,b) => (b.champion - a.champion) || (b.star - a.star) || (b.daysSinceTouch||0) - (a.daysSinceTouch||0))
-    .slice(0, 20);
-
-  const ds = getDailyTaskState();
-  return {
-    today: briefTodayStr(),
-    profile: profileLine(),
-    apps,
-    contacts,
-    archived: { rejected: state.apps.filter(a=>a.stage==='Rejected').length,
-                ghosted:  state.apps.filter(a=>a.stage==='Ghosted').length },
-    focus: { tasksDoneToday: DAILY_TASKS_DEF.filter(t=>ds.done[t.id]).length,
-             tasksTotal: DAILY_TASKS_DEF.length,
-             sessionsToday: state.pomSessions, streakDays: getFocusStreak() }
-  };
-}
-
-// Defensive clamp on the tool_use input: forced tool_choice guarantees the shape,
-// this guarantees the app never renders a broken card even if a field drifts.
-function sanitizeBrief(input) {
-  const URG = ['high','medium','low'], CAT = ['application','networking','focus'],
-        TABS = ['tracker','network','pomodoro','board'];
-  const out = { date_summary: String(input?.date_summary || 'Your plan for today'), actions: [] };
-  (Array.isArray(input?.actions) ? input.actions : []).slice(0,5).forEach(a => {
-    if (!a || !a.title) return;
-    const t = a.target || {};
-    const appOk = t.appId != null && state.apps.some(x => x.id === Number(t.appId));
-    const ctOk  = t.contactId != null && (state.contacts||[]).some(x => x.id === Number(t.contactId));
-    out.actions.push({
-      rank: out.actions.length + 1,
-      title: String(a.title).slice(0,80),
-      why: String(a.why || '').slice(0,220),
-      urgency: URG.includes(a.urgency) ? a.urgency : 'medium',
-      category: CAT.includes(a.category) ? a.category : 'application',
-      target: { tab: TABS.includes(t.tab) ? t.tab : 'board',
-                appId: appOk ? Number(t.appId) : null,
-                contactId: ctOk ? Number(t.contactId) : null },
-      button_label: String(a.button_label || 'Go').slice(0,26)
-    });
-  });
-  return out;
-}
-
-async function generateDailyBrief() {
-  if (state.briefLoading) return;
-  state.briefLoading = true; render('board');
-  try {
-    const resp = await claudePost({
-      model: CLAUDE_MODEL,
-      max_tokens: 1500,
-      system: BRIEF_SYSTEM,
-      messages: [{ role: 'user', content: 'Pipeline snapshot:\n' + JSON.stringify(buildBriefPayload()) + '\n\nGenerate today\'s brief.' }],
-      tools: [DAILY_BRIEF_TOOL],
-      tool_choice: { type: 'tool', name: 'daily_brief' }
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error.message || 'API error');
-    const block = (data.content || []).find(b => b.type === 'tool_use' && b.name === 'daily_brief');
-    if (!block) throw new Error('No brief returned');
-    const brief = sanitizeBrief(block.input);
-    localStorage.setItem(BRIEF_KEY, JSON.stringify({ date: briefTodayStr(), generatedAt: new Date().toISOString(), brief }));
-  } catch (e) { showToast(e.message); }
-  state.briefLoading = false;
-  render('board');
-}
-
-// Canned brief for the live tour — grounded in whatever example data is loaded,
-// so the deep links land on real cards without an API call.
-function demoBrief() {
-  const apps = state.apps || [], cts = state.contacts || [];
-  const a1 = apps.find(a => a.stage === 'Final Round') || apps.find(a => ['Phone Screen','Interview'].includes(a.stage)) || apps[0];
-  const a2 = apps.find(a => a !== a1 && a.priority === 'High') || apps.find(a => a !== a1);
-  const c1 = cts.find(c => c.champion) || cts.find(c => c.star) || cts[0];
-  const actions = [];
-  if (a1) actions.push({ rank: actions.length+1, title: `Prep for the ${a1.company} ${(a1.stage||'').toLowerCase()}`, why: `${a1.company} is at ${a1.stage} — the furthest-along application in this pipeline.`, urgency: 'high', category: 'application', target: { tab: 'tracker', appId: a1.id }, button_label: `Open ${a1.company}`.slice(0,24) });
-  if (c1) actions.push({ rank: actions.length+1, title: `Check in with ${c1.name}`, why: `${c1.name} is a ${c1.champion ? 'champion' : 'starred'} contact — keep the relationship warm.`, urgency: 'medium', category: 'networking', target: { tab: 'network', contactId: c1.id }, button_label: 'Open contact' });
-  if (a2) actions.push({ rank: actions.length+1, title: `Nudge ${a2.company}`, why: `High-priority application with no recent movement — a short follow-up keeps it alive.`, urgency: 'low', category: 'application', target: { tab: 'tracker', appId: a2.id }, button_label: `Open ${a2.company}`.slice(0,24) });
-  return { date_summary: 'A sample brief — with your own data, Claude ranks your real next moves.', actions };
-}
-
-function currentBrief() {
-  if (isDemo()) return demoBrief();
-  const rec = getTodaysBrief();
-  return rec ? rec.brief : null;
-}
-
-function briefGo(i) {
-  const brief = currentBrief(); if (!brief) return;
-  const a = brief.actions[i]; if (!a) return;
-  const t = a.target || { tab: 'board' };
-  if (t.tab === 'tracker') {
-    state.appFilter = 'all';
-    if (t.appId != null) { state.appExpanded = state.appExpanded || {}; state.appExpanded[t.appId] = true; }
-    showTab('tracker');
-    if (t.appId != null) flashCard('app-card-' + t.appId);
-  } else if (t.tab === 'network') {
-    state.netFilter = { view: 'all', source: '', sort: 'smart' };
-    if (t.contactId != null) { state.netExpanded = state.netExpanded || {}; state.netExpanded[t.contactId] = true; }
-    showTab('network');
-    if (t.contactId != null) flashCard('net-card-' + t.contactId);
-  } else showTab(t.tab === 'pomodoro' ? 'pomodoro' : 'board');
-}
-
-function flashCard(id) {
-  // setTimeout, not requestAnimationFrame — rAF never fires in a backgrounded
-  // window, which would swallow the scroll/flash entirely.
-  setTimeout(() => {
-    const el = document.getElementById(id); if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.style.transition = 'box-shadow .4s'; el.style.boxShadow = '0 0 0 2px var(--gold)';
-    setTimeout(() => { el.style.boxShadow = ''; }, 1600);
-  }, 60);
-}
-
-async function generatePipelineNarrative() {
-  const btn     = document.getElementById('narr-btn');
-  const loading = document.getElementById('narr-loading');
-  const output  = document.getElementById('narr-output');
-  const textEl  = document.getElementById('narr-text');
-  if (!btn) return;
-
-  const apps    = state.apps || [];
-  const HIDDEN  = ['Rejected','Ghosted'];
-  const weekAgo = Date.now() - 7*24*60*60*1000;
-
-  const stageCounts = {};
-  STAGES.forEach(s => { stageCounts[s] = apps.filter(a => a.stage === s).length; });
-  const appliedCount = stageCounts['Applied'] || 0;
-  const interviewCt  = (stageCounts['Phone Screen']||0) + (stageCounts['Interview']||0) + (stageCounts['Final Round']||0);
-  const activeApps   = apps.filter(a => !HIDDEN.includes(a.stage)).length;
-  const highPriCt    = apps.filter(a => a.priority === 'High' && !HIDDEN.includes(a.stage)).length;
-  const recentCt     = apps.filter(a => a.updatedAt && new Date(a.updatedAt).getTime() > weekAgo).length;
-  const responseRate = appliedCount > 0 ? Math.round(interviewCt / appliedCount * 100) : 0;
-  const today        = new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-
-  const prompt = `You are helping a job seeker write a weekly status paragraph for their job search.
-
-Pipeline snapshot — ${today}:
-• Saved / Queue: ${stageCounts['Saved']||0}
-• Coffee / Networking: ${stageCounts['Coffee / Networking']||0}
-• Applied: ${appliedCount}
-• Phone Screen: ${stageCounts['Phone Screen']||0}
-• Interview: ${stageCounts['Interview']||0}
-• Final Round: ${stageCounts['Final Round']||0}
-• Offer: ${stageCounts['Offer']||0}
-• Rejected: ${stageCounts['Rejected']||0}  |  Ghosted: ${stageCounts['Ghosted']||0}
-Active roles: ${activeApps}  |  Response rate: ${responseRate}%  |  High priority: ${highPriCt}  |  Updated this week: ${recentCt}
-
-Write ONE paragraph (3–5 sentences) summarizing where this job search stands this week. Be encouraging but honest. Note where momentum is building, which stage has the most activity, and what deserves focus in the coming week. Write in first-person as if the job seeker is narrating their own status to a trusted mentor. Flowing prose only — no bullet points, no headers, no lists.`;
-
-  btn.disabled = true;
-  loading.style.display = 'inline';
-  output.style.display = 'none';
-  textEl.textContent = '';
-
-  await claudeStream(prompt, full => {
-    output.style.display = 'block';
-    textEl.textContent = full;
-  });
-
-  loading.style.display = 'none';
-  btn.disabled = false;
-}
-
-function copyNarrative() {
-  const t = document.getElementById('narr-text');
-  if (!t) return;
-  navigator.clipboard.writeText(t.innerText).then(() => showToast('Paragraph copied to clipboard'));
-}
 
 async function adzunaSearch({q,where,salary,days,page=1,perPage=20}) {
   const p = new URLSearchParams({
@@ -1720,6 +1443,7 @@ function getCustomLinks() {
 }
 function saveCustomLinks(links) {
   localStorage.setItem('custom_links', JSON.stringify(links));
+  syncPrefsSoon();
 }
 function addCustomLink() {
   const nameEl = document.getElementById('cl-name');
@@ -1878,7 +1602,7 @@ const PLANK_LEVELS = {
 };
 
 function getDailyTaskState() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = localISODate();
   const raw = localStorage.getItem('daily_tasks');
   if (raw) {
     try {
@@ -1896,6 +1620,7 @@ function setDailyTaskDone(id, done) {
   const s = getDailyTaskState();
   s.done[id] = done;
   localStorage.setItem('daily_tasks', JSON.stringify(s));
+  syncPrefsSoon();
 }
 
 function launchDailyTaskById(id) {
@@ -1918,7 +1643,6 @@ function launchDailyTaskTimer(task) {
     if(state.pomSecs <= 0) {
       clearInterval(pomInterval); pomInterval = null; state.pomRunning = false;
       state.pomSessions++;
-      bumpWeekLog('focus');
       state.pomLog.push({task: state.pomTask, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), mins: task.pomMins});
       state.pomSecs = 0;
       render('pomodoro'); updateMiniTimer();
@@ -1933,131 +1657,6 @@ function launchDailyTaskTimer(task) {
 
 // ── HQ HERO — the new homepage landing section ────────────────────────────────
 
-// Daily Brief band — sits inside the HQ hero frame between the KPI strip and
-// the bottom split row. Three states: idle (generate button), loading, rendered
-// (ranked action cards with urgency colors + deep-link buttons).
-function renderDailyBriefPanel() {
-  const demo  = isDemo();
-  const brief = currentBrief();
-  const rec   = demo ? null : getTodaysBrief();
-  const empty = !demo && !(state.apps||[]).length && !((state.contacts||[]).length);
-
-  const shell = inner => `
-    <div style="border-left:1px solid rgba(91,160,210,0.20);border-right:1px solid rgba(91,160,210,0.20);border-bottom:1px solid rgba(91,160,210,0.10);background:rgba(201,138,14,0.06);padding:14px 20px">${inner}</div>`;
-  const header = right => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
-        <span style="width:20px;height:1px;display:inline-block;background:var(--gold)"></span>✦ Daily Brief${demo ? ` <span style="font-size:9px;color:var(--sky-blue-light);background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);border-radius:8px;padding:1px 7px;letter-spacing:.05em;font-weight:500;text-transform:lowercase">sample</span>` : ''}
-      </div>
-      ${right || ''}
-    </div>`;
-  const footer = `<div style="font-size:10px;color:rgba(201,150,26,0.5);margin-top:8px;letter-spacing:.03em">powered by claude · ranked next actions via live tool call · ~10 sec</div>`;
-
-  if (state.briefLoading) {
-    return shell(header('') + `
-      <div style="display:flex;align-items:center;gap:10px;padding:14px 0 6px">
-        <span class="spin"></span><span style="font-size:12px;color:#E8C97A;font-style:italic">Reading your pipeline…</span>
-      </div>`);
-  }
-
-  if (brief && brief.actions && brief.actions.length) {
-    const genAt = rec ? new Date(rec.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
-    const right = demo ? '' : `
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;color:rgba(201,150,26,0.5)">generated ${genAt}</span>
-        <button onclick="generateDailyBrief()" style="font-size:10px;color:#E8C97A;border:1px solid var(--gold-border);background:transparent;padding:3px 10px;border-radius:6px">↻ Regenerate</button>
-      </div>`;
-    const U_META = {
-      high:   { col: 'var(--rose)',       bg: 'rgba(196,96,122,0.10)', label: 'now'   },
-      medium: { col: '#E8C97A',           bg: 'rgba(201,138,14,0.10)', label: 'today' },
-      low:    { col: 'var(--teal-light)', bg: 'rgba(42,181,160,0.08)', label: 'soon'  }
-    };
-    const CAT_ICON = { application: '📌', networking: '🤝', focus: '⏱' };
-    const cards = brief.actions.map((a,i) => {
-      const U = U_META[a.urgency] || U_META.medium;
-      return `
-      <div style="display:flex;align-items:center;gap:12px;background:rgba(10,22,36,0.55);border:1px solid var(--navy-border);border-left:3px solid ${U.col};border-radius:0 8px 8px 0;padding:10px 14px;animation:fadeIn .3s ease both;animation-delay:${i*70}ms">
-        <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid rgba(201,138,14,0.45);background:rgba(201,138,14,0.10);color:#E8C97A;font-family:'DM Mono',monospace;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center">${a.rank}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--tx)">${CAT_ICON[a.category]||'📌'} ${esc(a.title)}
-            <span style="font-size:9px;color:${U.col};background:${U.bg};border:1px solid ${U.col};border-radius:8px;padding:1px 7px;margin-left:6px;letter-spacing:.05em;text-transform:uppercase;vertical-align:1px">${U.label}</span></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5">${esc(a.why)}</div>
-        </div>
-        <button onclick="briefGo(${i})" style="flex-shrink:0;font-size:11px;font-weight:600;color:${U.col};border:1px solid ${U.col};background:transparent;border-radius:6px;padding:6px 12px;white-space:nowrap">${esc(a.button_label)} →</button>
-      </div>`;
-    }).join('');
-    return shell(header(right) + `
-      <div style="font-size:17px;font-style:italic;font-family:'DM Serif Display',Georgia,serif;color:var(--tx);margin:8px 0 12px">${esc(brief.date_summary)}</div>
-      <div style="display:flex;flex-direction:column;gap:8px">${cards}</div>` + footer);
-  }
-
-  // Idle
-  return shell(`
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="flex:1;min-width:220px">
-        ${header('')}
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5">Claude reads your whole pipeline — every application, contact, and focus stat — and ranks your highest-leverage moves for today.</div>
-      </div>
-      ${empty
-        ? `<span style="font-size:11px;color:var(--faint);font-style:italic">Add a few applications or contacts first — the brief ranks what's already in your pipeline.</span>`
-        : `<button onclick="generateDailyBrief()" style="font-size:12px;background:var(--gold);color:#fff;border-color:var(--gold);padding:9px 18px;font-weight:600;flex-shrink:0">⚡ Generate today's brief</button>`}
-    </div>` + footer);
-}
-
-// HQ "Recharge" strip — a full-width band between the hero and the job-board
-// launcher that previews the Focus tab's Wellness & Move tools. Surfaces the
-// rolling 7-day momentum counters and one-tap deep-links into each key activity.
-function renderHQRechargeStrip() {
-  const wk = getWeeklyStats();
-  const kpis = [
-    {icon:'💧', val: wk.water,                          label:'hydration',   col:'var(--teal-light)'},
-    {icon:'🌬', val: wk.breath,                         label:'breath work', col:'var(--teal-light)'},
-    {icon:'🧘', val: wk.chair,                          label:'chair yoga',  col:'var(--rose)'},
-    {icon:'💪', val: wk.plankMin>0?`${wk.plankMin}m`:0, label:'plank',       col:'var(--rose)'},
-  ];
-  const kpiRow = kpis.map(k=>`
-    <div style="flex:1;min-width:78px;text-align:center;padding:8px 6px;background:rgba(8,18,30,0.35);border:1px solid rgba(255,255,255,0.06);border-radius:8px">
-      <div style="font-size:16px;font-weight:700;color:${k.col};line-height:1;font-family:'DM Mono',monospace">${k.icon} ${k.val}</div>
-      <div style="font-size:8.5px;color:var(--faint);margin-top:4px;letter-spacing:.04em;text-transform:uppercase">${k.label}</div>
-    </div>`).join('');
-  const actions = [
-    {section:'wellness', card:'breathe', icon:'🌬', label:'Breathe',    col:'var(--teal-light)', brd:'var(--teal-border)', bg:'rgba(42,181,160,0.10)'},
-    {section:'wellness', card:'hydrate', icon:'💧', label:'Hydrate',    col:'var(--teal-light)', brd:'var(--teal-border)', bg:'rgba(42,181,160,0.10)'},
-    {section:'move',     card:'chair',   icon:'🧘', label:'Chair yoga', col:'var(--rose)',       brd:'var(--rose-border)', bg:'var(--rose-pale)'},
-    {section:'move',     card:'plank',   icon:'💪', label:'Plank',      col:'var(--rose)',       brd:'var(--rose-border)', bg:'var(--rose-pale)'},
-  ];
-  const actionRow = actions.map(a=>`
-    <button onclick="hqOpenFocus('${a.section}','${a.card}')" style="flex:1;min-width:110px;font-size:12px;font-weight:600;color:${a.col};border:1px solid ${a.brd};background:${a.bg};border-radius:8px;padding:9px 10px;white-space:nowrap">${a.icon} ${a.label} →</button>`).join('');
-
-  return `
-  <div style="margin:0;border:1px solid rgba(42,181,160,0.22);border-radius:12px;overflow:hidden;background:linear-gradient(135deg,rgba(42,181,160,0.06) 0%,rgba(196,96,122,0.06) 100%)">
-    <div style="padding:14px 20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px">
-        <div style="font-size:11px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
-          <span style="width:20px;height:1px;display:inline-block;background:var(--teal)"></span>✦ Recharge · Wellness &amp; Movement
-        </div>
-        <button onclick="hqOpenFocus('focus')" style="font-size:10px;color:var(--teal-light);border:1px solid var(--teal-border);background:transparent;padding:3px 10px;border-radius:6px">Open Focus tab →</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">A search runs on your focus reserves. Top them back up — hydrate, breathe, move — so the deep work stays sustainable. <span style="color:var(--faint)">Counters are your rolling 7-day momentum.</span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${kpiRow}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${actionRow}</div>
-    </div>
-  </div>`;
-}
-
-// Deep-link from HQ into the Focus tab with a section (and optionally a card)
-// preselected, so a click on a Recharge action lands on the live tool.
-function hqOpenFocus(section, card) {
-  state.pomSection = section || 'focus';
-  if (section === 'move') { state.pomMoveCard = card || ''; state.pomMoveStep = 0; }
-  showTab('pomodoro');
-  // Wellness stacks its tools; scroll to the requested one (Breathe is already
-  // at the top of the section, so only hydrate/rest need a nudge).
-  if (section === 'wellness' && (card === 'hydrate' || card === 'rest')) {
-    requestAnimationFrame(()=>document.getElementById('wellness-'+card)?.scrollIntoView({behavior:'smooth',block:'center'}));
-  }
-}
-
 function renderHQHero() {
   const HIDDEN_STAGES = ['Rejected','Ghosted'];
   const apps = state.apps;
@@ -2068,7 +1667,7 @@ function renderHQHero() {
   let activeApps   = apps.filter(a=>!HIDDEN_STAGES.includes(a.stage)).length;
   let appliedCount = apps.filter(a=>a.stage==='Applied').length;
   let savedCount   = apps.filter(a=>a.stage==='Saved').length;
-  let interviewCt  = apps.filter(a=>['Phone Screen','Interview','Final Round'].includes(a.stage)).length;
+  let interviewCt  = apps.filter(a=>INTERVIEW_STAGES.includes(a.stage)).length;
   let highPriCt    = apps.filter(a=>a.priority==='High'&&!HIDDEN_STAGES.includes(a.stage)).length;
   let ghostedCount = apps.filter(a=>a.stage==='Ghosted').length;
 
@@ -2172,8 +1771,8 @@ function renderHQHero() {
           {label:'Active',      val:activeApps,     grp:'app', onclick:"showTab('tracker')"},
           {label:'Applied',          val:appliedCount,   grp:'app', onclick:"showTab('tracker')"},
           {label:'Saved',       val:savedCount,     grp:'app', onclick:"state.appFilter='Saved';showTab('tracker')"},
-          {label:'Interviews',  val:interviewCt,    grp:'app', onclick:"state.appFilter='Interview';showTab('tracker')"},
-          {label:'High Pri',    val:highPriCt,      grp:'app', onclick:"showTab('tracker')"},
+          {label:'Interviews',  val:interviewCt,    grp:'app', onclick:"state.appFilter='interviewing';showTab('tracker')"},
+          {label:'High Pri',    val:highPriCt,      grp:'app', onclick:"state.appFilter='priority';showTab('tracker')"},
           {label:'Ghosted',     val:ghostedCount,   grp:'app', onclick:"state.appFilter='archived';showTab('tracker')"},
           {label:'Network',     val:totalContacts,  grp:'net', onclick:"showTab('network')"},
           {label:'Warm',        val:warmContacts,   grp:'net', onclick:"state.netFilter={view:'warm',source:'',sort:'smart'};showTab('network')"},
@@ -2190,9 +1789,6 @@ function renderHQHero() {
         </div>`;}).join('')}
       </div>
     </div>
-
-    <!-- Daily Brief band — Claude ranks today's next actions via forced tool call -->
-    ${renderDailyBriefPanel()}
 
     <!-- Bottom row: Analyze JD + Daily Focus -->
     <div class="board-hero-split" style="display:grid;border:1px solid rgba(91,160,210,0.20);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;background:var(--navy-mid)">
@@ -2309,7 +1905,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + renderHQRechargeStrip() + `
+  el.innerHTML = setupBanner() + renderHQHero() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
@@ -2534,123 +2130,6 @@ function readAppForm(prefix) {
   return obj;
 }
 
-// Shared by both the High Priority strip and the main application list — used
-// to be two separately-maintained templates that drifted apart (missing
-// Archive/contact-line/AI actions on the strip, and a broken Edit button
-// there since only the main list's map() checked state.appEditing). One
-// render path now, so they can't drift again.
-function renderAppCard(app, isPriority) {
-  if(state.appEditing===app.id) {
-    return `<div class="card" style="margin-bottom:8px;border-left:3px solid var(--amber)">
-      <div style="font-size:12px;font-weight:500;color:var(--amber);margin-bottom:10px">Editing: ${esc(app.company)}</div>
-      ${appFormHTML(`e-${app.id}`,app)}
-      <div class="row" style="margin-top:10px">
-        <button class="amber" onclick="saveEdit(${app.id})">Save changes</button>
-        <button onclick="state.appEditing=null;render('tracker')">Cancel</button>
-      </div>
-    </div>`;
-  }
-
-  const isExpanded   = state.appExpanded && state.appExpanded[app.id];
-  const borderCol    = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[app.stage]||(isPriority?'var(--amber)':'var(--brd2)');
-  const cardBg       = STAGE_CARD_BG[app.stage]||'var(--card-default)';
-
-  // Heat tag: saved role sitting >28 days
-  let heatTag = '';
-  if(app.stage === 'Saved' && app.savedAt) {
-    const daysSaved = Math.floor((Date.now() - new Date(app.savedAt).getTime()) / 86400000);
-    if(daysSaved >= 28) {
-      const heatCol = daysSaved >= 56 ? '#E85D3A' : 'var(--amber)';
-      const heatBg  = daysSaved >= 56 ? 'rgba(232,93,58,0.12)' : 'var(--amber-bg)';
-      const heatBrd = daysSaved >= 56 ? 'rgba(232,93,58,0.35)' : 'var(--amber-dim)';
-      heatTag = `<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:${heatBg};border:1px solid ${heatBrd};color:${heatCol};font-weight:600;white-space:nowrap">⏰ ${daysSaved}d saved</span>`;
-    }
-  }
-
-  const details      = [
-    app.salary && pill(esc(app.salary)),
-    app.location && pill(esc(app.location)),
-    app.fit && fitPill(app),
-    heatTag
-  ].filter(Boolean).join('');
-  const contactLine  = [app.contact,app.netContact].filter(s=>s&&s!=='—')
-    .map(s => isGuest() ? `<span class="redacted">${esc(s)}</span>` : esc(s)).join(' · ');
-  const nextLine     = isGuest()
-    ? [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(s=>`<span class="redacted">${esc(s)}</span>`).join(' → ')
-    : [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(esc).join(' → ');
-  const keyReqs      = app.keyReqs&&app.keyReqs!=='—'?app.keyReqs:'';
-  const gaps         = app.gaps||app.notes||'';
-  const netRel       = app.netRel&&app.netRel!=='—'?app.netRel:'';
-  const STAGE_CSS_COL = {Saved:'var(--teal)',Applied:'var(--blue)','Coffee / Networking':'var(--green)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)'};
-  const stageColor = STAGE_CSS_COL[app.stage] || 'var(--amber)';
-  const updatedLabel = app.updatedAt
-    ? `<span style="font-weight:600;color:var(--tx2)">${esc(app.stage)}</span> <span style="color:${stageColor}">${app.updatedAt.slice(0,10)}</span>`
-    : '';
-  const isHigh       = app.priority==='High';
-
-  const aiGrid = isGuest() ? '' : `
-    <div class="app-card-ai-grid" style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto;align-self:stretch">
-      <div style="font-size:9px;font-weight:700;color:rgba(201,150,26,0.75);letter-spacing:.08em;text-transform:uppercase;text-align:center;white-space:nowrap">✦ ai tools · powered by claude</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:6px;flex:1">
-        <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Company Profile</button>
-        <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Interview Prep</button>
-        <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Cover Letter Support</button>
-        <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;padding:8px 6px;text-align:center;line-height:1.25">Resume Bullet Builder</button>
-      </div>
-    </div>`;
-
-  const condensed = `
-    <div class="app-card-inner app-card-split" style="display:flex;gap:14px;align-items:flex-start">
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
-            <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(app.company)}</span>
-            ${badge(app.stage,STAGE_COL[app.stage]||'amber')}
-            ${isPriority?`<span style="font-size:10px;color:var(--amber)">⭐</span>`:''}
-          </div>
-          <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
-          ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
-          ${app.netContact&&app.netContact!=='—'
-            ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
-            : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
-          ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px;font-weight:500">→ ${nextLine}</div>`:''}
-          ${updatedLabel?`<div style="font-size:11px;margin-top:2px">${updatedLabel}</div>`:''}
-        </div>
-        <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
-          ${isGuest()
-            ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
-            : `${sel(`stg-${app.id}`,STAGES,app.stage)}
-            <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
-            <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
-            <button onclick="state.appEditing=${app.id};render('tracker')" style="font-size:11px">Edit</button>
-            <button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>
-            <button onclick="delApp(${app.id})" style="font-size:11px;color:var(--muted);border-color:var(--brd)">Archive</button>`}
-        </div>
-      </div>
-      ${aiGrid}
-    </div>`;
-
-  const expanded = isExpanded ? `
-    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
-      ${app.reqNum&&app.reqNum!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">req #:</span> ${esc(app.reqNum)}</div>`:''}
-      ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
-      ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${isGuest()?'<span class="redacted">'+esc(gaps)+'</span>':esc(gaps)}</div>`:''}
-      ${(app.actLog&&app.actLog.length) ? `
-        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--navy-border)">
-          <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
-          ${app.actLog.slice(-5).reverse().map(e=>`
-            <div style="display:flex;gap:8px;font-size:10px;color:var(--faint);margin-bottom:2px">
-              <span style="color:var(--muted);white-space:nowrap">${e.date||''}</span>
-              <span>${esc(e.note||'')}</span>
-            </div>`).join('')}
-        </div>` : ''}
-    </div>` : '';
-
-  return `<div id="app-card-${app.id}" style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid ${borderCol};background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
-    ${condensed}${expanded}
-  </div>`;
-}
-
 function renderTracker(el) {
   const HIDDEN_STAGES = ['Rejected','Ghosted'];
 
@@ -2668,7 +2147,8 @@ function renderTracker(el) {
     case 'all':       list = list.filter(a=>!HIDDEN_STAGES.includes(a.stage)); break;
     case 'recent':    const cutoff=new Date(Date.now()-14*86400000).toISOString().slice(0,10);
                       list = list.filter(a=>!HIDDEN_STAGES.includes(a.stage) && (a.updatedAt||a.date||'')>=cutoff); break;
-    case 'priority':  list = list.filter(a=>!HIDDEN_STAGES.includes(a.stage) && a.priority!=='High'); break;
+    case 'priority':  list = list.filter(a=>!HIDDEN_STAGES.includes(a.stage) && a.priority==='High'); break;
+    case 'interviewing': list = list.filter(a=>INTERVIEW_STAGES.includes(a.stage)); break;
     case 'archived':  list = list.filter(a=>HIDDEN_STAGES.includes(a.stage)); break;
     default:          list = list.filter(a=>a.stage===state.appFilter); break;
   }
@@ -2679,7 +2159,11 @@ function renderTracker(el) {
 
   // Exclude top-priority apps from the main list (they live in the strip)
   const topIds = new Set(topPriority.map(a=>a.id));
-  if(state.appFilter!=='archived') list = list.filter(a=>!topIds.has(a.id));
+  // The High-priority view shows every High app in the main list, so the
+  // pinned strip steps aside rather than hiding them or listing them twice.
+  // Select mode also lists them inline so every card in the view is selectable.
+  if(state.appFilter!=='archived' && state.appFilter!=='priority' && !state.appSelectMode) list = list.filter(a=>!topIds.has(a.id));
+  window._trackerViewIds = list.map(a=>a.id);
   if(isGuest()) list = list.slice(0,5);
 
   // Stage counts for filter badges
@@ -2688,13 +2172,55 @@ function renderTracker(el) {
   const archivedCount= state.apps.filter(a=>HIDDEN_STAGES.includes(a.stage)).length;
 
   // ── Top priority strip — same card format as main tracker cards ────────────
-  const priorityStrip = topPriority.length ? `
+  const priorityStrip = (topPriority.length && state.appFilter!=='priority' && !state.appSelectMode) ? `
     <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--navy-border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-size:10px;color:var(--amber);letter-spacing:.09em;text-transform:uppercase;font-weight:600">⭐ High Priority (${topPriority.length}/10)</div>
         ${topPriority.length>=10 ? `<span style="font-size:11px;color:var(--red);font-weight:500">⚑ At limit</span>` : ''}
       </div>
-      ${topPriority.map(a => renderAppCard(a, true)).join('')}
+      ${topPriority.map(a => {
+        const isExp = state.appExpanded && state.appExpanded['top_'+a.id];
+        const borderCol = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[a.stage]||'var(--amber)';
+        const cardBg = STAGE_CARD_BG[a.stage]||'var(--card-default)';
+        const details = [a.salary&&pill(a.salary),a.location&&pill(a.location),fitPill(a)].filter(Boolean).join('');
+        const nextLine = [a.nextStep,a.nextDate].filter(s=>s&&s!=='—').map(esc).join(' → ');
+        const keyReqs = a.keyReqs&&a.keyReqs!=='—'?a.keyReqs:'';
+        const gaps = a.gaps||stripNotesPrefix(a.notes)||'';
+        return `<div style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid var(--amber);background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
+          <div class="app-card-inner" style="display:flex;flex-direction:column;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(a.company)}</span>
+                ${badge(a.stage,STAGE_COL[a.stage]||'amber')}
+              </div>
+              <div style="color:var(--muted);margin-bottom:5px;font-size:12px">${esc(a.role||'')}</div>
+              ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
+              ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px">→ ${nextLine}</div>`:''}
+            </div>
+            <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
+              ${sel('stg-top-'+a.id,STAGES,a.stage)}
+              <button onclick="setAppStage(${a.id},document.getElementById('stg-top-${a.id}').value)" style="font-size:11px">Save</button>
+              <button onclick="toggleHighPriority(${a.id})" title="Remove from high priority" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)">⭐</button>
+              <button onclick="openProfilePanel(${a.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Profile</button>
+              <button onclick="state.appEditing=${a.id};render('tracker')" style="font-size:11px">Edit</button>
+              <button onclick="toggleExpandTop(${a.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExp?'▴ Details':'▾ Details'}</button>
+            </div>
+          </div>
+          ${isExp && (keyReqs||gaps||(a.actLog&&a.actLog.length)) ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
+            ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
+            ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${esc(gaps)}</div>`:''}
+            ${(a.actLog&&a.actLog.length) ? `
+              <div style="padding-top:6px;border-top:1px solid var(--navy-border)">
+                <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
+                ${a.actLog.slice(-5).reverse().map(e=>`
+                  <div style="display:flex;gap:8px;font-size:10px;color:var(--faint);margin-bottom:2px">
+                    <span style="color:var(--muted);white-space:nowrap">${e.date||''}</span>
+                    <span>${esc(e.note||'')}</span>
+                  </div>`).join('')}
+              </div>` : ''}
+          </div>` : ''}
+        </div>`;
+      }).join('')}
     </div>` : '';
 
   // ── Unified filter row: All + stages with entries + category filters + Archived ──
@@ -2726,13 +2252,121 @@ function renderTracker(el) {
     </div>` : '';
 
   // ── Application cards ──────────────────────────────────────────────────────
-  const cards = list.map(app => renderAppCard(app, false)).join('');
+  const cards = list.map(app => {
+    if(state.appEditing===app.id) {
+      return `<div class="card" style="margin-bottom:8px;border-left:3px solid var(--amber)">
+        <div style="font-size:12px;font-weight:500;color:var(--amber);margin-bottom:10px">Editing: ${esc(app.company)}</div>
+        ${appFormHTML(`e-${app.id}`,app)}
+        <div class="row" style="margin-top:10px">
+          <button class="amber" onclick="saveEdit(${app.id})">Save changes</button>
+          <button onclick="state.appEditing=null;render('tracker')">Cancel</button>
+          <button class="danger" onclick="deleteAppPermanently(${app.id})" style="margin-left:auto">Delete permanently</button>
+        </div>
+      </div>`;
+    }
+
+    const isExpanded   = state.appExpanded && state.appExpanded[app.id];
+    const borderCol    = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[app.stage]||'var(--brd2)';
+    const cardBg       = STAGE_CARD_BG[app.stage]||'var(--card-default)';
+
+    // Heat tag: saved role sitting >28 days
+    let heatTag = '';
+    if(app.stage === 'Saved' && app.savedAt) {
+      const daysSaved = Math.floor((Date.now() - new Date(app.savedAt).getTime()) / 86400000);
+      if(daysSaved >= 28) {
+        const heatCol = daysSaved >= 56 ? '#E85D3A' : 'var(--amber)';
+        const heatBg  = daysSaved >= 56 ? 'rgba(232,93,58,0.12)' : 'var(--amber-bg)';
+        const heatBrd = daysSaved >= 56 ? 'rgba(232,93,58,0.35)' : 'var(--amber-dim)';
+        heatTag = `<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:${heatBg};border:1px solid ${heatBrd};color:${heatCol};font-weight:600;white-space:nowrap">⏰ ${daysSaved}d saved</span>`;
+      }
+    }
+
+    const details      = [
+      app.salary && pill(esc(app.salary)),
+      app.location && pill(esc(app.location)),
+      app.fit && fitPill(app),
+      heatTag
+    ].filter(Boolean).join('');
+    const contactLine  = [app.contact,app.netContact].filter(s=>s&&s!=='—')
+      .map(s => isGuest() ? `<span class="redacted">${esc(s)}</span>` : esc(s)).join(' · ');
+    const nextLine     = isGuest()
+      ? [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(s=>`<span class="redacted">${esc(s)}</span>`).join(' → ')
+      : [app.nextStep,app.nextDate].filter(s=>s&&s!=='—').map(esc).join(' → ');
+    const keyReqs      = app.keyReqs&&app.keyReqs!=='—'?app.keyReqs:'';
+    const gaps         = app.gaps||stripNotesPrefix(app.notes)||'';
+    const netRel       = app.netRel&&app.netRel!=='—'?app.netRel:'';
+    const STAGE_CSS_COL = {Saved:'var(--teal)',Applied:'var(--blue)','Coffee / Networking':'var(--green)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)'};
+    const stageColor = STAGE_CSS_COL[app.stage] || 'var(--amber)';
+    const updatedLabel = app.updatedAt
+      ? `<span style="font-weight:600;color:var(--tx2)">${esc(app.stage)}</span> <span style="color:${stageColor}">${app.updatedAt.slice(0,10)}</span>`
+      : '';
+    const isHigh       = app.priority==='High';
+
+    const condensed = `
+      <div class="app-card-inner" style="display:flex;flex-direction:column;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div class="row" style="margin-bottom:3px;flex-wrap:wrap">
+            ${state.appSelectMode ? `<input type="checkbox" ${state.appSelected&&state.appSelected[app.id]?'checked':''} onchange="toggleAppSelect(${app.id},this.checked)" style="width:16px;height:16px;margin:0 2px 0 0;accent-color:var(--rose);cursor:pointer;flex-shrink:0" title="Select">` : ''}
+            <span style="font-size:14px;font-weight:600;color:var(--tx)">${esc(app.company)}</span>
+            ${badge(app.stage,STAGE_COL[app.stage]||'amber')}
+          </div>
+          <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
+          ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
+          ${app.netContact&&app.netContact!=='—'
+            ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
+            : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
+          ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px;font-weight:500">→ ${nextLine}</div>`:''}
+          ${updatedLabel?`<div style="font-size:11px;margin-top:2px">${updatedLabel}</div>`:''}
+        </div>
+        <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
+          ${isGuest()
+            ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
+            : `${sel(`stg-${app.id}`,STAGES,app.stage)}
+            <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
+            <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
+            <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Profile</button>
+            <button onclick="copyPrepPrompt(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Prep</button>
+            <button onclick="state.appEditing=${app.id};render('tracker')" style="font-size:11px">Edit</button>
+            <button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>
+            <button onclick="delApp(${app.id})" style="font-size:11px;color:var(--muted);border-color:var(--brd)">Archive</button>`}
+        </div>
+      </div>`;
+
+    const expanded = isExpanded ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
+        ${app.reqNum&&app.reqNum!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">req #:</span> ${esc(app.reqNum)}</div>`:''}
+        ${(/^https?:\/\//i.test(app.jobLink||'')||/^https?:\/\//i.test(app.pageUrl||'')) ? `<div style="display:flex;gap:10px;font-size:11px;margin-bottom:6px">
+          ${/^https?:\/\//i.test(app.jobLink||'') ? `<a href="${esc(app.jobLink)}" target="_blank" rel="noopener">↗ Job posting</a>` : ''}
+          ${/^https?:\/\//i.test(app.pageUrl||'') ? `<a href="${esc(app.pageUrl)}" target="_blank" rel="noopener">↗ Notion page</a>` : ''}
+        </div>` : ''}
+        ${app.notes&&stripNotesPrefix(app.notes)!==gaps?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px;white-space:pre-wrap"><span style="color:var(--muted)">notes:</span> ${esc(app.notes)}</div>`:''}
+        ${keyReqs?`<div style="font-size:11px;color:var(--faint);margin-bottom:4px"><span style="color:var(--muted)">match:</span> ${esc(keyReqs)}</div>`:''}
+        ${gaps&&gaps!=='—'?`<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">notes:</span> ${isGuest()?'<span class="redacted">'+esc(gaps)+'</span>':esc(gaps)}</div>`:''}
+        ${isGuest() ? '' : `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <button onclick="openCoverLetterPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Cover Letter</button>
+          <button onclick="openResumeBulletPanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Resume Bullets</button>
+        </div>`}
+        ${(app.actLog&&app.actLog.length) ? `
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--navy-border)">
+            <div style="font-size:10px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Activity</div>
+            ${app.actLog.slice(-5).reverse().map(e=>`
+              <div style="display:flex;gap:8px;font-size:10px;color:var(--faint);margin-bottom:2px">
+                <span style="color:var(--muted);white-space:nowrap">${e.date||''}</span>
+                <span>${esc(e.note||'')}</span>
+              </div>`).join('')}
+          </div>` : ''}
+      </div>` : '';
+
+    return `<div style="margin-bottom:8px;border-radius:8px;border:1px solid var(--navy-border);border-left:3px solid ${borderCol};background:${cardBg};padding:1rem 1.25rem;animation:fadeIn .2s ease">
+      ${condensed}${expanded}
+    </div>`;
+  }).join('');
 
   const HIDDEN_STAGES_ALL = ['Rejected','Ghosted'];
   let totalApps    = state.apps.length;
   let appliedCount = state.apps.filter(a=>a.stage==='Applied').length;
   let savedCount   = state.apps.filter(a=>a.stage==='Saved').length;
-  let interviewCt  = state.apps.filter(a=>['Phone Screen','Interview','Final Round'].includes(a.stage)).length;
+  let interviewCt  = state.apps.filter(a=>INTERVIEW_STAGES.includes(a.stage)).length;
   let highPriCt    = state.apps.filter(a=>a.priority==='High' && !HIDDEN_STAGES_ALL.includes(a.stage)).length;
 
   // v19: Guest mode — show real pipeline numbers on the dashboard stats
@@ -2744,40 +2378,33 @@ function renderTracker(el) {
     highPriCt    = 7;
   }
 
-  const dashAndJD = `
-  <!-- KPI row — all five stats across the top -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px">
-    ${[
-      {label:'Total tracked', val:totalApps,    col:'var(--sky-blue)', bg:'var(--sky-blue-pale)', filter:'all'},
-      {label:'Active Apps',   val:appliedCount, col:'var(--blue)',     bg:'var(--blue-bg)',       filter:'Applied'},
-      {label:'Saved / Queue', val:savedCount,   col:'var(--purple)',   bg:'var(--purple-bg)',     filter:'Saved'},
-      {label:'Interviewing',  val:interviewCt,  col:'var(--amber)',    bg:'var(--amber-bg)',      filter:'Interview'},
-      {label:'High priority', val:highPriCt,    col:'var(--rose)',     bg:'var(--rose-pale)',     filter:'priority'},
-    ].map(d=>`<div onclick="setAppFilter('${d.filter}')" style="background:${d.bg};border:1px solid ${state.appFilter===d.filter?d.col:'rgba(0,0,0,0.06)'};border-radius:8px;padding:10px 12px;text-align:center;cursor:pointer;transition:all .15s;${state.appFilter===d.filter?'box-shadow:0 0 0 2px '+d.col+';':''}" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-      <div style="font-size:22px;font-weight:600;color:${d.col};line-height:1">${d.val}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.03em">${d.label}</div>
-    </div>`).join('')}
-  </div>
-  <!-- AI row — JD analyzer (filled gold) + Pipeline Narrative (outline gold) -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:18px;align-items:stretch">
+  const dashAndJD = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;align-items:start">
+    <!-- LEFT: stats block -->
+    <div>
+      <!-- Total tracked — full width top -->
+      <div onclick="setAppFilter('all')" style="background:var(--sky-blue-pale);border:1px solid ${state.appFilter==='all'?'var(--sky-blue)':'rgba(0,0,0,0.06)'};border-radius:8px;padding:10px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:8px;${state.appFilter==='all'?'box-shadow:0 0 0 2px var(--sky-blue);':''}" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <div style="font-size:24px;font-weight:600;color:var(--sky-blue);line-height:1">${totalApps}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.04em">Total tracked</div>
+      </div>
+      <!-- 2x2 grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          {label:'Active Apps',       val:appliedCount, col:'var(--blue)',  bg:'var(--blue-bg)',   filter:'Applied'},
+          {label:'Saved / Queue', val:savedCount,   col:'var(--purple)',bg:'var(--purple-bg)', filter:'Saved'},
+          {label:'Interviewing',  val:interviewCt,  col:'var(--amber)', bg:'var(--amber-bg)',  filter:'interviewing'},
+          {label:'High priority', val:highPriCt,    col:'var(--rose)',  bg:'var(--rose-pale)', filter:'priority'},
+        ].map(d=>`<div onclick="setAppFilter('${d.filter}')" style="background:${d.bg};border:1px solid ${state.appFilter===d.filter?d.col:'rgba(0,0,0,0.06)'};border-radius:8px;padding:10px 12px;text-align:center;cursor:pointer;transition:all .15s;${state.appFilter===d.filter?'box-shadow:0 0 0 2px '+d.col+';':''}" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+          <div style="font-size:20px;font-weight:600;color:${d.col};line-height:1">${d.val}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.03em">${d.label}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <!-- RIGHT: Claude JD panel -->
     <div style="background:rgba(201,138,14,0.07);border:1px solid rgba(201,138,14,0.30);border-top:3px solid var(--gold);border-radius:8px;padding:14px">
       <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">✦ Analyze a Job Description</div>
       <textarea id="tracker-jd-quick" rows="3" placeholder="Paste JD text here — get fit score, red flags &amp; save to tracker…" style="width:100%;font-size:12px;margin-bottom:8px;background:rgba(201,138,14,0.06);border:1px solid rgba(201,138,14,0.30);border-radius:6px;color:var(--tx);resize:none;padding:7px 10px"></textarea>
       <button onclick="openAnalyzeModalWithText(document.getElementById('tracker-jd-quick').value)" style="width:100%;font-size:12px;background:var(--gold);color:#fff;border-color:var(--gold);padding:8px 0;font-weight:600">⚡ Analyze JD</button>
       <div style="font-size:10px;color:rgba(201,150,26,0.6);margin-top:6px;text-align:center;letter-spacing:.02em">powered by claude · ~15 seconds · no data stored</div>
-    </div>
-    <div style="background:rgba(201,138,14,0.07);border:1px solid rgba(201,138,14,0.30);border-top:3px solid var(--gold);border-radius:8px;padding:14px">
-      <div style="font-size:11px;font-weight:700;color:#E8C97A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">✦ Pipeline Narrative</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">Turns your live pipeline stats into a short first-person status paragraph — where momentum is building and what to focus on next week. Ready to paste into a mentor check-in or weekly review.</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <button id="narr-btn" onclick="generatePipelineNarrative()" style="font-size:12px;background:transparent;color:#E8C97A;border:1px solid var(--gold-border);padding:7px 14px;font-weight:600">✦ Generate weekly status</button>
-        <span id="narr-loading" style="display:none;font-size:11px;color:var(--muted);font-style:italic">Writing…</span>
-      </div>
-      <div id="narr-output" style="display:none">
-        <pre id="narr-text" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.6;color:var(--tx);margin:0 0 8px 0;padding:10px;background:rgba(201,138,14,0.05);border-radius:6px;border:1px solid rgba(201,138,14,0.15)"></pre>
-        <button onclick="copyNarrative()" style="font-size:11px;padding:5px 12px;color:#E8C97A;border-color:var(--gold-border);background:transparent">Copy paragraph</button>
-      </div>
-      <div style="font-size:10px;color:rgba(201,150,26,0.6);margin-top:6px;letter-spacing:.02em">powered by claude · plain-language summary · not stored</div>
     </div>
   </div>`;
 
@@ -2803,9 +2430,21 @@ function renderTracker(el) {
       <div class="stage-filters" style="margin-bottom:0;flex:1;min-width:0">${unifiedBtns}</div>
       ${isGuest() ? '' : `<button class="amber" onclick="state.appShowAdd=!state.appShowAdd;render('tracker')" style="flex-shrink:0;align-self:flex-start">+ Add</button>`}
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;margin-bottom:${state.appSelectMode?'8':'14'}px;align-items:center;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--faint)">Sort:</span>${sortBtns}
+      ${isGuest() ? '' : `<button class="tag ${state.appSelectMode?'on':''}" onclick="toggleAppSelectMode()" style="font-size:10px;margin-left:auto">${state.appSelectMode?'✓ Done selecting':'☐ Select'}</button>`}
     </div>
+    ${state.appSelectMode ? (() => {
+      const n = selectedAppIds().length, inView = (window._trackerViewIds||[]).length;
+      return `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:8px 12px;border:1px solid var(--rose-border);border-radius:8px;background:var(--rose-pale);position:sticky;top:60px;z-index:5">
+        <span id="app-sel-count" style="font-size:12px;font-weight:600;color:var(--tx);min-width:84px">${n} selected</span>
+        <button onclick="selectAllAppsInView(true)" style="font-size:11px">Select all in view (${inView})</button>
+        <button onclick="selectAllAppsInView(false)" style="font-size:11px;color:var(--faint)">Clear</button>
+        <span style="flex:1"></span>
+        <button class="app-sel-action" onclick="bulkArchiveApps()" ${n?'':'disabled'} style="font-size:11px">Archive selected</button>
+        <button class="app-sel-action danger" onclick="bulkDeleteApps()" ${n?'':'disabled'} style="font-size:11px">Delete selected</button>
+      </div>`;
+    })() : ''}
     ${addForm}
     <div style="position:relative">
       ${cards||'<div class="empty">No applications in this view.</div>'}
@@ -2829,6 +2468,12 @@ function toggleHighPriority(id) {
 function toggleExpand(id) {
   if(!state.appExpanded) state.appExpanded={};
   state.appExpanded[id] = !state.appExpanded[id];
+  render('tracker');
+}
+
+function toggleExpandTop(id) {
+  if(!state.appExpanded) state.appExpanded={};
+  state.appExpanded['top_'+id] = !state.appExpanded['top_'+id];
   render('tracker');
 }
 
@@ -2941,19 +2586,23 @@ function renderBuilderMarkdown(t) {
     .split('\n').map(line => line.startsWith('<')||!line.trim() ? line : `<p style="font-size:12px;color:var(--muted);line-height:1.7;margin:3px 0">${line}</p>`).join('\n');
 }
 
-async function streamIntoBuilderPanel(prompt, failLabel) {
-  try {
-    await claudeStream(prompt, t => {
-      state.profilePanelText = t;
-      const content = document.getElementById('profile-panel-content');
-      if(!content) return;
-      content.innerHTML = renderBuilderMarkdown(t);
-    });
-    document.getElementById('profile-copy-btn').style.display = 'block';
-  } catch(e) {
+async function streamIntoBuilderPanel(prompt, failLabel, {webSearch=false}={}) {
+  const showFail = msg => {
     const content = document.getElementById('profile-panel-content');
-    if(content) content.innerHTML = `<div style="color:var(--red);font-size:12px;padding:10px">${esc(failLabel)} failed: ${esc(e.message)}<br><br>Make sure your Cloudflare deployment is live with <code>ANTHROPIC_API_KEY</code> set in its environment variables.</div>`;
-  }
+    if (!content) return;
+    // Keep any partial text that already streamed in, and add the error below it.
+    const partial = state.profilePanelText ? renderBuilderMarkdown(state.profilePanelText) : '';
+    content.innerHTML = partial + `<div style="color:var(--red);font-size:12px;padding:10px;margin-top:8px;border:1px solid var(--rose-border);border-radius:6px;background:var(--rose-pale)">${esc(failLabel)} failed: ${esc(msg)}</div>`;
+  };
+  let failed = false;
+  const full = await claudeStream(prompt, t => {
+    state.profilePanelText = t;
+    const content = document.getElementById('profile-panel-content');
+    if(!content) return;
+    content.innerHTML = renderBuilderMarkdown(t);
+  }, {webSearch, onError: msg => { failed = true; showFail(msg); }});
+  if (!failed && !full) showFail('The AI returned an empty response. Try again in a moment.');
+  if (full) document.getElementById('profile-copy-btn').style.display = 'block';
 }
 
 async function buildProfile(app) {
@@ -2978,7 +2627,7 @@ Use web search to research this company. Produce a concise, scannable profile:
 
 Be specific throughout. If PE-backed, flag what that means strategically. Flag if the company has had recent layoffs or funding challenges.`;
 
-  await streamIntoBuilderPanel(prompt, 'Profile generation');
+  await streamIntoBuilderPanel(prompt, 'Profile generation', {webSearch:true});
 }
 
 function copyProfile() {
@@ -3155,38 +2804,10 @@ function renderPomodoro(el) {
     {key:'wellness', label:'Wellness', accent:'var(--teal)',     dim:'rgba(42,181,160,0.60)',  bdrDim:'rgba(42,181,160,0.22)',  pale:'rgba(42,181,160,0.10)', brd:'rgba(42,181,160,0.30)',  navBg:'rgba(47,158,110,0.10)'},
     {key:'move',     label:'Move',     accent:'var(--rose)',     dim:'rgba(196,96,122,0.60)',  bdrDim:'rgba(196,96,122,0.22)',  pale:'var(--rose-pale)',       brd:'var(--rose-border)',     navBg:'rgba(196,96,122,0.06)'},
   ];
-  // Weekly momentum stats (rolling 7 days) power the two KPIs shown beneath
-  // each mini-nav title — see getWeeklyStats(). Each section keeps its own
-  // color identity so all three read at a glance, selected or not.
-  const wk = getWeeklyStats();
-  const SECTION_KPIS = {
-    focus: [
-      {val: wk.focus,                                     label:'sessions'},
-      {val: streak>0 ? `🔥 ${streak}` : '—', label:'day streak'},
-    ],
-    wellness: [
-      {val: wk.water>0 ? `💧 ${wk.water}` : '—', label:'hydration'},
-      {val: wk.breath,                                          label:'breath work'},
-    ],
-    move: [
-      {val: wk.chair,                                       label:'chair yoga'},
-      {val: wk.plankMin>0 ? `${wk.plankMin}m` : '—',   label:'plank'},
-    ],
-  };
-  const sectionNav = SNAV.map(s=>{
-    const on = section===s.key;
-    const kps = SECTION_KPIS[s.key] || [];
-    return `
-    <div onclick="switchSection('${s.key}')" style="padding:11px 8px 12px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${on?s.pale:s.navBg};border-bottom:${on?`2px solid ${s.accent}`:`2px solid ${s.bdrDim}`};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${on?s.pale:s.navBg}'">
-      <div style="font-size:14px;font-weight:700;color:${on?s.accent:s.dim};line-height:1;font-family:'DM Mono',monospace;margin-bottom:10px">${s.label}</div>
-      <div style="display:flex;gap:8px;justify-content:center">
-        ${kps.map(k=>`<div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;color:${s.accent};line-height:1;font-family:'DM Mono',monospace">${k.val}</div>
-          <div style="font-size:8px;color:var(--faint);margin-top:4px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.label}</div>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
+  const sectionNav = SNAV.map(s=>`
+    <div onclick="switchSection('${s.key}')" style="padding:10px 6px;text-align:center;cursor:pointer;border-right:1px solid rgba(255,255,255,0.05);background:${section===s.key?s.pale:s.navBg};border-bottom:${section===s.key?`2px solid ${s.accent}`:`2px solid ${s.bdrDim}`};transition:all .15s" onmouseover="this.style.background='${s.pale}'" onmouseout="this.style.background='${section===s.key?s.pale:s.navBg}'">
+      <div style="font-size:14px;font-weight:700;color:${section===s.key?s.accent:s.dim};line-height:1;font-family:'DM Mono',monospace">${s.label}</div>
+    </div>`).join('');
 
   // ── Hero meta per section ───────────────────────────────────────────────────
   const heroAccent = SNAV.find(s=>s.key===section)?.accent || 'var(--amber)';
@@ -3196,17 +2817,38 @@ function renderPomodoro(el) {
     : 'yoga \u00b7 walk \u00b7 scan \u00b7 plank';
   const starFill  = section==='focus' ? '#F5A623' : section==='wellness' ? '#2AB5A0' : '#C4607A';
 
-  // ── Welcome copy (focus section only — the tab's landing view) ───────────────
-  const welcomeBlock = section==='focus' ? `
-    <div style="margin-top:14px;max-width:660px;display:flex;flex-direction:column;gap:9px">
-      <p style="margin:0;font-size:12.5px;line-height:1.65;color:#C9DEEF">Welcome. A job search is a marathon you mostly run alone — this is the room you step into to look after the person running it. A few minutes spent here <em>on purpose</em>, rather than on autopilot, pay back as steadier attention, less burnout, and momentum that outlasts any single application.</p>
-      <p style="margin:0;font-size:12.5px;line-height:1.65;color:#9FBBD4">Each corner does its part: <strong style="color:var(--amber);font-weight:600">Focus</strong> protects deep, uninterrupted work; <strong style="color:var(--teal);font-weight:600">Wellness</strong> keeps you hydrated, rested, and breathing; <strong style="color:var(--rose);font-weight:600">Move</strong> loosens the stillness before it hardens into fatigue. Tend all three and they compound into overall well-being — the ground that finally makes real focus possible.</p>
-    </div>` : '';
-
-  // Thin caption clarifying the KPIs above are a rolling weekly total, not today's grind.
-  const weeklyCaption = `
-    <div style="background:rgba(8,18,30,0.55);border-top:1px solid rgba(91,160,210,0.10);padding:5px 8px;text-align:center;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">◷ rolling 7-day momentum</div>`;
-
+  // ── KPI strip (per-section — matches HQ dashboard style) ────────────────────
+  const lastWaterMin = hydration.lastTs ? Math.round((Date.now()-hydration.lastTs)/60000) : null;
+  // Wellness KPIs
+  const breathDone = state.pomBreathTheme==='' && state.pomBreathStep>0 ? 1 : 0;
+  const wellnessActivities = (hydration.glasses>0?1:0) + (breathDone) + (state.pomRestSecs>0&&state.pomRestSecs<20*60?1:0);
+  const waterStatus = lastWaterMin===null ? '—' : lastWaterMin<2 ? 'just now' : lastWaterMin>45 ? `${lastWaterMin}m ⚠` : `${lastWaterMin}m`;
+  // Move KPIs
+  const moveActivities = state.pomMoveSessionsDone || 0;
+  const moveActive = state.pomMoveCard ? 1 : 0;
+  const kpiItems = section==='focus' ? [
+    {val:state.pomSessions,                              label:'sessions',  col:'var(--sky-blue-light)'},
+    {val:streak>0?`\uD83D\uDD25 ${streak}`:'—',         label:'streak',    col:'var(--amber)'},
+    {val:score.label.split(' ')[0],                      label:'score',     col:score.color},
+    {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'hydration', col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--sky-blue-light)'},
+  ] : section==='wellness' ? [
+    {val:`\uD83D\uDCA7 ${hydration.glasses}/8`,         label:'water',     col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--teal)'},
+    {val:waterStatus,                                    label:'last sip',  col:lastWaterMin!==null&&lastWaterMin>45?'var(--amber)':'var(--faint)'},
+    {val:wellnessActivities,                             label:'done today',col:'var(--teal)'},
+    {val:state.pomSessions>0?`\uD83D\uDD25 ${state.pomSessions}`:'—', label:'focus sessions', col:'var(--sky-blue-light)'},
+  ] : [
+    {val:moveActivities>0?`\uD83D\uDCAA ${moveActivities}`:(moveActive?'active':'—'), label:'moves done',  col:'var(--rose)'},
+    {val:state.pomMoveCard ? (state.pomMoveCard.charAt(0).toUpperCase()+state.pomMoveCard.slice(1)) : '—', label:'active move', col:'var(--rose)'},
+    {val:state.pomMoveStep>0?`step ${state.pomMoveStep+1}`:'—',                        label:'progress',   col:'var(--rose)'},
+    {val:state.pomSessions>0?state.pomSessions:'—',                                    label:'sessions',   col:'var(--faint)'},
+  ];
+  const focusKpis = `
+    <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:repeat(4,1fr)">
+      ${kpiItems.map(k=>`<div style="padding:9px 6px;text-align:center;border-right:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:15px;font-weight:700;color:${k.col};line-height:1;font-family:'DM Mono',monospace">${k.val}</div>
+        <div style="font-size:9px;color:var(--faint);margin-top:3px;letter-spacing:.04em;text-transform:uppercase">${k.label}</div>
+      </div>`).join('')}
+    </div>`;
 
   // ── Break picker ────────────────────────────────────────────────────────────
   const lastMood = state.pomLog.length ? (state.pomLog[state.pomLog.length-1].mood||'') : '';
@@ -3370,13 +3012,12 @@ function renderPomodoro(el) {
             <span style="display:inline-block;width:12px;height:1px;background:${heroAccent}"></span>${heroSub}
           </div>
           <div style="font-size:46px;font-weight:400;color:#F4F8FC;line-height:1;letter-spacing:-.02em;font-style:italic;font-family:'DM Serif Display',Georgia,serif">${heroTitle}</div>
-          ${welcomeBlock}
         </div>
       </div>
       <div style="background:rgba(8,18,30,0.85);border-top:1px solid rgba(91,160,210,0.12);display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid rgba(91,160,210,0.10)">
         ${sectionNav}
       </div>
-      ${weeklyCaption}
+      ${focusKpis}
     </div>
     ${section==='focus' ? focusContent : section==='wellness' ? buildWellnessContent() : buildMoveContent()}
   </div>`;
@@ -3417,7 +3058,6 @@ function togglePom() {
           clearInterval(pomInterval); pomInterval=null; state.pomRunning=false;
           if(state.pomMode===0) {
             state.pomSessions++;
-            bumpWeekLog('focus');
             state.pomLog.push({task:state.pomCustomTask||state.pomTask,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),mins:[25,5,15][state.pomMode]});
             updateFocusStreak();
             state.pomBreakPicker=true;
@@ -3528,7 +3168,6 @@ function logWater() {
   h.glasses = (h.glasses||0) + 1;
   h.lastTs = Date.now();
   localStorage.setItem('hydration', JSON.stringify(h));
-  bumpWeekLog('water');
   render('pomodoro');
 }
 
@@ -3536,42 +3175,6 @@ function clearWater() {
   const today = new Date().toISOString().slice(0,10);
   localStorage.setItem('hydration', JSON.stringify({date:today, glasses:0, lastTs:null}));
   render('pomodoro');
-}
-
-// ── WEEKLY MOMENTUM LOG ─────────────────────────────────────────────────────
-// A single localStorage key ('jq_weekly_activity') holds per-day counters keyed
-// by activity: {focus, breath, chair, water, plankMin}. The Focus tab mini-nav
-// KPIs sum the trailing 7 days to show momentum rather than the daily grind.
-// clearWater intentionally does NOT decrement the weekly water tally — it only
-// resets today's on-screen glass tracker.
-
-function getWeekLog() {
-  try { return JSON.parse(localStorage.getItem('jq_weekly_activity') || '{}') || {}; }
-  catch(e) { return {}; }
-}
-
-function bumpWeekLog(key, amt) {
-  amt = amt || 1;
-  const log = getWeekLog();
-  const today  = new Date().toISOString().slice(0,10);
-  const cutoff = new Date(Date.now()-6*86400000).toISOString().slice(0,10);
-  if (!log[today]) log[today] = {};
-  log[today][key] = (log[today][key]||0) + amt;
-  Object.keys(log).forEach(d => { if (d < cutoff) delete log[d]; });
-  try { localStorage.setItem('jq_weekly_activity', JSON.stringify(log)); } catch(e) {}
-}
-
-function getWeeklyStats() {
-  const log = getWeekLog();
-  const cutoff = new Date(Date.now()-6*86400000).toISOString().slice(0,10);
-  const sum = {focus:0, breath:0, chair:0, water:0, plankMin:0};
-  Object.keys(log).forEach(d => {
-    if (d >= cutoff) {
-      const day = log[d] || {};
-      Object.keys(sum).forEach(k => { sum[k] += (day[k]||0); });
-    }
-  });
-  return sum;
 }
 
 // ── PARKING LOT ───────────────────────────────────────────────────────────────
@@ -3657,20 +3260,7 @@ function launchBreakActivity(type) {
 
 // ── SECTION NAVIGATION ────────────────────────────────────────────────────────
 
-// Stop any in-progress guided practice (Breathe / Chair Yoga / Walk / Body Scan):
-// halt its auto-advance timer and all audio. Called when the user navigates away so
-// a session never keeps ticking (or narrating) on a hidden tab — and so its next
-// step boundary can't yank the view back to Focus.
-function stopGuidedSessions() {
-  clearInterval(breathInterval); breathInterval = null;
-  clearInterval(moveInterval); moveInterval = null;
-  state.pomBreathRunning = false;
-  state.pomMoveRunning = false;
-  jqAudio.stop();
-}
-
 function switchSection(s) {
-  if (s !== state.pomSection) stopGuidedSessions();
   state.pomSection = s;
   render('pomodoro');
 }
@@ -3678,53 +3268,81 @@ function switchSection(s) {
 // ── WELLNESS SECTION BUILDERS ─────────────────────────────────────────────────
 
 function buildWellnessContent() {
-  // Wellness stacks its tools vertically now, with Breathe as the centerpiece
-  // (mirroring how the Focus mini-tab gives its primary tool room), hydration
-  // cues in the middle, and Rest at the end.
+  const sel = state.pomWellnessCard || '';
+  const cards = [
+    {id:'hydrate', icon:'\uD83D\uDCA7', label:'Hydrate', desc:'Daily water tracker'},
+    {id:'breathe', icon:'\uD83C\uDF2C', label:'Breathe', desc:'Guided meditation'},
+    {id:'rest',    icon:'\uD83D\uDCA4', label:'Rest',    desc:'20-min nap \u00b7 surrender series'},
+  ];
+  const cardRow = cards.map(c=>`
+    <div onclick="state.pomWellnessCard='${sel===c.id?'':c.id}';render('pomodoro')" style="flex:1;padding:14px;border:1px solid ${sel===c.id?'rgba(42,181,160,0.45)':'rgba(255,255,255,0.08)'};border-radius:10px;background:${sel===c.id?'rgba(42,181,160,0.10)':'rgba(255,255,255,0.03)'};cursor:pointer;transition:all .15s;text-align:center">
+      <div style="font-size:26px;margin-bottom:6px">${c.icon}</div>
+      <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--teal-light)':'var(--muted)'}">${c.label}</div>
+      <div style="font-size:10px;color:var(--faint);margin-top:3px;line-height:1.4">${c.desc}</div>
+    </div>`).join('');
+
+  let expanded = '';
+  if (sel==='hydrate') expanded = buildHydrateContent();
+  else if (sel==='breathe') expanded = buildBreatheContent();
+  else if (sel==='rest') expanded = buildRestContent();
+
   return `
-    <div style="border:1px solid rgba(42,181,160,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px;display:flex;flex-direction:column;gap:24px">
-      ${buildBreatheSection()}
-      ${buildHydrateSection()}
-      ${buildRestSection()}
+    <div style="border:1px solid rgba(42,181,160,0.20);border-top:none;border-radius:0 0 12px 12px;background:var(--navy-mid);padding:20px">
+      <div style="display:flex;gap:10px;${sel?'margin-bottom:16px':''}">${cardRow}</div>
+      ${expanded}
     </div>`;
 }
 
-// Breathe — the headline Wellness tool. All four guided practices get generous
-// space in a 2x2 grid (steps + est. minutes on each), or the active session
-// expands to fill the section once a practice is chosen.
-function buildBreatheSection() {
+function buildHydrateContent() {
+  const h = getHydrationState();
+  const lastMin = h.lastTs ? Math.round((Date.now()-h.lastTs)/60000) : null;
+  const warn = lastMin!==null && lastMin>45;
+  const status = lastMin===null ? 'No water logged yet' : lastMin<2 ? 'Just now \u2713' : warn ? `${lastMin}m ago \u26a0` : `${lastMin}m ago`;
+  return `
+    <div style="border:1px solid rgba(91,160,210,0.15);border-radius:10px;background:rgba(8,18,30,0.40);padding:18px">
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:14px">
+        <div style="text-align:center;min-width:60px">
+          <div style="font-size:52px;font-weight:600;color:var(--tx);font-family:var(--mono);line-height:1">${h.glasses}</div>
+          <div style="font-size:10px;color:var(--faint);margin-top:2px">glasses</div>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--teal)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
+          <div style="font-size:11px;color:${warn?'var(--amber)':'var(--muted)'}">Goal: 8 glasses \u00b7 ${status}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--faint);margin-bottom:4px">Why it matters</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">Even mild dehydration impacts focus, memory, and mood. Your brain is 75% water.</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--faint);margin-bottom:4px">Simple rhythm</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">One glass at session start + end. One with each meal. That\u2019s your 8.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="logWater()" style="flex:1;font-size:12px;background:var(--teal-pale);border-color:var(--teal-border);color:var(--teal-light)">+ Glass</button>
+        ${h.glasses>0?`<button onclick="clearWater()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Reset</button>`:''}
+      </div>
+    </div>`;
+}
+
+function buildBreatheContent() {
   const themeId = state.pomBreathTheme || '';
-  const header = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <span style="width:20px;height:1px;display:inline-block;background:var(--teal)"></span>
-      <span style="font-size:12px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;text-transform:uppercase">🌬 Breathe</span>
-      <span style="font-size:11px;color:var(--faint);font-style:italic">${themeId ? 'in session' : "four guided practices for the moment you're in"}</span>
-    </div>`;
-  if (themeId) return `<div>${header}${buildBreatheActive()}</div>`;
-  const cards = BREATH_THEMES.map(t=>{
-    const mins = Math.max(1, Math.round(t.steps.reduce((a,x)=>a+x.secs,0)/60));
-    return `
-    <div onclick="startBreathTheme('${t.id}')" style="padding:18px;border:1px solid ${t.brd};border-radius:12px;background:${t.pale};cursor:pointer;transition:transform .15s,border-color .15s;display:flex;flex-direction:column;min-height:138px" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='${t.color}'" onmouseout="this.style.transform='none';this.style.borderColor='${t.brd}'">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
-        <span style="font-size:28px;line-height:1">${t.icon}</span>
-        <span style="font-size:15px;font-weight:600;color:${t.color}">${t.label}</span>
-      </div>
-      <div style="font-size:11.5px;color:var(--muted);line-height:1.5;flex:1">${t.desc}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
-        <span style="font-size:9.5px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase">${t.steps.length} steps · ~${mins} min</span>
-        <span style="font-size:11px;font-weight:600;color:${t.color}">Begin →</span>
+  if (!themeId) {
+    return `<div>
+      <div style="font-size:10px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Choose a practice</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${BREATH_THEMES.map(t=>`
+          <div onclick="startBreathTheme('${t.id}')" style="padding:14px;border:1px solid ${t.brd};border-radius:10px;background:${t.pale};cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='0.82'" onmouseout="this.style.opacity='1'">
+            <div style="font-size:22px;margin-bottom:6px">${t.icon}</div>
+            <div style="font-size:13px;font-weight:600;color:${t.color};margin-bottom:4px">${t.label}</div>
+            <div style="font-size:11px;color:var(--faint);line-height:1.45">${t.desc}</div>
+          </div>`).join('')}
       </div>
     </div>`;
-  }).join('');
-  return `<div>${header}
-    <div class="breathe-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${cards}</div>
-  </div>`;
-}
-
-// The in-session breathing guide — larger, calmer typography than the old
-// card-expanded version, since it now owns the top of the Wellness section.
-function buildBreatheActive() {
-  const theme = BREATH_THEMES.find(t=>t.id===state.pomBreathTheme);
+  }
+  const theme = BREATH_THEMES.find(t=>t.id===themeId);
   const stepIdx = state.pomBreathStep || 0;
   const step = theme.steps[stepIdx];
   const secs = state.pomBreathStepSecs || step.secs;
@@ -3732,72 +3350,26 @@ function buildBreatheActive() {
   const m = Math.floor(secs/60), s = secs%60;
   const timeStr = m>0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
   return `
-    <div style="border:1px solid ${theme.brd};border-radius:12px;background:${theme.pale};padding:22px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:24px">${theme.icon}</span>
-          <span style="font-size:16px;font-weight:600;color:${theme.color}">${theme.label}</span>
+    <div style="border:1px solid ${theme.brd};border-radius:10px;background:${theme.pale};padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px">${theme.icon}</span>
+          <span style="font-size:13px;font-weight:600;color:${theme.color}">${theme.label}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          ${audioToggleBtn(theme.color)}
-          <button onclick="closeBreath()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;text-decoration:underline">← All practices</button>
-        </div>
+        <button onclick="closeBreath()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;text-decoration:underline">\u2190 Back</button>
       </div>
-      <div style="display:flex;gap:3px;margin-bottom:16px">${theme.steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?theme.color:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
-      <div style="font-size:11px;color:${theme.color};letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Step ${stepIdx+1} of ${theme.steps.length} · ${step.label}</div>
-      <div style="font-size:17px;color:var(--tx);line-height:1.75;margin-bottom:20px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="font-size:38px;font-weight:600;color:${theme.color};font-family:var(--mono);min-width:62px" id="breath-timer">${timeStr}</div>
+      <div style="display:flex;gap:3px;margin-bottom:14px">${theme.steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?theme.color:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
+      <div style="font-size:11px;color:${theme.color};letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Step ${stepIdx+1} of ${theme.steps.length} \u00b7 ${step.label}</div>
+      <div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:16px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:32px;font-weight:600;color:${theme.color};font-family:var(--mono);min-width:52px" id="breath-timer">${timeStr}</div>
         <div style="flex:1;display:flex;gap:8px">
           <button onclick="toggleBreathTimer()" style="flex:1;font-size:12px;background:${isRunning?'rgba(255,255,255,0.06)':theme.pale};border-color:${theme.brd};color:${theme.color};font-weight:600">${isRunning?'Pause':secs===step.secs?'Begin':'Resume'}</button>
           ${stepIdx<theme.steps.length-1
-            ? `<button onclick="nextBreathStep()" style="font-size:12px">Next →</button>`
-            : `<button onclick="closeBreath()" style="font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green)">Done ✓</button>`}
+            ? `<button onclick="nextBreathStep()" style="font-size:12px">Next \u2192</button>`
+            : `<button onclick="closeBreath()" style="font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green)">Done \u2713</button>`}
         </div>
       </div>
-    </div>`;
-}
-
-// Hydration is now a compact cue below Breathe: counter, progress, quick add.
-function buildHydrateSection() {
-  const h = getHydrationState();
-  const lastMin = h.lastTs ? Math.round((Date.now()-h.lastTs)/60000) : null;
-  const warn = lastMin!==null && lastMin>45;
-  const status = lastMin===null ? 'none logged yet' : lastMin<2 ? 'just now ✓' : warn ? `${lastMin}m ago ⚠` : `${lastMin}m ago`;
-  return `
-    <div id="wellness-hydrate">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <span style="width:20px;height:1px;display:inline-block;background:var(--teal)"></span>
-        <span style="font-size:12px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;text-transform:uppercase">💧 Hydrate</span>
-        <span style="font-size:11px;color:${warn?'var(--amber)':'var(--faint)'};font-style:italic">last sip ${status}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px;border:1px solid rgba(91,160,210,0.15);border-radius:10px;background:rgba(8,18,30,0.40);padding:14px 16px;flex-wrap:wrap">
-        <div style="display:flex;align-items:baseline;gap:5px;min-width:60px">
-          <span style="font-size:34px;font-weight:600;color:var(--tx);font-family:var(--mono);line-height:1">${h.glasses}</span>
-          <span style="font-size:12px;color:var(--faint)">/ 8</span>
-        </div>
-        <div style="flex:1;min-width:170px">
-          <div style="display:flex;gap:3px;margin-bottom:6px">${[...Array(8)].map((_,i)=>`<div style="flex:1;height:8px;border-radius:4px;background:${i<h.glasses?'var(--teal)':'rgba(255,255,255,0.07)'}"></div>`).join('')}</div>
-          <div style="font-size:10.5px;color:var(--muted);line-height:1.45">One glass at each session's start and end, one with every meal — that's your 8. Mild dehydration quietly saps focus and mood.</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">
-          <button onclick="logWater()" style="font-size:12px;background:var(--teal-pale);border-color:var(--teal-border);color:var(--teal-light);white-space:nowrap;padding:8px 18px">+ Glass</button>
-          ${h.glasses>0?`<button onclick="clearWater()" style="font-size:10px;color:var(--faint);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Reset</button>`:''}
-        </div>
-      </div>
-    </div>`;
-}
-
-// Rest closes the section — the 20-minute surrender series.
-function buildRestSection() {
-  return `
-    <div id="wellness-rest">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <span style="width:20px;height:1px;display:inline-block;background:var(--blue)"></span>
-        <span style="font-size:12px;font-weight:700;color:var(--blue);letter-spacing:.05em;text-transform:uppercase">💤 Rest</span>
-        <span style="font-size:11px;color:var(--faint);font-style:italic">a guided wind-down</span>
-      </div>
-      ${buildRestContent()}
     </div>`;
 }
 
@@ -3849,7 +3421,7 @@ function buildMoveContent() {
   ];
   const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;${sel?'margin-bottom:16px':''}">
     ${cards.map(c=>`
-      <div onclick="selectMoveCard('${c.id}')" style="padding:16px;border:1px solid ${sel===c.id?'var(--rose-border)':'rgba(196,96,122,0.18)'};border-radius:10px;background:${sel===c.id?'var(--rose-pale)':'rgba(196,96,122,0.04)'};cursor:pointer;transition:all .15s">
+      <div onclick="state.pomMoveCard='${sel===c.id?'':c.id}';state.pomMoveStep=0;render('pomodoro')" style="padding:16px;border:1px solid ${sel===c.id?'var(--rose-border)':'rgba(196,96,122,0.18)'};border-radius:10px;background:${sel===c.id?'var(--rose-pale)':'rgba(196,96,122,0.04)'};cursor:pointer;transition:all .15s">
         <div style="font-size:26px;margin-bottom:8px">${c.icon}</div>
         <div style="font-size:12px;font-weight:600;color:${sel===c.id?'var(--rose)':'var(--muted)'};margin-bottom:3px">${c.label}</div>
         <div style="font-size:10px;color:var(--faint);line-height:1.4">${c.desc}</div>
@@ -3868,118 +3440,21 @@ function buildMoveContent() {
     </div>`;
 }
 
-// Completing a guided Move flow (chair yoga / walk / body scan). Only chair
-// yoga feeds its own weekly KPI; all count toward the generic session tally.
-function finishMoveGuide() {
-  clearInterval(moveInterval); moveInterval = null;
-  jqAudio.stop();
-  if (state.pomMoveCard === 'chair') bumpWeekLog('chair');
-  state.pomMoveSessionsDone = (state.pomMoveSessionsDone||0) + 1;
-  state.pomMoveCard = ''; state.pomMoveStep = 0; state.pomMoveSecs = 0; state.pomMoveRunning = false;
-  render('pomodoro');
-}
-
-// Resolve the active Move practice's step array (chair yoga / walk / body scan).
-function moveSteps() {
-  const c = state.pomMoveCard;
-  return c==='chair' ? CHAIR_YOGA : c==='walk' ? WALK_GUIDE : c==='scan' ? BODY_SCAN : null;
-}
-
-// Open / toggle a Move practice card. Stops any in-progress session first so audio
-// and the timer never bleed across practices.
-function selectMoveCard(id) {
-  clearInterval(moveInterval); moveInterval = null;
-  jqAudio.stop();
-  state.pomMoveCard = (state.pomMoveCard === id) ? '' : id;
-  state.pomMoveStep = 0; state.pomMoveSecs = 0; state.pomMoveRunning = false;
-  render('pomodoro');
-}
-
-// Play/Pause the guided Move flow — auto-advances each slide at its suggested time,
-// narrating the cue as each step begins (mirrors Breathe's toggleBreathTimer).
-function toggleMoveTimer() {
-  const steps = moveSteps();
-  if (!steps) return;
-  if (state.pomMoveRunning) {
-    clearInterval(moveInterval); moveInterval = null;
-    state.pomMoveRunning = false; jqAudio.stop(); render('pomodoro');
-  } else {
-    const idx = Math.min(state.pomMoveStep||0, steps.length-1);
-    if (!state.pomMoveSecs) state.pomMoveSecs = steps[idx].secs;
-    state.pomMoveRunning = true;
-    jqAudio.start(); jqAudio.speak(steps[idx].cue);
-    render('pomodoro');
-    moveInterval = setInterval(()=>{
-      state.pomMoveSecs--;
-      if (state.pomMoveSecs<=0) {
-        const s = moveSteps(); const step = state.pomMoveStep||0;
-        if (s && step < s.length-1) {
-          state.pomMoveStep = step+1;
-          state.pomMoveSecs = s[step+1].secs;
-          jqAudio.speak(s[step+1].cue);
-          render('pomodoro');
-        } else {
-          clearInterval(moveInterval); moveInterval = null;
-          state.pomMoveRunning = false; state.pomMoveSecs = 0;
-          finishMoveGuide();  // logs the session, resets, stops audio
-        }
-      } else {
-        const el = document.getElementById('move-timer');
-        if (el) { const m=Math.floor(state.pomMoveSecs/60), sc=state.pomMoveSecs%60;
-                  el.textContent = m>0 ? `${m}:${String(sc).padStart(2,'0')}` : `${sc}s`; }
-      }
-    }, 1000);
-  }
-}
-
-// Manual Back/Next — pauses the timer, re-seeds the step time, and (if a session is
-// underway) narrates the new cue.
-function moveStepBy(delta) {
-  const steps = moveSteps();
-  if (!steps) return;
-  clearInterval(moveInterval); moveInterval = null; state.pomMoveRunning = false;
-  const idx = Math.min(Math.max((state.pomMoveStep||0)+delta, 0), steps.length-1);
-  state.pomMoveStep = idx; state.pomMoveSecs = steps[idx].secs;
-  if (jqAudio.active) jqAudio.speak(steps[idx].cue);
-  render('pomodoro');
-}
-
-// Shared audio control — always present in a session header. Sessions play silent by
-// default; this labeled speaker invites the user to add voice + light music. When on,
-// it shows "Audio on" and mutes on tap. The choice persists.
-function audioToggleBtn(col) {
-  const off = jqAudio.muted;
-  const c = col || 'var(--faint)';
-  return `<button onclick="jqAudio.toggleMute()" title="${off?'Playing silent — tap to add narration + light music':'Voice + music on — tap to mute'}" style="font-size:11px;line-height:1;display:inline-flex;align-items:center;gap:5px;background:${off?'rgba(255,255,255,0.05)':'transparent'};border:1px solid ${off?c:'transparent'};border-radius:99px;cursor:pointer;padding:4px 10px;color:${c};font-weight:600"><span style="font-size:13px">${off?'🔇':'🔊'}</span>${off?'Add audio':'Audio on'}</button>`;
-}
-
 function buildStepGuide(steps, col, pale, brd) {
   const stepIdx = Math.min(state.pomMoveStep||0, steps.length-1);
   const step = steps[stepIdx];
   const total = steps.length;
-  const isRunning = state.pomMoveRunning;
-  const secs = state.pomMoveSecs || step.secs;
-  const m = Math.floor(secs/60), s = secs%60;
-  const timeStr = m>0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
-  const atStart = !state.pomMoveSecs || state.pomMoveSecs===step.secs;
   return `
     <div style="border:1px solid ${brd};border-radius:10px;background:${pale};padding:18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-size:10px;color:var(--faint);letter-spacing:.05em">${jqAudio.muted?'Press play to auto-advance \u00b7 silent (add voice + music \u2192)':'Press play to auto-advance \u00b7 voice + light music on'}</span>
-        ${audioToggleBtn(col)}
-      </div>
       <div style="display:flex;gap:3px;margin-bottom:12px">${steps.map((_,i)=>`<div style="flex:1;height:3px;border-radius:2px;background:${i<=stepIdx?col:'rgba(255,255,255,0.10)'}"></div>`).join('')}</div>
       <div style="font-size:11px;color:${col};letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Step ${stepIdx+1} of ${total} \u00b7 ${step.label}</div>
-      <div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:16px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="font-size:32px;font-weight:600;color:${col};font-family:var(--mono);min-width:58px" id="move-timer">${timeStr}</div>
-        <div style="flex:1;display:flex;gap:8px">
-          <button onclick="toggleMoveTimer()" style="flex:1;font-size:12px;background:${isRunning?'rgba(255,255,255,0.06)':pale};border-color:${brd};color:${col};font-weight:600">${isRunning?'Pause':atStart?'\u25b6 Play':'Resume'}</button>
-          ${stepIdx>0 ? `<button onclick="moveStepBy(-1)" style="font-size:12px">\u2190</button>` : ''}
-          ${stepIdx<total-1
-            ? `<button onclick="moveStepBy(1)" style="font-size:12px">Next \u2192</button>`
-            : `<button onclick="finishMoveGuide()" style="font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green)">Done \u2713</button>`}
-        </div>
+      <div style="font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:10px;font-family:'DM Serif Display',Georgia,serif;font-style:italic">${step.cue}</div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:14px">${step.secs>=60?Math.floor(step.secs/60)+'m suggested':step.secs+'s suggested'}</div>
+      <div style="display:flex;gap:8px">
+        ${stepIdx>0 ? `<button onclick="state.pomMoveStep--;render('pomodoro')" style="font-size:12px">\u2190 Back</button>` : ''}
+        ${stepIdx<total-1
+          ? `<button onclick="state.pomMoveStep++;render('pomodoro')" style="flex:1;font-size:12px;background:${pale};border-color:${brd};color:${col};font-weight:600">Next \u2192</button>`
+          : `<button onclick="state.pomMoveSessionsDone=(state.pomMoveSessionsDone||0)+1;state.pomMoveCard='';state.pomMoveStep=0;render('pomodoro')" style="flex:1;font-size:12px;background:rgba(42,155,122,0.12);border-color:rgba(42,155,122,0.30);color:var(--green);font-weight:600">Done \u2713</button>`}
       </div>
     </div>`;
 }
@@ -4024,13 +3499,9 @@ function startBreathTheme(id) {
 function toggleBreathTimer() {
   if (state.pomBreathRunning) {
     clearInterval(breathInterval); breathInterval=null;
-    state.pomBreathRunning=false; jqAudio.stop(); render('pomodoro');
+    state.pomBreathRunning=false; render('pomodoro');
   } else {
-    const theme0=BREATH_THEMES.find(t=>t.id===state.pomBreathTheme);
-    state.pomBreathRunning=true;
-    jqAudio.start();
-    if (theme0) jqAudio.speak(theme0.steps[state.pomBreathStep||0].cue);
-    render('pomodoro');
+    state.pomBreathRunning=true; render('pomodoro');
     breathInterval = setInterval(()=>{
       state.pomBreathStepSecs--;
       if (state.pomBreathStepSecs<=0) {
@@ -4039,13 +3510,10 @@ function toggleBreathTimer() {
         if (theme&&step<theme.steps.length-1) {
           state.pomBreathStep=step+1;
           state.pomBreathStepSecs=theme.steps[step+1].secs;
-          jqAudio.speak(theme.steps[step+1].cue);
           render('pomodoro');
         } else {
           clearInterval(breathInterval); breathInterval=null;
           state.pomBreathRunning=false; state.pomBreathTheme=''; state.pomBreathStep=0; state.pomBreathStepSecs=0;
-          jqAudio.stop();
-          bumpWeekLog('breath');
           showToast('\uD83C\uDF2C Breathwork complete \u2014 carry this with you.');
           render('pomodoro');
         }
@@ -4065,14 +3533,12 @@ function nextBreathStep() {
   if (theme&&step<theme.steps.length-1) {
     state.pomBreathStep=step+1;
     state.pomBreathStepSecs=theme.steps[step+1].secs;
-    if (jqAudio.active) jqAudio.speak(theme.steps[step+1].cue);
   }
   render('pomodoro');
 }
 
 function closeBreath() {
   clearInterval(breathInterval); breathInterval=null;
-  jqAudio.stop();
   state.pomBreathRunning=false; state.pomBreathTheme=''; state.pomBreathStep=0; state.pomBreathStepSecs=0;
   render('pomodoro');
 }
@@ -4136,9 +3602,6 @@ function togglePlank() {
         } else {
           clearInterval(plankInterval); plankInterval=null; state.pomPlankRunning=false; state.pomPlankSecs=0;
           state.pomMoveSessionsDone=(state.pomMoveSessionsDone||0)+1;
-          const _plv = state.pomPlankLevel||'beginner';
-          const _plankMin = Math.round(PLANK_LEVELS[_plv].rounds.reduce((a,r)=>a+r.work,0)/60);
-          bumpWeekLog('plankMin', _plankMin);
           showToast('\uD83D\uDCAA Challenge complete! Core activated.'); render('pomodoro');
         }
       } else {
@@ -4155,24 +3618,9 @@ function resetPlank() {
   render('pomodoro');
 }
 
-const NET_FILTER_DEFAULT = {view:'all', source:'', search:'', sort:'smart'};
+const NET_FILTER_DEFAULT = {view:'all', source:'', sort:'smart'};
 if(!state.netFilter) state.netFilter = {...NET_FILTER_DEFAULT};
 if(!state.netFilter.sort) state.netFilter.sort = 'smart';
-
-// Debounced live-search for the network filter row. A full render() on every
-// keystroke would recreate the input and drop focus/cursor position, so this
-// batches renders and restores both afterward.
-let _netSearchDebounce = null;
-function updateNetSearch(el) {
-  const selStart = el.selectionStart, selEnd = el.selectionEnd;
-  state.netFilter.search = el.value;
-  clearTimeout(_netSearchDebounce);
-  _netSearchDebounce = setTimeout(() => {
-    render('network');
-    const fresh = document.getElementById('net-search-input');
-    if (fresh) { fresh.focus(); fresh.setSelectionRange(selStart, selEnd); }
-  }, 180);
-}
 
 const ACTIVITY_TYPES = [
   {key:'message',  label:'Sent message',  icon:'💬', col:'var(--sky-blue)'},
@@ -4257,7 +3705,6 @@ function renderNetwork(el) {
   if(filt.view==='nudge') filtered = filtered.filter(c=>c.heat==='nudge');
   if(filt.view==='cold')  filtered = filtered.filter(c=>c.heat==='cold');
   if(filt.source) filtered = filtered.filter(c=>(c.source||'').toLowerCase().includes(filt.source.toLowerCase()));
-  if(filt.search) { const q = filt.search.toLowerCase(); filtered = filtered.filter(c=>(c.name||'').toLowerCase().includes(q) || (c.company||'').toLowerCase().includes(q)); }
 
   // Sort — 'smart' sections: Champions → Stars (top 10) → warmth; 'name' A–Z; 'recent' last-contacted desc
   const heatOrder = {new:0,warm:1,nudge:2,cold:3};
@@ -4423,7 +3870,7 @@ function renderNetwork(el) {
       </div>` : '';
 
 
-    return `<div id="net-card-${c.id}" class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
+    return `<div class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
       <div class="net-row" style="display:flex;gap:0;align-items:stretch">
         <!-- LEFT: who -->\
         <div style="flex:1;min-width:0;padding-right:10px;cursor:pointer" onclick="state.netExpanded=state.netExpanded||{};state.netExpanded[${c.id}]=!state.netExpanded[${c.id}];render('network')">
@@ -4528,15 +3975,10 @@ function renderNetwork(el) {
       <button class="tag ${(filt.sort||'smart')==='smart'?'on':''}" onclick="state.netFilter.sort='smart';render('network')" style="font-size:10px">Warmth</button>
       <button class="tag ${filt.sort==='name'?'on':''}" onclick="state.netFilter.sort='name';render('network')" style="font-size:10px">A–Z</button>
       <button class="tag ${filt.sort==='recent'?'on':''}" onclick="state.netFilter.sort='recent';render('network')" style="font-size:10px">Recent</button>
-      ${sources.length ? `<select onchange="state.netFilter.source=this.value;render('network')" class="tag ${filt.source?'on':''}" style="font-size:10px;padding:4px 9px;width:auto;flex:0 0 auto;cursor:pointer">
+      ${sources.length ? `<select onchange="state.netFilter.source=this.value;render('network')" style="font-size:11px;padding:4px 8px;flex:0 0 auto;margin-left:4px">
         <option value="">All sources</option>
         ${sources.map(s=>`<option value="${esc(s)}" ${filt.source===s?'selected':''}>${esc(s)}</option>`).join('')}
       </select>` : ''}
-      <div class="tag ${filt.search?'on':''}" style="display:flex;align-items:center;gap:4px;padding:3px 10px 3px 11px;cursor:text" onclick="document.getElementById('net-search-input').focus()">
-        <span style="font-size:10px;opacity:.65">🔍</span>
-        <input id="net-search-input" type="text" placeholder="Search name / company…" value="${esc(filt.search||'')}" oninput="updateNetSearch(this)" onclick="event.stopPropagation()" style="border:none;background:none;outline:none;font-size:11px;color:inherit;width:130px;padding:0">
-        ${filt.search ? `<span onclick="event.stopPropagation();state.netFilter.search='';render('network')" style="cursor:pointer;opacity:.6;font-size:11px;padding-left:2px">✕</span>` : ''}
-      </div>
       ${!total && !isGuest() ? `<button style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;margin-left:auto" onclick="state.netShowAdd=!state.netShowAdd;state.netEditing=null;render('network')">+ Add contact</button>` : ''}
     </div>
 
@@ -5033,8 +4475,8 @@ async function genRefMsg(id) {
   );
   save();
 }
-const APP_COLS  = ['Company','Role Title','Salary Range','Location / Remote','Date Applied','Stage','Priority','Fit Score','Key Requirement Match','Gaps / Notes','Next Step','Next Step Date','Recruiter / Contact','Link / Source','Req #','Networking Contact','Relationship / Status'];
-const APP_KEYS  = ['company','role','salary','location','date','stage','priority','fit','keyReqs','gaps','nextStep','nextDate','contact','source','reqNum','netContact','netRel'];
+const APP_COLS  = ['Company','Role Title','Salary Range','Location / Remote','Date Applied','Stage','Priority','Fit Score','Key Requirement Match','Gaps / Notes','Next Step','Next Step Date','Recruiter / Contact','Link / Source','Req #','Networking Contact','Relationship / Status','Notes','Job Link','Page URL'];
+const APP_KEYS  = ['company','role','salary','location','date','stage','priority','fit','keyReqs','gaps','nextStep','nextDate','contact','source','reqNum','netContact','netRel','notes','jobLink','pageUrl'];
 const NET_COLS  = ['Company','Role','Alumni Contact','Relationship','Last Touch','Next Touch','Status','Notes'];
 const NET_KEYS  = ['company','role','name','rel','last','next','status','notes'];
 
@@ -5283,98 +4725,458 @@ function exportContactsXLSX() {
   XLSX.writeFile(wb, `contacts_${new Date().toISOString().slice(0,10)}.xlsx`, { cellStyles: true });
 }
 
+// ── CSV PARSING (v1_3_10) ─────────────────────────────────────────────────────
+// RFC 4180 parser. Reads the whole file character by character so quoted cells
+// can contain commas, escaped quotes ("") and line breaks. The old version
+// split on newlines first, which turned every multi-line Notes cell into
+// several junk "rows". Handles CRLF line endings and a UTF-8 BOM.
+function parseCSVRows(text) {
+  text = String(text || '').replace(/^﻿/, '');
+  const rows = []; let row = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') { inQ = false; }
+      else cur += c;
+    } else if (c === '"') { inQ = true; }
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i+1] === '\n') i++;
+      row.push(cur); rows.push(row); row = []; cur = '';
+    }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ''));
+}
+
 function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = parseCSVLine(lines[0]);
-  return lines.slice(1).filter(l=>l.trim()).map(line => {
-    const vals = parseCSVLine(line);
+  const rows = parseCSVRows(text);
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(vals => {
     const obj = {};
-    headers.forEach((h,i) => { obj[h.trim()] = (vals[i]||'').trim(); });
+    headers.forEach((h,i) => { obj[h] = (vals[i]||'').trim(); });
     return obj;
   });
 }
 
-function parseCSVLine(line) {
-  const result = []; let cur = ''; let inQ = false;
-  for(let i=0;i<line.length;i++) {
-    const c=line[i];
-    if(c==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
-    else if(c==='"'){inQ=!inQ;}
-    else if(c===','&&!inQ){result.push(cur);cur='';}
-    else cur+=c;
-  }
-  result.push(cur);
-  return result;
+// ── APPLICATION IMPORT (v1_3_10) ──────────────────────────────────────────────
+// Flow: pick file → buildImportPlan() → preview modal → applyImport(mode).
+// Nothing is written until the user picks a mode and confirms in the preview.
+
+// Header aliases → internal keys. Matched case-insensitively. APP_COLS and
+// APP_KEYS are added on top, so JobQuest's own exports always round-trip.
+const IMPORT_HEADER_ALIASES = {
+  'company':'company', 'company name':'company', 'employer':'company',
+  'role':'role', 'role title':'role', 'title':'role', 'job title':'role', 'position':'role',
+  'status':'stage', 'stage':'stage',
+  'notes':'notes', 'note':'notes',
+  'job link':'jobLink', 'job url':'jobLink', 'posting':'jobLink', 'posting url':'jobLink', 'url':'jobLink', 'link':'jobLink', 'joblink':'jobLink',
+  'page url':'pageUrl', 'notion url':'pageUrl', 'notion page':'pageUrl', 'pageurl':'pageUrl',
+  'follow-up date':'nextDate', 'follow up date':'nextDate', 'followup date':'nextDate', 'follow-up':'nextDate',
+  'date applied':'date', 'applied':'date', 'applied date':'date',
+  'created':'createdAt', 'created time':'createdAt', 'createdat':'createdAt',
+  'source':'source', 'location':'location', 'salary':'salary', 'priority':'priority',
+};
+
+// Outside status vocabularies (Notion, Huntr, Teal, spreadsheets) → JobQuest stages.
+const IMPORT_STATUS_MAP = {
+  'to apply':'Saved', 'saved':'Saved', 'wishlist':'Saved', 'interested':'Saved', 'bookmarked':'Saved',
+  'applied':'Applied', 'submitted':'Applied',
+  'screening':'Phone Screen', 'screen':'Phone Screen', 'phone screen':'Phone Screen', 'recruiter screen':'Phone Screen',
+  'interview':'Interview', 'interviewing':'Interview',
+  'final round':'Final Round', 'final':'Final Round', 'onsite':'Final Round',
+  'offer':'Offer', 'rejected':'Rejected', 'declined':'Rejected', 'not selected':'Rejected',
+  'withdrawn':'Ghosted', 'ghosted':'Ghosted', 'no response':'Ghosted', 'closed':'Ghosted',
+  'coffee / networking':'Coffee / Networking', 'networking':'Coffee / Networking', 'coffee':'Coffee / Networking',
+};
+
+// Many exports (including JobQuest's own older exports via Notion) carry
+// priority and fit as a text prefix on Notes: "Priority: Low | Fit: 4 | …".
+// Read them into the real fields. Only the first ~160 chars are checked so a
+// "fit" mentioned deep in a note is never picked up.
+function parseNotesPrefix(notes) {
+  const head = String(notes||'').slice(0,160);
+  const out = {};
+  const pm = head.match(/\bPriority:\s*(High|Medium|Normal|Low)\b/i);
+  if (pm) out.priority = pm[1].toLowerCase()==='normal' ? 'Medium' : pm[1][0].toUpperCase()+pm[1].slice(1).toLowerCase();
+  const fm = head.match(/\bFit:\s*(\d{1,2}(?:\.\d+)?)(?:\s*\/\s*10)?/i);
+  if (fm && Number(fm[1]) >= 0 && Number(fm[1]) <= 10) out.fit = normFit(fm[1]);
+  return out;
+}
+// "7.0" → "7", "6.5" → "6.5"; anything non-numeric is left as typed.
+function normFit(v) {
+  const n = Number(String(v).trim());
+  if (!String(v).trim() || isNaN(n)) return String(v||'').trim();
+  return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10);
+}
+// For display only: hide the "Priority: X | Fit: Y |" lead-in, since the
+// card's pills already show both. Stored notes are never changed.
+function stripNotesPrefix(notes) {
+  let s = String(notes||''), prev;
+  do { prev = s; s = s.replace(/^\s*(?:Priority:\s*\w+|Fit:\s*\d{1,2}(?:\.\d+)?(?:\s*\/\s*10)?)\s*(?:\||\n+)?\s*/i, ''); } while (s !== prev);
+  return s;
 }
 
-function importAppsCSV(text) {
-  const rows = parseCSV(text);
-  if(!rows.length) return {count:0, skipped:0, msg:'No rows found in file.'};
+// Fields that only JobQuest creates. A matched card keeps these on import.
+const IMPORT_KEEP_FIELDS = ['fit','fitSource','jdText','actLog','keyReqs','gaps','savedAt','contact','netContact','netRel','reqNum','nextStep'];
 
-  // Try to detect column mapping — accepts both exact Excel headers and app-internal keys
-  const colMap = {};
-  const firstRow = rows[0];
-  const allHeaders = Object.keys(firstRow);
-
-  // Map Excel column names → internal keys
-  const excelToKey = {};
-  APP_COLS.forEach((col,i) => { excelToKey[col] = APP_KEYS[i]; });
-  // Also accept lowercase/trimmed variants
-  APP_COLS.forEach((col,i) => { excelToKey[col.toLowerCase()] = APP_KEYS[i]; });
-  // Also accept direct key names
-  APP_KEYS.forEach(k => { excelToKey[k] = k; excelToKey[k.toLowerCase()] = k; });
-
-  // Build per-row mapping
-  const headerMap = {}; // header name → internal key
-  allHeaders.forEach(h => {
-    const key = excelToKey[h] || excelToKey[h.trim().toLowerCase()];
-    if(key) headerMap[h] = key;
+function importHeaderMap(headers) {
+  const lookup = {...IMPORT_HEADER_ALIASES};
+  APP_COLS.forEach((col,i) => { lookup[col.toLowerCase()] = APP_KEYS[i]; });
+  APP_KEYS.forEach(k => { lookup[k.toLowerCase()] = k; });
+  const map = {}, unmapped = [];
+  headers.forEach(h => {
+    const key = lookup[h.trim().toLowerCase()];
+    // First column wins if two headers resolve to the same key.
+    if (key && !Object.values(map).includes(key)) map[h] = key;
+    else if (!key) unmapped.push(h);
   });
+  return {map, unmapped};
+}
 
-  if(!headerMap['Company'] && !headerMap['company']) {
-    return {count:0, skipped:0, msg:`Could not find a "Company" column. Headers found: ${allHeaders.slice(0,5).join(', ')}…`};
+function importStage(raw, hasDateApplied) {
+  const s = String(raw||'').trim();
+  if (!s) return hasDateApplied ? 'Applied' : 'Saved';
+  if (STAGES.includes(s)) return s;
+  return IMPORT_STATUS_MAP[s.toLowerCase()] || (hasDateApplied ? 'Applied' : 'Saved');
+}
+
+const normUrl = u => String(u||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'');
+const normText = s => String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const coRoleKey = (co, role) => normText(co) + '|' + normText(role);
+
+function nextAppId() {
+  const maxId = state.apps.reduce((m,a) => Math.max(m, Math.floor(Number(a.id)||0)), 0);
+  if (!nextAppId._last || nextAppId._last < maxId) nextAppId._last = Math.max(maxId, Date.now());
+  return ++nextAppId._last;
+}
+
+// Pure planning step — reads state.apps but changes nothing.
+function buildImportPlan(text) {
+  const parsed = parseCSVRows(text);
+  if (parsed.length < 2) return {error:'No rows found in this file.'};
+  const headers = parsed[0].map(h => h.trim());
+  const {map, unmapped} = importHeaderMap(headers);
+  const keysInFile = new Set(Object.values(map));
+  // Notes may carry priority/fit (see parseNotesPrefix); treat them as file
+  // fields so Replace and the change check consider them.
+  if (keysInFile.has('notes')) ['priority','fit','fitSource'].forEach(k => keysInFile.add(k));
+  if (!keysInFile.has('company')) {
+    return {error:`Couldn't find a Company column. Headers found: ${headers.slice(0,6).join(', ')}${headers.length>6?'…':''}`};
   }
 
-  let added=0, skipped=0, updated=0;
-  const existingCos = state.apps.map(a=>a.company.toLowerCase().trim());
-
-  rows.forEach(row => {
-    const mapped = {};
-    Object.entries(headerMap).forEach(([h,k]) => { mapped[k] = row[h]||''; });
-    const co = (mapped.company||'').trim();
-    if(!co) { skipped++; return; }
-
-    const existIdx = existingCos.indexOf(co.toLowerCase());
-    if(existIdx !== -1) {
-      // Update existing — merge in any non-empty fields from CSV
-      const existing = state.apps[existIdx];
-      APP_KEYS.forEach(k => { if(mapped[k]) existing[k] = mapped[k]; });
-      updated++;
-    } else {
-      state.apps.push({
-        id: Date.now() + Math.random(),
-        company: mapped.company||'',
-        role: mapped.role||'',
-        salary: mapped.salary||'',
-        location: mapped.location||'',
-        date: mapped.date||'',
-        stage: mapped.stage||'Applied',
-        priority: mapped.priority||'Medium',
-        fit: mapped.fit||'',
-        keyReqs: mapped.keyReqs||'',
-        gaps: mapped.gaps||'',
-        nextStep: mapped.nextStep||'',
-        nextDate: mapped.nextDate||'',
-        contact: mapped.contact||'',
-        source: mapped.source||'',
-        notes: mapped.notes||mapped.gaps||'',
-      });
-      added++;
-    }
+  // Index existing cards by each match key.
+  const byPage = new Map(), byLink = new Map(), byCoRole = new Map();
+  state.apps.forEach((a,i) => {
+    if (a.pageUrl) byPage.set(normUrl(a.pageUrl), i);
+    if (a.jobLink) byLink.set(normUrl(a.jobLink), i);
+    const k = coRoleKey(a.company, a.role);
+    if (!byCoRole.has(k)) byCoRole.set(k, i);
   });
 
+  const incoming = [], claimed = new Set(), seenInFile = new Set();
+  let skippedBlank = 0, inFileDupes = 0, derivedCount = 0;
+  const stageCounts = {};
+
+  parsed.slice(1).forEach(vals => {
+    const f = {};
+    headers.forEach((h,i) => { if (map[h]) f[map[h]] = (vals[i]||'').trim(); });
+    if (!f.company) { skippedBlank++; return; }
+    f.stage = importStage(f.stage, !!f.date);
+    // A real Priority / Fit column always wins over the notes prefix.
+    const derived = {};
+    const pre = parseNotesPrefix(f.notes);
+    if (!f.priority && pre.priority) { f.priority = pre.priority; derived.priority = true; }
+    if (!f.fit && pre.fit)           { f.fit = pre.fit; f.fitSource = 'import'; derived.fit = true; }
+    if (f.priority === 'Normal') f.priority = 'Medium';
+    if (f.fit) f.fit = normFit(f.fit);
+    if (derived.priority || derived.fit) derivedCount++;
+    stageCounts[f.stage] = (stageCounts[f.stage]||0) + 1;
+
+    // Same row twice in one file (same Page URL, else same link, else same company+role).
+    const fileKey = f.pageUrl ? 'p:'+normUrl(f.pageUrl) : f.jobLink ? 'l:'+normUrl(f.jobLink) : 'c:'+coRoleKey(f.company, f.role);
+    if (seenInFile.has(fileKey)) { inFileDupes++; return; }
+    seenInFile.add(fileKey);
+
+    // Match priority: Page URL → Job Link → company + role. Each existing card
+    // can only be claimed once, so two different roles never merge into one.
+    let idx, by = '';
+    const tryKey = (m, k, label) => { if (idx === undefined && k && m.has(k) && !claimed.has(m.get(k))) { idx = m.get(k); by = label; } };
+    tryKey(byPage, f.pageUrl && normUrl(f.pageUrl), 'Page URL');
+    tryKey(byLink, f.jobLink && normUrl(f.jobLink), 'Job Link');
+    tryKey(byCoRole, coRoleKey(f.company, f.role), 'company + role');
+    if (idx !== undefined) claimed.add(idx);
+
+    let changed = false;
+    if (idx !== undefined) {
+      const ex = state.apps[idx];
+      // Blank file values for protected fields don't overwrite (see
+      // importMergeCard), so they don't count as a change either.
+      changed = [...keysInFile].some(k => {
+        if (!f[k] && (IMPORT_KEEP_FIELDS.includes(k) || ['company','stage','priority'].includes(k))) return false;
+        return String(ex[k]||'') !== String(f[k]||'');
+      });
+    }
+    incoming.push({fields:f, matchIdx: idx, matchBy: by, changed, derived});
+  });
+
+  const matched = incoming.filter(r => r.matchIdx !== undefined);
+  const unmatchedExisting = state.apps.filter((a,i) => !claimed.has(i));
+  return {
+    headers, unmapped, keysInFile:[...keysInFile], incoming, stageCounts,
+    skippedBlank, inFileDupes, derivedCount,
+    newCount: incoming.length - matched.length,
+    matchedCount: matched.length,
+    changedCount: matched.filter(r => r.changed).length,
+    removedOnReplace: unmatchedExisting,
+  };
+}
+
+function importFieldsToNewCard(f, today, now) {
+  const card = {
+    id: nextAppId(), company:'', role:'', salary:'', location:'', date:'', stage:'Saved',
+    priority:'Medium', fit:'', keyReqs:'', gaps:'', nextStep:'', nextDate:'', contact:'',
+    source:'', notes:'', jobLink:'', pageUrl:'', ...f,
+    updatedAt: now,
+    actLog: [{date: today, note: 'Imported from CSV'}],
+  };
+  if (!['High','Medium','Low'].includes(card.priority)) card.priority = 'Medium';
+  if (card.stage === 'Saved') card.savedAt = (f.createdAt||'').slice(0,10) || today;
+  return card;
+}
+
+// Matched card: every column present in the file overwrites the card (even
+// when blank, so the tracker mirrors the file). JobQuest-only fields stay.
+// Company, stage and priority are never blanked.
+function importMergeCard(existing, f, keysInFile, today, now, derived={}) {
+  const merged = {...existing};
+  keysInFile.forEach(k => {
+    // An AI fit score from the analyzer is never replaced by an imported one.
+    if ((k==='fit' || k==='fitSource') && existing.fitSource === 'claude' && existing.fit) return;
+    // Values read from the notes prefix only fill gaps: they never override a
+    // priority you set in JobQuest (anything but the Medium default) or a fit
+    // already on the card. A real Priority/Fit column does override.
+    if (k==='priority' && derived.priority && existing.priority && existing.priority !== 'Medium') return;
+    if ((k==='fit' || k==='fitSource') && derived.fit && existing.fit) return;
+    if (IMPORT_KEEP_FIELDS.includes(k) && !f[k]) return;
+    if (['company','stage','priority'].includes(k) && !f[k]) return;
+    if (k === 'priority' && !['High','Medium','Low'].includes(f[k])) return;
+    merged[k] = f[k] || '';
+  });
+  if (merged.stage !== existing.stage) {
+    merged.actLog = [...(existing.actLog||[]), {date: today, note: `Stage → ${merged.stage} (import)`}];
+    if (merged.stage === 'Saved' && !merged.savedAt) merged.savedAt = today;
+  }
+  merged.updatedAt = now;
+  return merged;
+}
+
+function applyImport(plan, mode) {
+  const label = mode === 'replace' ? `Replace from ${plan.fileName||'CSV'}` : `Add new from ${plan.fileName||'CSV'}`;
+  if (!snapshotApps(label)) return;
+  const now = new Date().toISOString(), today = now.slice(0,10);
+  const keys = plan.keysInFile;
+  if (mode === 'replace') {
+    state.apps = plan.incoming.map(r => r.matchIdx !== undefined
+      ? importMergeCard(state.apps[r.matchIdx], r.fields, keys, today, now, r.derived)
+      : importFieldsToNewCard(r.fields, today, now));
+  } else {
+    const added = plan.incoming.filter(r => r.matchIdx === undefined).map(r => importFieldsToNewCard(r.fields, today, now));
+    state.apps = [...state.apps, ...added];
+  }
   save();
-  return {count:added, updated, skipped, msg:`Done — ${added} added, ${updated} updated, ${skipped} skipped (blank company).`};
+  return mode === 'replace'
+    ? `Tracker now matches the file: ${state.apps.length} cards (${plan.newCount} new, ${plan.matchedCount} matched, ${plan.removedOnReplace.length} removed).`
+    : `Added ${plan.newCount} new cards. Existing cards untouched.`;
+}
+
+// ── UNDO SNAPSHOT (import + bulk delete) ──────────────────────────────────────
+const APPS_SNAPSHOT_KEY = 'jq_apps_snapshot';
+
+function snapshotApps(label) {
+  try {
+    localStorage.setItem(APPS_SNAPSHOT_KEY, JSON.stringify({label, at:new Date().toISOString(), apps: state.apps}));
+    return true;
+  } catch(e) {
+    return confirm(`Couldn't save an undo copy first (browser storage is full).\n\nContinue anyway? This change won't be undoable. Exporting a CSV from Sync first is a safe backup.`);
+  }
+}
+function getAppsSnapshot() {
+  try { return JSON.parse(localStorage.getItem(APPS_SNAPSHOT_KEY) || 'null'); } catch { return null; }
+}
+function undoAppsSnapshot() {
+  const s = getAppsSnapshot(); if (!s) return;
+  if (!confirm(`Undo "${s.label}"?\n\nThis restores the ${s.apps.length} cards you had on ${new Date(s.at).toLocaleString()}. Changes made since then to applications will be lost.`)) return;
+  state.apps = s.apps;
+  localStorage.removeItem(APPS_SNAPSHOT_KEY);
+  save(); render(state.tab || 'sync');
+  showToast(`Restored ${s.apps.length} cards ✓`);
+}
+function dismissAppsSnapshot() {
+  localStorage.removeItem(APPS_SNAPSHOT_KEY);
+  render('sync');
+}
+
+// ── IMPORT PREVIEW MODAL ──────────────────────────────────────────────────────
+let importPreview = null; // {plan, mode}
+
+function openImportPreview(plan) {
+  importPreview = {plan, mode: 'add'};
+  renderImportPreview();
+}
+function closeImportPreview() {
+  importPreview = null;
+  const m = document.getElementById('import-modal'); if (m) m.remove();
+}
+function setImportMode(mode) { if (importPreview) { importPreview.mode = mode; renderImportPreview(); } }
+
+function renderImportPreview() {
+  if (!importPreview) return;
+  const {plan, mode} = importPreview;
+  let m = document.getElementById('import-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'import-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.addEventListener('click', e => { if (e.target === m) closeImportPreview(); });
+    document.body.appendChild(m);
+  }
+  const stat = (n, label, col) => `<div style="flex:1;min-width:88px;background:var(--surf2);border-radius:8px;padding:9px 10px;text-align:center">
+      <div style="font-size:20px;font-weight:700;color:${col};font-family:var(--mono);line-height:1">${n}</div>
+      <div style="font-size:10px;color:var(--faint);margin-top:4px;text-transform:uppercase;letter-spacing:.04em">${label}</div></div>`;
+  const removed = plan.removedOnReplace;
+  const removedSample = removed.slice(0,6).map(a => `<div style="font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">• ${esc(a.company||'(blank)')}${a.role?' · '+esc(a.role):''}</div>`).join('');
+  const stageLine = Object.entries(plan.stageCounts).sort((a,b)=>b[1]-a[1]).map(([s,n]) => `${esc(s)} ${n}`).join(' · ');
+  const notes = [
+    plan.skippedBlank ? `${plan.skippedBlank} rows skipped (no company)` : '',
+    plan.inFileDupes ? `${plan.inFileDupes} duplicate rows in the file skipped` : '',
+    plan.derivedCount ? `Priority and fit read from the notes on ${plan.derivedCount} rows` : '',
+    plan.unmapped.length ? `Not imported (no matching field): ${plan.unmapped.map(esc).join(', ')}` : '',
+  ].filter(Boolean);
+
+  const modeCard = (key, title, desc, warn) => {
+    const on = mode === key;
+    return `<div onclick="setImportMode('${key}')" style="flex:1;min-width:220px;cursor:pointer;border-radius:9px;padding:12px 14px;border:1.5px solid ${on?(key==='replace'?'var(--rose)':'var(--sky-blue)'):'var(--brd2)'};background:${on?(key==='replace'?'var(--rose-pale)':'var(--sky-blue-pale)'):'transparent'}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="width:14px;height:14px;border-radius:50%;border:1.5px solid ${on?'var(--tx)':'var(--faint)'};display:inline-flex;align-items:center;justify-content:center">${on?'<span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span>':''}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--tx)">${title}</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);line-height:1.55">${desc}</div>
+      ${warn ? `<div style="font-size:11px;color:var(--rose);margin-top:6px;line-height:1.5">${warn}</div>` : ''}
+    </div>`;
+  };
+
+  const applyLabel = mode === 'replace'
+    ? `Replace tracker with ${plan.incoming.length} cards`
+    : (plan.newCount ? `Add ${plan.newCount} new cards` : 'Nothing new to add');
+
+  m.innerHTML = `
+    <div style="background:var(--surf);border:1px solid var(--brd2);border-radius:12px;width:100%;max-width:660px;max-height:90vh;overflow-y:auto;padding:22px 24px;position:relative">
+      <button onclick="closeImportPreview()" style="position:absolute;top:12px;right:12px;font-size:16px;background:none;border:none;color:var(--muted);cursor:pointer">✕</button>
+      <div style="font-size:16px;font-weight:600;color:var(--tx);margin-bottom:2px">Import preview</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">${esc(plan.fileName||'CSV')} · nothing has changed yet</div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${stat(plan.incoming.length, 'rows in file', 'var(--tx)')}
+        ${stat(plan.newCount, 'new', 'var(--jade)')}
+        ${stat(plan.matchedCount, 'match a card', 'var(--sky-blue-light)')}
+        ${stat(state.apps.length, 'cards now', 'var(--muted)')}
+      </div>
+      ${stageLine ? `<div style="font-size:11px;color:var(--faint);margin-bottom:6px"><span style="color:var(--muted)">Stages in file:</span> ${stageLine}</div>` : ''}
+      ${notes.map(n => `<div style="font-size:11px;color:var(--faint);margin-bottom:3px">${n}</div>`).join('')}
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 12px">
+        ${modeCard('add', 'Add net new',
+          `Adds the ${plan.newCount} rows that don't match an existing card. Existing cards are not touched.`)}
+        ${modeCard('replace', 'Replace with this file',
+          `The tracker becomes exactly this file. ${plan.matchedCount} matched cards are refreshed from the file and keep their fit scores, saved job descriptions, and activity history. ${plan.newCount} rows are added.`,
+          removed.length ? `${removed.length} current cards are not in the file and will be removed.` : '')}
+      </div>
+
+      ${mode === 'replace' && removed.length ? `
+        <div style="border:1px solid var(--rose-border);border-radius:8px;padding:9px 12px;margin-bottom:12px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Cards that will be removed (${removed.length}):</div>
+          ${removedSample}
+          ${removed.length > 6 ? `<div style="font-size:11px;color:var(--faint);margin-top:2px">and ${removed.length-6} more</div>` : ''}
+        </div>` : ''}
+
+      <div style="font-size:11px;color:var(--faint);margin-bottom:14px;line-height:1.55">Rows are matched by Notion Page URL first, then Job Link, then company and role. An undo copy of your current tracker is saved before anything changes (Sync → Undo).</div>
+
+      <div style="display:flex;gap:8px">
+        <button class="${mode==='replace'?'danger':'amber'}" onclick="confirmImportPreview()" ${mode==='add'&&!plan.newCount?'disabled':''} style="flex:1;padding:9px 0;font-size:13px;font-weight:600">${applyLabel}</button>
+        <button onclick="closeImportPreview()" style="font-size:12px">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function confirmImportPreview() {
+  if (!importPreview) return;
+  const {plan, mode} = importPreview;
+  if (mode === 'replace' && plan.removedOnReplace.length &&
+      !confirm(`Replace your tracker with this file?\n\n${plan.removedOnReplace.length} cards not in the file will be removed. You can undo this from the Sync tab.`)) return;
+  const msg = applyImport(plan, mode);
+  closeImportPreview();
+  if (!msg) return;
+  render(state.tab || 'sync');
+  showToast(msg.length > 70 ? 'Import done ✓ (undo available in Sync)' : msg);
+  const n = document.getElementById('import-note');
+  if (n) { n.style.color = 'var(--green)'; n.textContent = msg; }
+}
+
+// ── PERMANENT DELETE + BULK SELECT ────────────────────────────────────────────
+function deleteAppPermanently(id) {
+  const app = state.apps.find(a => a.id === id); if (!app) return;
+  if (!confirm(`Permanently delete "${app.company}${app.role?' · '+app.role:''}"?\n\nThis removes the card and its notes, fit score, and activity. Use Archive instead if you want to keep a record.`)) return;
+  state.apps = state.apps.filter(a => a.id !== id);
+  state.appEditing = null;
+  save(); render('tracker');
+  showToast('Card deleted');
+}
+
+function toggleAppSelectMode() {
+  state.appSelectMode = !state.appSelectMode;
+  state.appSelected = {};
+  state.appEditing = null;
+  render('tracker');
+}
+function toggleAppSelect(id, checked) {
+  if (!state.appSelected) state.appSelected = {};
+  if (checked) state.appSelected[id] = true; else delete state.appSelected[id];
+  updateAppSelectBar();
+}
+function selectAllAppsInView(on) {
+  state.appSelected = {};
+  if (on) (window._trackerViewIds || []).forEach(id => { state.appSelected[id] = true; });
+  render('tracker');
+}
+function selectedAppIds() {
+  return Object.keys(state.appSelected || {}).map(k => state.apps.find(a => String(a.id) === k)?.id).filter(v => v !== undefined);
+}
+function updateAppSelectBar() {
+  const n = selectedAppIds().length;
+  const c = document.getElementById('app-sel-count'); if (c) c.textContent = n + ' selected';
+  document.querySelectorAll('.app-sel-action').forEach(b => { b.disabled = !n; });
+}
+function bulkArchiveApps() {
+  const ids = new Set(selectedAppIds()); if (!ids.size) return;
+  if (!confirm(`Move ${ids.size} cards to Ghosted?`)) return;
+  const now = new Date().toISOString();
+  state.apps = state.apps.map(a => ids.has(a.id) ? {...a, stage:'Ghosted', updatedAt:now, actLog:[...(a.actLog||[]), {date:now.slice(0,10), note:'Stage → Ghosted (bulk)'}]} : a);
+  state.appSelected = {};
+  save(); render('tracker');
+  showToast(`${ids.size} cards archived`);
+}
+function bulkDeleteApps() {
+  const ids = new Set(selectedAppIds()); if (!ids.size) return;
+  if (!confirm(`Permanently delete ${ids.size} cards?\n\nAn undo copy is saved first (Sync → Undo).`)) return;
+  if (!snapshotApps(`Delete ${ids.size} cards`)) return;
+  state.apps = state.apps.filter(a => !ids.has(a.id));
+  state.appSelected = {};
+  save(); render('tracker');
+  showToast(`${ids.size} cards deleted · undo in Sync`);
 }
 
 function importContactsCSV(text) {
@@ -5420,7 +5222,22 @@ function renderSync(el) {
       </div>
     </div>` : '';
 
-  el.innerHTML = secHead('Settings & sync') + sampleNotice + `
+  const snap = getAppsSnapshot();
+  const undoCard = snap ? `
+    <div class="card" style="margin-bottom:16px;border-color:var(--sky-blue-mid);border-left:3px solid var(--sky-blue)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--tx);margin-bottom:2px">↶ Undo available: ${esc(snap.label)}</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.55;margin:0">Saved ${esc(new Date(snap.at).toLocaleString())}. Undo puts back the ${snap.apps.length} application cards you had before. Contacts aren't affected.</p>
+        </div>
+        <div class="row" style="gap:6px">
+          <button onclick="undoAppsSnapshot()" style="font-size:11.5px;padding:6px 13px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale);font-weight:600">Undo</button>
+          <button onclick="dismissAppsSnapshot()" style="font-size:11px;color:var(--faint)" title="Discard the undo copy">Dismiss</button>
+        </div>
+      </div>
+    </div>` : '';
+
+  el.innerHTML = secHead('Settings & sync') + sampleNotice + undoCard + `
 
     <div class="card" style="margin-bottom:16px;border-color:var(--jade-border);border-left:3px solid var(--jade)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -5532,7 +5349,7 @@ function renderSync(el) {
           <div style="width:32px;height:32px;border-radius:8px;background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);display:flex;align-items:center;justify-content:center;font-size:15px">📋</div>
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--tx)">Applications</div>
-            <div style="font-size:10px;color:var(--faint)">CSV only</div>
+            <div style="font-size:10px;color:var(--faint)">CSV · preview before anything changes</div>
           </div>
           <div style="margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber)">Import ↑</div>
         </div>
@@ -5571,7 +5388,7 @@ function renderSync(el) {
 
         <div style="padding:14px 0;border-bottom:1px solid var(--brd)">
           <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:5px">What does Import actually do — will it overwrite my data?</div>
-          <div style="font-size:12px;color:var(--muted);line-height:1.7">Import merges, it does not replace. Rows are matched by company name (case-insensitive). Existing entries are updated with values from the CSV; new rows are appended. Nothing is ever deleted automatically. If you want a clean slate, clear your data first, then import.</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">Nothing changes until you confirm a preview. <b style="color:var(--tx)">Add net new</b> only adds rows that don't match a card you already have. <b style="color:var(--tx)">Replace with this file</b> makes the tracker match the file exactly: matched cards are refreshed but keep their fit scores, saved job descriptions, and activity history, and cards not in the file are removed. Rows match by Notion Page URL, then Job Link, then company and role. Either way an undo copy is saved first, and the Undo button appears at the top of this tab.</div>
         </div>
 
         <div style="padding:14px 0;border-bottom:1px solid var(--brd)">
@@ -5633,14 +5450,20 @@ function exportContacts(fmt) {
 }
 
 function doImportApps() {
-  const file = document.getElementById('import-apps-file').files[0];
+  const input = document.getElementById('import-apps-file');
+  const file = input && input.files[0];
   if(!file){ alert('Pick a CSV file first.'); return; }
   const reader = new FileReader();
   reader.onload = e => {
-    const result = importAppsCSV(e.target.result);
-    const n=document.getElementById('import-note');
-    if(n){ n.style.color = result.count>0||result.updated>0 ? 'var(--green)' : 'var(--red)'; n.textContent=result.msg; }
-    render('sync');
+    const plan = buildImportPlan(e.target.result);
+    if (plan.error) {
+      const n=document.getElementById('import-note');
+      if(n){ n.style.color='var(--red)'; n.textContent=plan.error; }
+      return;
+    }
+    plan.fileName = file.name;
+    input.value = '';
+    openImportPreview(plan);
   };
   reader.readAsText(file, 'UTF-8');
 }
@@ -5762,48 +5585,6 @@ async function doMigrateFromJsonBin() {
   }
 }
 
-async function doCloudSetup() {
-  const token = document.getElementById('setup-gh-token').value.trim();
-  const gistId = document.getElementById('setup-gh-gist').value.trim();
-  const errEl = document.getElementById('setup-error');
-  if (!token) { errEl.textContent = 'Please enter your GitHub PAT.'; return; }
-  if (!gistId) { errEl.textContent = 'Please enter your Gist ID.'; return; }
-  const btn = document.getElementById('setup-btn');
-  btn.disabled = true; btn.textContent = 'Connecting…';
-  state.ghToken = token; state.ghGistId = gistId;
-  try {
-    // Verify the Gist is reachable and load any existing data.
-    // If the Gist is empty (first-time setup), keep the local state as-is
-    // so we can push it up immediately below.
-    const data = await ghRead();
-    if (data.apps && data.apps.length > 0)      state.apps      = data.apps;
-    if (data.contacts && data.contacts.length > 0) state.contacts = data.contacts;
-    // Before pushing, load the localStorage backup into state so we send
-    // real data, not the in-memory defaults (initApp returned early for setup screen)
-    if (!data.apps || data.apps.length === 0) {
-      const appsBackup    = localStorage.getItem('apps_backup');
-      const contactsBackup = localStorage.getItem('contacts_backup');
-      const tasksBackup    = localStorage.getItem('tasks');
-      const referralsBackup = localStorage.getItem('referrals');
-      if (appsBackup)     state.apps      = JSON.parse(appsBackup);
-      if (contactsBackup) state.contacts  = JSON.parse(contactsBackup);
-      if (tasksBackup)    state.tasks     = JSON.parse(tasksBackup);
-      if (referralsBackup) state.referrals = JSON.parse(referralsBackup);
-    }
-    saveCredentials();
-    errEl.textContent = '';
-    // Push current local state to Gist immediately (don't use save() — it's debounced 30s)
-    btn.textContent = 'Pushing data…';
-    await ghWrite();
-    showTab('board');
-    setSyncStatus('✓ cloud connected · ' + state.apps.length + ' apps synced', false);
-  } catch(e) {
-    state.ghToken = ''; state.ghGistId = '';
-    errEl.textContent = 'Could not connect: ' + e.message;
-    btn.disabled = false; btn.textContent = 'Connect →';
-  }
-}
-
 function skipCloudSetup() {
   localStorage.setItem('cloud_skipped', '1');
   showTab('board');
@@ -5820,8 +5601,13 @@ async function doCloudSetup() {
   state.ghToken = token; state.ghGistId = gistId;
   try {
     const data = await ghRead();
-    if (data.apps     && data.apps.length     > 0) state.apps     = data.apps;
-    if (data.contacts && data.contacts.length > 0) state.contacts = data.contacts;
+    // A Gist that already holds data is the source of truth for a newly
+    // connected device: apps, contacts, tasks, referrals, profile, links.
+    if (data.apps && data.apps.length > 0) {
+      applyCloudData(data);
+    } else if (data.contacts && data.contacts.length > 0) {
+      state.contacts = data.contacts;
+    }
     if (!data.apps || data.apps.length === 0) {
       const appsBackup     = localStorage.getItem('apps_backup');
       const contactsBackup = localStorage.getItem('contacts_backup');
@@ -5834,10 +5620,18 @@ async function doCloudSetup() {
     }
     saveCredentials();
     if (errEl) errEl.textContent = '';
+    state.dataLoaded = true;
     btn.textContent = 'Pushing data…';
     await ghWrite();
-    render('sync');
-    showToast('✓ Cloud connected — ' + state.apps.length + ' apps synced to Gist');
+    // Connecting from the Sync tab re-renders Sync; the first-run cloud screen
+    // (rendered into the board pane by initApp) hands off to the real board.
+    if (state.tab === 'sync') {
+      render('sync');
+      showToast('✓ Cloud connected — ' + state.apps.length + ' apps synced to Gist');
+    } else {
+      showTab('board');
+      setSyncStatus('✓ cloud connected · ' + state.apps.length + ' apps synced', false);
+    }
   } catch(e) {
     state.ghToken = ''; state.ghGistId = '';
     if (errEl) errEl.textContent = 'Could not connect: ' + e.message;
@@ -5872,6 +5666,8 @@ async function initApp() {
   // loadFromCloud() loads the GitHub Gist when configured, and falls back to the
   // localStorage backup otherwise — so local-only data is always rehydrated.
   await loadFromCloud();
+  refreshDemoDates();
+  state.dataLoaded = true;
 
   // Migrate rel values from old vocabulary
   const REL_MIGRATE = {'Warm':'Connection','Cold':'Cold Outreach'};
@@ -6185,9 +5981,6 @@ function renderSetupWizard() {
         <button onclick="saveWizardProfile()" class="amber" style="font-size:13px;padding:10px 22px;font-weight:600">${editing ? 'Save changes' : 'Save & continue →'}</button>
         ${editing
           ? `<button onclick="closeSetupWizard();render(state.tab||'board')" style="font-size:12px">Cancel</button>`
-          : hasRealDataAtRisk()
-          ? `<span style="font-size:11px;color:var(--faint);font-style:italic">Sample data is unavailable here — you already have real data on this device.</span>
-             <button onclick="closeSetupWizard();render(state.tab||'board')" style="font-size:12px">Close</button>`
           : `<button onclick="loadExampleData()" style="font-size:12px;color:var(--blue);border-color:var(--blue);background:var(--blue-bg)">Load example data</button>
              <button onclick="skipSetupForNow()" style="font-size:12px;color:var(--faint)">Skip for now →</button>`}
         <span style="font-size:11px;color:var(--faint)">Name and at least one target title are required to save.</span>
@@ -6209,7 +6002,7 @@ function renderSetupWizard() {
             <span style="display:inline-block;width:16px;height:1px;background:var(--rose-deep)"></span>your personal job-search OS
           </div>
           <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:42px;font-weight:400;font-style:italic;color:#F4F8FC;margin:0;line-height:1.08;letter-spacing:-.02em;max-width:600px">Run your whole job search in one place.</h1>
-          ${!hasRealDataAtRisk() ? `<button onclick="startDemoTour()" title="Open a fully populated demo — nothing saved" style="position:absolute;bottom:14px;right:16px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--jade);background:var(--jade-pale);border:1px solid var(--jade-border);border-radius:999px;padding:4px 11px;cursor:pointer;z-index:2">▶ view live demo</button>` : ''}
+          <button onclick="startDemoTour()" title="Open a fully populated demo — nothing saved" style="position:absolute;bottom:14px;right:16px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--jade);background:var(--jade-pale);border:1px solid var(--jade-border);border-radius:999px;padding:4px 11px;cursor:pointer;z-index:2">▶ view live demo</button>
         </div>
         <div style="font-family:'DM Serif Display',Georgia,serif;font-style:italic;font-size:24px;color:var(--tx);line-height:1.2;margin:0 0 14px;padding-left:20px;max-width:680px">Built by you, for you, <span style="color:var(--gold)">with Claude.</span></div>
         <p style="font-size:14px;color:var(--muted);line-height:1.75;margin:0 0 12px;padding-left:20px;max-width:680px">
@@ -6240,8 +6033,8 @@ function renderSetupWizard() {
 
         <div class="row" style="gap:12px;flex-wrap:wrap;align-items:center">
           <button onclick="wzGotoSetup()" class="amber" style="font-size:14px;padding:12px 26px;font-weight:600">Get started →</button>
-          ${!hasRealDataAtRisk() ? `<button onclick="startDemoTour()" style="font-size:13px;padding:11px 20px;font-weight:600;color:var(--sky-blue-light);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">▶ Take a live tour</button>
-          <span style="font-size:12px;color:var(--faint);flex-basis:100%">Build your own, or take the tour first — explore a fully populated app with sample roles, contacts, and tools. No signup, nothing saved.</span>` : `<span style="font-size:12px;color:var(--faint);flex-basis:100%">You already have real data on this device, so the live tour is hidden here to protect it — open this app in a private/incognito window to preview the demo safely.</span>`}
+          <button onclick="startDemoTour()" style="font-size:13px;padding:11px 20px;font-weight:600;color:var(--sky-blue-light);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">▶ Take a live tour</button>
+          <span style="font-size:12px;color:var(--faint);flex-basis:100%">Build your own, or take the tour first — explore a fully populated app with sample roles, contacts, and tools. No signup, nothing saved.</span>
         </div>
       </div>`;
     wz.style.display = 'block';
@@ -6415,10 +6208,6 @@ function skipSetupForNow() {
 }
 
 function loadExampleData() {
-  if (hasRealDataAtRisk()) {
-    alert("You already have a real profile and/or cloud sync connected on this device. Loading sample data here would risk overwriting your live data once it syncs.\n\nTo preview the demo safely, open this app in a private/incognito browser window instead.");
-    return false;
-  }
   const EXAMPLE_PROFILE = {
     name:'Dario Naharis',
     titles:'Senior Product Manager / Sr. Manager, Product',
@@ -6436,9 +6225,11 @@ function loadExampleData() {
     honestGaps:'No direct 510(k) submission ownership. Limited pure enterprise SaaS PM background. References available pending confirmation of which face is currently on file.',
     portfolioUrl:''
   };
-  saveProfile(EXAMPLE_PROFILE);
-  state.apps     = JSON.parse(JSON.stringify(EXAMPLE_APPS));
-  state.contacts = JSON.parse(JSON.stringify(EXAMPLE_CONTACTS));
+  saveProfile(EXAMPLE_PROFILE, {sync:false});
+  const today = localISODate(), shift = daysBetweenISO(DEMO_ANCHOR_DATE, today);
+  state.apps     = shiftRecordDates(JSON.parse(JSON.stringify(EXAMPLE_APPS)), shift);
+  state.contacts = shiftRecordDates(JSON.parse(JSON.stringify(EXAMPLE_CONTACTS)), shift);
+  localStorage.setItem(DEMO_SHIFT_KEY, today);
   localStorage.setItem('apps_backup',      JSON.stringify(state.apps));
   localStorage.setItem('contacts_backup',  JSON.stringify(state.contacts));
   localStorage.setItem('backup_updatedAt', new Date().toISOString());
@@ -6446,7 +6237,6 @@ function loadExampleData() {
   localStorage.setItem('example_loaded', '1');   // lets Sync offer "Clear sample data"
   closeSetupWizard();
   initApp();
-  return true;
 }
 
 // Remove the seeded sample dataset (profile + apps + contacts) loaded via
@@ -6458,6 +6248,7 @@ function clearSampleData() {
   state.contacts = [];
   localStorage.removeItem(PROFILE_KEY);
   localStorage.removeItem('example_loaded');
+  localStorage.removeItem(DEMO_SHIFT_KEY);
   localStorage.setItem('setup_skipped', '1');    // stay in the app, don't force the wizard
   localStorage.setItem('cloud_skipped', '1');
   save();                                         // persist empty state locally + push to cloud if connected
@@ -6470,7 +6261,7 @@ function clearSampleData() {
 // demo and does NOT set setup_skipped — so exiting drops the user straight back
 // to the welcome screen with nothing persisted as "their" setup.
 function startDemoTour() {
-  if (!loadExampleData()) return;          // blocked — real data/cloud already on this device
+  loadExampleData();                       // seeds profile + apps + contacts, boots app
   localStorage.setItem('jq_demo', '1');    // mark this as a tour, not a real setup
   localStorage.removeItem('setup_skipped');// don't treat the tour as "skipped setup"
   localStorage.removeItem('setup_banner_dismissed');
@@ -6479,7 +6270,7 @@ function startDemoTour() {
 function isDemo() { return localStorage.getItem('jq_demo') === '1'; }
 function exitDemoTour() {
   // Wipe the sample data and tour flags, then reopen the welcome screen.
-  ['jq_demo','cloud_skipped','setup_banner_dismissed','apps_backup','contacts_backup','backup_updatedAt']
+  ['jq_demo','cloud_skipped','setup_banner_dismissed','apps_backup','contacts_backup','backup_updatedAt',DEMO_SHIFT_KEY]
     .forEach(k => localStorage.removeItem(k));
   localStorage.removeItem(PROFILE_KEY);
   state.apps = [];
@@ -6660,10 +6451,7 @@ ${input}`;
     const bodyPayload = {
       model: CLAUDE_MODEL,
       max_tokens: 1000,
-      // Cache the profile system prompt across back-to-back analyses. Silent
-      // no-op below the model's minimum cacheable prefix (2048 tokens on
-      // sonnet-4-6) — activates automatically for verbose profiles.
-      system: [{ type: 'text', text: buildAnalyzeSystem(), cache_control: { type: 'ephemeral' } }],
+      system: buildAnalyzeSystem(),
       messages: [{ role: 'user', content: userPrompt }],
       // The proxy supports server-side web search for live company news.
       tools: [{ type: 'web_search_20250305', name: 'web_search' }]
@@ -6687,7 +6475,6 @@ ${input}`;
     }
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-    console.debug('analyze usage', data.usage);
     const text = (data.content||[]).filter(b => b.type==='text').map(b=>b.text).join('').trim();
     // Strip markdown fences if present
     const clean = text.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
