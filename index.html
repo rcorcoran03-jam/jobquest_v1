@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.13  (import reads priority + fit;       ║
-║  full cloud sync; demo dates stay current)                                   ║
+║  JOBQUEST — Starter Edition  ·  v1.3.14  (import errors surface; preview     ║
+║  always on top)                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -137,6 +137,14 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator).║
+║  v1_3_14 Import can't fail silently. doImportApps wraps read → plan →        ║
+║          preview in try/catch; any failure shows in the import note and a    ║
+║          toast ('Nothing was changed'), and the file box only clears once    ║
+║          the preview is actually open. Planning drops null/non-object cards  ║
+║          left by old imports. Preview layer raised to z-index 5000 so the    ║
+║          nav and slide-in panels can't cover it. Card subtitle now says      ║
+║          where Replace lives. initApp drops malformed app/contact            ║
+║          records on load so one bad entry can't break the board.             ║
 ║  v1_3_13 Demo dates stay fresh. EXAMPLE_APPS/CONTACTS are authored against   ║
 ║          DEMO_ANCHOR_DATE (2026-06-20); loadExampleData shifts every date by ║
 ║          anchor → today, and refreshDemoDates() rolls them forward on each   ║
@@ -284,9 +292,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.13">
+<meta name="jq-version" content="1.3.14">
 <meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-10-21">
+<meta name="jq-date" content="2026-10-26">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -982,7 +990,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.13';
+const APP_VERSION = '1.3.14';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -4869,6 +4877,9 @@ function buildImportPlan(text) {
   }
 
   // Index existing cards by each match key.
+  // Old imports and sync glitches can leave null or non-object entries in
+  // state.apps; drop them up front so they can't break matching or the preview.
+  state.apps = (state.apps || []).filter(a => a && typeof a === 'object');
   const byPage = new Map(), byLink = new Map(), byCoRole = new Map();
   state.apps.forEach((a,i) => {
     if (a.pageUrl) byPage.set(normUrl(a.pageUrl), i);
@@ -5040,7 +5051,7 @@ function renderImportPreview() {
   if (!m) {
     m = document.createElement('div');
     m.id = 'import-modal';
-    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px';
     m.addEventListener('click', e => { if (e.target === m) closeImportPreview(); });
     document.body.appendChild(m);
   }
@@ -5048,7 +5059,7 @@ function renderImportPreview() {
       <div style="font-size:20px;font-weight:700;color:${col};font-family:var(--mono);line-height:1">${n}</div>
       <div style="font-size:10px;color:var(--faint);margin-top:4px;text-transform:uppercase;letter-spacing:.04em">${label}</div></div>`;
   const removed = plan.removedOnReplace;
-  const removedSample = removed.slice(0,6).map(a => `<div style="font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">• ${esc(a.company||'(blank)')}${a.role?' · '+esc(a.role):''}</div>`).join('');
+  const removedSample = removed.slice(0,6).map(a => `<div style="font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">• ${esc(String(a.company||'(blank)').slice(0,80))}${a.role?' · '+esc(String(a.role).slice(0,60)):''}</div>`).join('');
   const stageLine = Object.entries(plan.stageCounts).sort((a,b)=>b[1]-a[1]).map(([s,n]) => `${esc(s)} ${n}`).join(' · ');
   const notes = [
     plan.skippedBlank ? `${plan.skippedBlank} rows skipped (no company)` : '',
@@ -5349,7 +5360,7 @@ function renderSync(el) {
           <div style="width:32px;height:32px;border-radius:8px;background:var(--sky-blue-pale);border:1px solid var(--sky-blue-mid);display:flex;align-items:center;justify-content:center;font-size:15px">📋</div>
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--tx)">Applications</div>
-            <div style="font-size:10px;color:var(--faint)">CSV · preview before anything changes</div>
+            <div style="font-size:10px;color:var(--faint)">CSV · choose Replace or Add new in the next step</div>
           </div>
           <div style="margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber)">Import ↑</div>
         </div>
@@ -5452,18 +5463,28 @@ function exportContacts(fmt) {
 function doImportApps() {
   const input = document.getElementById('import-apps-file');
   const file = input && input.files[0];
-  if(!file){ alert('Pick a CSV file first.'); return; }
+  const note = msg => {
+    const n = document.getElementById('import-note');
+    if (n) { n.style.color = 'var(--red)'; n.textContent = msg; }
+    showToast(msg.length > 90 ? msg.slice(0,87) + '…' : msg);
+  };
+  if(!file){ note('Pick a CSV file first, then click Import.'); return; }
   const reader = new FileReader();
+  reader.onerror = () => note(`Couldn't read ${file.name}. Try choosing the file again.`);
   reader.onload = e => {
-    const plan = buildImportPlan(e.target.result);
-    if (plan.error) {
-      const n=document.getElementById('import-note');
-      if(n){ n.style.color='var(--red)'; n.textContent=plan.error; }
-      return;
+    // Any failure here used to be silent. Surface it so it can be reported.
+    try {
+      const plan = buildImportPlan(e.target.result);
+      if (plan.error) { note(plan.error); return; }
+      plan.fileName = file.name;
+      openImportPreview(plan);
+      if (!document.getElementById('import-modal')) throw new Error('preview window did not open');
+      input.value = '';   // only cleared once the preview is actually up
+    } catch(err) {
+      console.error('JobQuest import failed', err);
+      closeImportPreview();
+      note(`Import preview failed: ${err.message}. Nothing was changed.`);
     }
-    plan.fileName = file.name;
-    input.value = '';
-    openImportPreview(plan);
   };
   reader.readAsText(file, 'UTF-8');
 }
@@ -5666,6 +5687,10 @@ async function initApp() {
   // loadFromCloud() loads the GitHub Gist when configured, and falls back to the
   // localStorage backup otherwise — so local-only data is always rehydrated.
   await loadFromCloud();
+  // Drop null / non-object records (left by old imports or a bad sync) so one
+  // malformed entry can't break rendering of the whole board.
+  state.apps     = (state.apps     || []).filter(a => a && typeof a === 'object');
+  state.contacts = (state.contacts || []).filter(c => c && typeof c === 'object');
   refreshDemoDates();
   state.dataLoaded = true;
 
