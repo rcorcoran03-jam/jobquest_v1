@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.3.14  (import errors surface; preview     ║
-║  always on top)                                                              ║
+║  JOBQUEST — Starter Edition  ·  v1.4.7  (gist diagnostics)                   ║
+║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
 ║                                                                              ║
@@ -137,6 +137,167 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator).║
+║  v1_4_7  Gist connection diagnostics. 'Could not connect: Write failed 403'  ║
+║          named nothing and sent a debugging session down the wrong path,     ║
+║          because a status code alone never separates a missing scope from a  ║
+║          wrong account. (1) gistErrorHelp() maps 401/403/404/422/5xx to the  ║
+║          actual remedy, with 403 split by operation: on a write it names the ║
+║          gist scope for a classic token and Account permissions -> Gists ->  ║
+║          Read and write for a fine-grained one, and says an existing token   ║
+║          can be edited rather than replaced. ghRead and ghWrite both use it. ║
+║          (2) A Test connection button on both setup cards runs               ║
+║          diagnoseGist(), which walks the chain one step at a time and        ║
+║          reports which link fails: token validity via GET /user; token KIND  ║
+║          and scopes read from the x-oauth-scopes response header, where a    ║
+║          missing header is itself the tell for a fine-grained token since    ║
+║          those carry no scopes; whether 'gist' is among them, named outright ║
+║          as the problem when it is absent; whether the Gist is readable;     ║
+║          whether its owner matches the token's login, which catches the case ║
+║          where you can read someone's Gist but can never write to it; and    ║
+║          whether jobquest.json is in it. Read-only throughout, so running it ║
+║          can never touch the data.                                           ║
+║  v1_4_6  Gist size safety. The API inlines a gist file's content only to     ║
+║          about 1MB; past that it sets truncated:true, cuts the body mid-     ║
+║          string and offers a raw_url. ghRead() never checked, so crossing    ║
+║          the line would have killed sync with 'Unexpected end of JSON        ║
+║          input', which names nothing useful. (1) ghRead now checks truncated ║
+║          and falls back to raw_url, fetched WITHOUT the Authorization header ║
+║          since raw_url is on gist.githubusercontent.com, a different host    ║
+║          where the token is not valid and can trip CORS preflight; every     ║
+║          failure path, including the parse, now carries a message that says  ║
+║          what to do. (2) ghWrite refuses to push past the limit rather than  ║
+║          writing something the next read cannot pull back; local storage has ║
+║          already saved, so nothing is lost. (3) A payload meter in the cloud ║
+║          card shows bytes against the limit continuously, with the share     ║
+║          held by stored job descriptions called out, since that is the part  ║
+║          that grows fastest and is worth reclaiming first. (4) New setting:  ║
+║          JD text KEPT per tracked job (default 1500), separate from the JD   ║
+║          text PULLED at search time (6000). The full text matters for AI     ║
+║          scoring; the stored copy mostly needs to remind you what the role   ║
+║          was. bdTrimJd cuts on a word boundary and marks the cut; 0 keeps    ║
+║          everything. A Trim button reclaims descriptions saved before the    ║
+║          setting existed, via snapshotApps so it undoes like the sweep.      ║
+║  v1_4_5  Four small upgrades. (1) Stale sweep, keyed on last ACTIVITY rather ║
+║          than the date a card was added, which is where the version this     ║
+║          came from was wrong: lastActivityISO() takes the newest of actLog,  ║
+║          updatedAt, nextDate and date, so a role worked last week is never   ║
+║          swept just because it was saved two months ago. Only Applied /      ║
+║          Phone Screen / Interview / Final Round can be swept, since silence  ║
+║          in Saved is a backlog, not a ghosting. The button shows the live    ║
+║          count, confirms with the companies it is about to move, and takes a ║
+║          snapshotApps() first so it undoes from Sync like import and bulk    ║
+║          delete. Threshold sits beside the button and persists               ║
+║          (profile.staleDays, default 45). (2) Escape closes the JD preview,  ║
+║          then the rules drawer, registered once at load and ignored while    ║
+║          focus is in a text field so it keeps its native meaning while       ║
+║          typing. (3) Board filter chips above the results when more than one ║
+║          board returned anything, counted post-rules so each chip shows what ║
+║          that board would actually give you; the filter resets on a new      ║
+║          search, since a stale one would hide everything, and an empty       ║
+║          result from a filtered board says so and offers a way back. (4)     ║
+║          Network empty state now tells apart an empty CRM from a filter      ║
+║          matching nothing. The old copy said 'No contacts yet' for both and  ║
+║          offered no way out of the filter.                                   ║
+║  v1_4_4  Contact auto-link. app.netContact has always been free text with no ║
+║          connection to state.contacts, so the tracker and the CRM never knew ║
+║          about each other. Application cards now carry a badge listing       ║
+║          contacts at that company, each chip coloured by the existing heat   ║
+║          system and warmest first, clicking through to that contact expanded ║
+║          and highlighted in Network (jumpToContact clears the active net     ║
+║          filter first, or the target could be filtered out of the list it    ║
+║          scrolls to). Matching is by company name, so no data migration and  ║
+║          it works on every card you already have: normalizeCompany() drops   ║
+║          parenthetical owners before corporate and sector suffixes, because  ║
+║          the tracker carries them and contact records rarely do - 'Shockwave ║
+║          Medical (J&J)' has to land on the same key as 'Shockwave Medical',  ║
+║          and 'Inspire Medical' on the same key as 'Inspire'. Checked against ║
+║          14 real name pairs including ones that must NOT match ('Health      ║
+║          Catalyst' vs 'Catalyst Pharmaceuticals', 'Boston Scientific' vs     ║
+║          'Boston Consulting Group'). Contact cards gained id net-card-<id>   ║
+║          as the scroll target. No badge renders when nobody matches. Guest   ║
+║          view redacts the names.                                             ║
+║  v1_4_3  Mobile fixes for the board search, found by rendering it at 390px   ║
+║          rather than assuming. (1) Result cards: the action buttons held     ║
+║          their width while the title block shrank, so a long role wrapped    ║
+║          one word per line. The row parts now carry .bd-row-main / .bd-row-  ║
+║          actions and the 640px breakpoint gives the title the full width and ║
+║          drops the buttons onto their own line, following the class-plus-    ║
+║          breakpoint convention the rest of the file uses. (2) The rules      ║
+║          drawer's fixed two-column grid became auto-fit minmax(210px), so    ║
+║          Exclude and Locations stack instead of squeezing a three-line label ║
+║          over a narrow input. (3) white-space:nowrap on the inline rule      ║
+║          labels so the row wraps between controls rather than mid-label.     ║
+║          Settings needed no change: its auto-fit grids already collapsed     ║
+║          correctly. Desktop is unchanged.                                    ║
+║  v1_4_2  Search settings move out of code and into Settings. (1) Everything  ║
+║          that shapes a board search now lives on the profile, so it          ║
+║          persists, rides the Gist prefs sync, and is editable in Sync ->     ║
+║          Search rules & limits: default keyword, exclude terms, allowed      ║
+║          locations, remote-only, min salary, posting freshness, min AI fit,  ║
+║          whether Remotive is searched, whether already-tracked postings are  ║
+║          hidden, max postings per search, how much JD text to pull, how many ║
+║          postings each AI scoring run covers, and how long to wait on a slow ║
+║          board. (2) The board tab's Rules drawer edits the same stored       ║
+║          object rather than a separate ephemeral one, so a mid-search tweak  ║
+║          is saved, and Clear rules still means the same thing after a        ║
+║          reload. (3) Rule edits persist on a 600ms debounce and repaint only ║
+║          the results list (renderBoardResults, split out of                  ║
+║          renderBoardSearch) so the caret does not jump mid-word, and the     ║
+║          whole profile is not re-stringified per keystroke. (4) jobs.js      ║
+║          takes limit, jd and timeout per request, each clamped server-side   ║
+║          so a hand-edited URL cannot ask for a 10-minute timeout or a        ║
+║          megabyte of JD per posting; MAX_SLUGS_PER_ATS stays fixed, being an ║
+║          abuse guard rather than a preference. Remotive's page size follows  ║
+║          the overall cap, bounded at 100 so one general feed cannot crowd    ║
+║          out your own boards. (5) Fixed a clamp bug caught in testing:       ║
+║          Number(null) is 0, not NaN, so an absent ?limit was clamping to the ║
+║          floor and a search without an explicit limit would have returned 10 ║
+║          postings instead of 120.                                            ║
+║  v1_4_1  Security headers + dead-code sweep. (1) New _headers file. The CSP  ║
+║          is scoped to what the app actually loads, audited from the file:    ║
+║          cdnjs for SheetJS, Google Fonts for stylesheets and font files,     ║
+║          data: for the inline SVG favicon. connect-src is pinned to self +   ║
+║          api.github.com, which is the directive that matters here: the Gist  ║
+║          PAT lives in localStorage, so the real risk is that token leaving   ║
+║          for an attacker host, and connect-src stops that even though inline ║
+║          script is still permitted. script-src keeps 'unsafe-inline'         ║
+║          deliberately. Forbidding it would mean moving ~236 inline handlers  ║
+║          onto delegated listeners first, a large refactor with real          ║
+║          regression risk and no user-visible gain, deferred as its own pass. ║
+║          frame-ancestors / frame-src / object-src none and form-action /     ║
+║          base-uri self are free, since the app has no forms, iframes or      ║
+║          objects at all. Also nosniff, Referrer-Policy, COOP same-origin-    ║
+║          allow-popups, a Permissions-Policy denying                          ║
+║          camera/mic/geo/payment/usb, and no-store on /api/*. This closes the ║
+║          PENDING _headers note left open in v1_3_3. (2) Removed 90 lines of  ║
+║          unreachable code, each symbol reference-counted first:              ║
+║          adzunaSearch() and its credentials (never called, and no UI ever    ║
+║          set the keys, so they could not be populated); the orphaned job-    ║
+║          search UI state it fed (jobs, jobTotal, jobPage, jobLoading,        ║
+║          jobPreset, jobCustomQ, jobWhere, jobSalary, jobDays, jobSort,       ║
+║          jobBlocklist, jobHidden, jobSaved, analyzed, analyzing); fmtSal(),  ║
+║          which only formatted Adzuna's salary_min/salary_max shape; and      ║
+║          doMigrateFromJsonBin(), never called, whose DOM ids (migrate-btn,   ║
+║          migrate-status) exist nowhere in the file.                          ║
+║  v1_4_0  Live board search. (1) New functions/api/jobs.js Pages Function     ║
+║          fans out to the public Greenhouse, Lever, Ashby and Remotive board  ║
+║          APIs in parallel and returns normalized postings with full JD text. ║
+║          Every response carries per-slug status, so a wrong slug is reported ║
+║          instead of looking like a board with no openings. 8s timeout per    ║
+║          board; dedupe on normalized URL. (2) /api/jobs?probe=<company>      ║
+║          resolves a company name to slugs that actually answer (Headspace is ║
+║          'hs', WellPower is 'mentalhealthcenterofdenver'), surfaced in Sync  ║
+║          -> Job boards with one-click Add per hit. (3) Board tab gains a     ║
+║          Live Board Search card above the launcher: keyword search, a        ║
+║          client-side rule layer (exclude scans the JD, locations, remote-    ║
+║          only, min salary, max age, min fit), named searches, JD preview,    ║
+║          and + Track straight into the tracker via boardJobToApp(), which    ║
+║          mirrors saveAnalyzedCard()'s record shape. (4) Score top 10 rates   ║
+║          visible postings in a single claudeStream call and re-sorts by fit, ║
+║          so triage is one request not ten. (5) Slugs and saved searches sit  ║
+║          on the profile, so they ride the existing Gist prefs sync to other  ║
+║          devices. (6) Postings already in the tracker are dropped at fetch   ║
+║          time. Adzuna was still present at this version.                     ║
 ║  v1_3_14 Import can't fail silently. doImportApps wraps read → plan →        ║
 ║          preview in try/catch; any failure shows in the import note and a    ║
 ║          toast ('Nothing was changed'), and the file box only clears once    ║
@@ -292,9 +453,9 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.3.14">
-<meta name="jq-base" content="24">
-<meta name="jq-date" content="2026-10-26">
+<meta name="jq-version" content="1.4.7">
+<meta name="jq-base" content="32">
+<meta name="jq-date" content="2026-11-23">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
 
@@ -657,6 +818,12 @@
     /* Job boards grid: stack to single column on mobile */
     .job-boards-grid { grid-template-columns: 1fr !important; }
 
+    /* Board search results: let the role title own the full width and drop the
+       action buttons onto their own row. Without this the buttons hold their
+       width and the title wraps one word per line. */
+    .bd-row-main { flex: 1 1 100% !important; }
+    .bd-row-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+
     /* Sync page import/export cards: stack to single column on mobile — the
        2-col grid's items default to min-width:auto, which was letting long
        content (file inputs, header rows) force the grid wider than the
@@ -813,8 +980,42 @@ const EMPTY_PROFILE = {
   name:'', titles:'', focus:'', salaryMin:'', salaryMax:'', location:'',
   workMode:'', noReloc:'', yearsExp:'', background:'', specialties:'',
   education:'', idealSignals:'', redFlagSignals:'', honestGaps:'', portfolioUrl:'',
-  resumeText:'', coverLetterSample:'', coverLetterSampleAsked:false
+  resumeText:'', coverLetterSample:'', coverLetterSampleAsked:false,
+  // v1_4_0 — public ATS board slugs for the /api/jobs aggregator. Kept on the
+  // profile (not in `state`) so they ride the existing debounced Gist prefs
+  // sync and follow you to another device along with everything else.
+  ghSlugs:'', leverSlugs:'', ashbySlugs:'',
+  // Saved board-search rule sets. Each: {id,name,include,exclude,locations,
+  // remoteOnly,minFit,maxAgeDays,minSalaryK}
+  boardPresets:[],
+  // v1_4_2 — everything that shapes a board search now lives here rather than
+  // in code, so it is editable in Settings, persists, and rides the Gist prefs
+  // sync. The board tab's rules drawer edits these same values.
+  boardRules:null, boardOpts:null
 };
+
+// Defaults for the board search. A profile saved before v1_4_2 has null for
+// both, so these fill in; a partial object merges field by field, which means
+// adding a knob later cannot strand an existing profile.
+const BOARD_RULES_DEFAULT = {
+  include:'', exclude:'intern, director, vp, clearance', locations:'',
+  remoteOnly:false, minFit:0, maxAgeDays:0, minSalaryK:0
+};
+const BOARD_OPTS_DEFAULT = {
+  useRemotive:true,   // include Remotive's remote-only feed alongside your boards
+  maxResults:120,     // cap on postings returned per search
+  jdChars:6000,       // how much job-description text to pull back per posting
+  triageBatch:10,     // postings scored per 'Score top N' call
+  // How much JD text to KEEP on a tracked job, as opposed to how much to pull
+  // at search time. The full text matters for scoring; the stored copy mostly
+  // needs to be enough to remind you what the role was, and it is what grows
+  // the Gist. 0 keeps everything.
+  keepJdChars:1500,
+  hideTracked:true,   // drop postings already in the tracker
+  timeoutMs:8000      // give up on a single slow board after this long
+};
+function getBoardRules() { return {...BOARD_RULES_DEFAULT, ...((getProfile()||{}).boardRules || {})}; }
+function getBoardOpts()  { return {...BOARD_OPTS_DEFAULT,  ...((getProfile()||{}).boardOpts  || {})}; }
 function getProfile() {
   try { const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); return p ? {...EMPTY_PROFILE, ...p} : null; }
   catch { return null; }
@@ -990,7 +1191,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.3.14';
+const APP_VERSION = '1.4.7';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -999,20 +1200,12 @@ let state = {
   // Cloud credentials (persisted to localStorage — device-only, not synced)
   ghToken:  localStorage.getItem('gh_token')  || '',
   ghGistId: localStorage.getItem('gh_gist_id') || '',
-  adzunaId:  localStorage.getItem('adzuna_id')  || '',
-  adzunaKey: localStorage.getItem('adzuna_key') || '',
   // Cloud sync status
   cloudLoading: false, cloudStatus: '', cloudError: '',
   // App data (loaded from GitHub Gist on startup, falls back to defaults)
   apps: DEFAULT_APPS,
   contacts: DEFAULT_CONTACTS,
   // Ephemeral UI state
-  jobs: [], jobTotal: 0, jobPage: 1, jobLoading: false,
-  jobPreset: 0, jobCustomQ: '', jobWhere: '', jobSalary: '120000', jobDays: '30', jobSort: 'date',
-  jobBlocklist: [], // kept for backwards compat, no longer used
-  jobHidden: [],    // per-session hidden posting IDs (resets on new search)
-  jobSaved: {},
-  analyzed: {}, analyzing: {},
   appFilter: 'all', appEditing: null, appShowAdd: false, appSort: 'updated', appExpanded: {}, appSelectMode: false, appSelected: {},
   coverCo: '', coverTone: 'professional', coverJD: '', coverOut: '', coverLoading: false,
   intRole: '', intCo: '', intQtype: 'behavioral', intQs: [], intAns: {}, intFb: {}, intLoading: false, intFbLoading: {},
@@ -1026,6 +1219,16 @@ let state = {
   pomRestSecs: 0, pomRestRunning: false,
   pomPlankLevel: 'beginner', pomPlankRound: 0, pomPlankPhase: 'work', pomPlankSecs: 0, pomPlankRunning: false,
   netShowAdd: false, netEditing: null, netExpanded: {}, netFilter: {view:'all', source:'', sort:'smart'}, netDraft: '', netDraftFor: null, netDraftLoading: false,
+  // ── v1_4_0 BOARD SEARCH (live /api/jobs aggregator) ──
+  // All ephemeral: results are re-fetchable, so none of this is persisted.
+  bdQ: '', bdJobs: [], bdLoading: false, bdError: '', bdSources: [], bdSearched: false,
+  // Live working copy of the saved rules, seeded from the profile on first use.
+  // Edits re-filter the on-screen list immediately and are flushed to the
+  // profile on a short debounce, so typing stays responsive but nothing is lost.
+  bdRules: null,
+  bdShowRules: false, bdPreview: null, bdTriaging: false, bdHidden: {},
+  bdProbeQ: '', bdProbeHits: null, bdProbeLoading: false, bdProbeNote: '',
+  bdSourceFilter: '',   // '' = all boards; otherwise 'Greenhouse:lirio' style key
   tasks: JSON.parse(localStorage.getItem('tasks')||'null') || [
     {id:1,  text:'Fill in your profile (Sync tab → Edit profile)',     done:false, cat:'today',   due:'', priority:'high'},
     {id:2,  text:'Analyze your first job description',                  done:false, cat:'today',   due:'', priority:'high'},
@@ -1083,14 +1286,183 @@ function ghHeaders() {
   };
 }
 
+// GitHub inlines a gist file's content in the API response only up to about
+// 1MB. Past that it returns truncated:true with the body cut mid-string and
+// hands you a raw_url instead. Parsing the inline copy then dies on a string
+// that stops mid-object, and the error ('Unexpected end of JSON input') says
+// nothing about the real cause.
+const GIST_INLINE_LIMIT = 1024 * 1024;      // where GitHub starts truncating
+// Refuse to write a little below that. GitHub documents the threshold as
+// 'about 1MB', so writing right up to it would be betting on the exact number,
+// and the margin keeps the read path on the inline copy rather than depending
+// on the raw_url fallback below.
+const GIST_WRITE_CEILING = Math.round(GIST_INLINE_LIMIT * 0.92);
+const GIST_WARN_AT      = 0.75;             // surface the number well before then
+
+function payloadBytes(obj) {
+  try { return new Blob([JSON.stringify(obj)]).size; }
+  catch { try { return JSON.stringify(obj).length; } catch { return 0; } }
+}
+function fmtBytes(n) {
+  if (!n) return '0 KB';
+  return n >= 1048576 ? `${(n/1048576).toFixed(2)} MB` : `${Math.round(n/1024)} KB`;
+}
+// The exact object ghWrite sends, so the size shown is the size that matters.
+function cloudPayload() {
+  return {
+    apps: state.apps, contacts: state.contacts,
+    tasks: state.tasks, referrals: state.referrals,
+    prefs: collectPrefs(),
+    version: 3, updatedAt: new Date().toISOString()
+  };
+}
+
+// Turns a GitHub status code into something that names the actual remedy.
+// '403' on its own sent one debugging session down the wrong path; the status
+// alone never distinguishes a missing scope from a wrong account.
+function gistErrorHelp(status, op) {
+  if (status === 401) return 'GitHub rejected the token (401). It is wrong, expired, or revoked. Create a new one and reconnect.';
+  if (status === 403) return op === 'write'
+    ? 'Token is valid but not allowed to write Gists (403). Classic token: tick the "gist" scope at github.com/settings/tokens. Fine-grained token: Account permissions → Gists → Read and write. You can edit an existing token, no need to make a new one.'
+    : 'GitHub refused the request (403). Usually a missing Gist permission on the token, or a rate limit if it worked a moment ago.';
+  if (status === 404) return 'No Gist with that ID is visible to this token (404). Check the ID, and check the token belongs to the same GitHub account that owns the Gist.';
+  if (status === 422) return 'GitHub rejected the data (422). Usually the payload is too large; check the cloud payload meter in Sync.';
+  if (status === 409 || status === 500 || status === 502 || status === 503) return `GitHub had a problem (${status}). Try again shortly.`;
+  return `GitHub returned ${status}.`;
+}
+
+// Walks the connection one step at a time and reports which step fails, so the
+// answer is a named cause rather than a status code. Read-only: it never
+// writes to the Gist, so running it is always safe.
+async function diagnoseGist(token, gistId) {
+  const out = [];
+  const hdr = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' };
+  let login = null;
+
+  // 1. Is the token real, and what kind is it?
+  try {
+    const r = await fetch('https://api.github.com/user', { headers: hdr });
+    if (!r.ok) {
+      out.push({ ok:false, step:'Token', msg: gistErrorHelp(r.status, 'read') });
+      return out;
+    }
+    const u = await r.json();
+    login = u.login;
+    // Classic tokens report their scopes in this header; fine-grained ones
+    // have no scopes and send nothing, which is itself the tell.
+    out.push({ ok:true, step:'Token', msg:`Valid, signed in as ${u.login}.` });
+
+    // Token type comes from the prefix, which is certain. The scope header is
+    // only a bonus: browsers can read a response header only if GitHub lists it
+    // in Access-Control-Expose-Headers, so a missing header may mean the token
+    // has no scopes OR that we simply are not allowed to see them. Inferring
+    // 'fine-grained' from absence alone would hand out a confident wrong answer.
+    const classic = /^ghp_/.test(token);
+    const fine    = /^github_pat_/.test(token);
+    const scopes  = r.headers.get('x-oauth-scopes');
+
+    if (fine) {
+      out.push({ ok:null, step:'Type', msg:'Fine-grained token. It needs Account permissions → Gists → Read and write, which is off by default and sits under Account, not Repository.' });
+    } else if (classic) {
+      if (scopes === null) {
+        out.push({ ok:null, step:'Type', msg:'Classic token. Its scope list was not readable from the browser, so check it by hand: github.com/settings/tokens → this token → "gist" must be ticked.' });
+      } else {
+        const list = scopes.split(',').map(s => s.trim()).filter(Boolean);
+        const hasGist = list.includes('gist');
+        out.push({
+          ok: hasGist, step:'Gist scope',
+          msg: hasGist
+            ? `Present. Scopes: ${list.join(', ') || 'none'}.`
+            : `MISSING. This is the problem. Scopes on this token: ${list.join(', ') || 'none'}. Tick "gist" at github.com/settings/tokens and update the token, then reconnect.`
+        });
+      }
+    } else {
+      out.push({ ok:null, step:'Type', msg:'Unrecognised token prefix. GitHub classic tokens start ghp_ and fine-grained ones github_pat_. Either kind needs Gist write permission.' });
+    }
+  } catch (e) {
+    out.push({ ok:false, step:'Token', msg:'Could not reach api.github.com. Check your connection.' });
+    return out;
+  }
+
+  // 2. Can this token see that Gist, and does it own it?
+  if (!gistId) { out.push({ ok:false, step:'Gist', msg:'No Gist ID entered.' }); return out; }
+  try {
+    const r = await fetch(`${GIST_API}/${gistId}`, { headers: hdr });
+    if (!r.ok) { out.push({ ok:false, step:'Gist', msg: gistErrorHelp(r.status, 'read') }); return out; }
+    const g = await r.json();
+    const owner = g.owner?.login || '(unknown)';
+    const sameOwner = login && owner.toLowerCase() === login.toLowerCase();
+    out.push({
+      ok: sameOwner, step:'Gist',
+      msg: sameOwner
+        ? `Readable, owned by ${owner}.`
+        : `Owned by ${owner}, but your token belongs to ${login}. You can read someone else's Gist but never write to it.`
+    });
+    const hasFile = Boolean(g.files && g.files[GIST_FILE]);
+    out.push({
+      ok: hasFile, step:'File',
+      msg: hasFile ? `"${GIST_FILE}" found.` : `No "${GIST_FILE}" in this Gist. Files present: ${Object.keys(g.files||{}).join(', ') || 'none'}. The app will create it on first sync.`
+    });
+  } catch (e) {
+    out.push({ ok:false, step:'Gist', msg:'Request failed. If this app is open as a local file rather than the deployed site, the browser may be blocking it.' });
+  }
+  return out;
+}
+
+async function runGistDiagnostic() {
+  const token  = (document.getElementById('setup-gh-token') || {}).value?.trim() || state.ghToken;
+  const gistId = (document.getElementById('setup-gh-gist')  || {}).value?.trim() || state.ghGistId;
+  const box = document.getElementById('gist-diag');
+  if (!token) { if (box) box.innerHTML = '<span style="color:var(--amber)">Enter your token first.</span>'; return; }
+  if (box) box.innerHTML = '<span style="color:var(--muted)">Checking…</span>';
+
+  const rows = await diagnoseGist(token, gistId);
+  if (!box) return;
+  box.innerHTML = rows.map(r => {
+    const mark = r.ok === true ? '✓' : r.ok === null ? 'ℹ' : '✗';
+    const col  = r.ok === true ? 'var(--green-dim)' : r.ok === null ? 'var(--sky-blue)' : 'var(--red)';
+    return `<div style="display:flex;gap:7px;align-items:flex-start;margin-bottom:5px">
+      <span style="color:${col};font-weight:700;flex:none">${mark}</span>
+      <span style="flex:none;min-width:74px;color:var(--muted);font-weight:500">${esc(r.step)}</span>
+      <span style="color:var(--tx);line-height:1.5">${esc(r.msg)}</span>
+    </div>`;
+  }).join('');
+}
+
 // Read latest data from Gist
 async function ghRead() {
   const resp = await fetch(`${GIST_API}/${state.ghGistId}`, { headers: ghHeaders() });
-  if (!resp.ok) throw new Error(`Read failed ${resp.status}`);
+  if (!resp.ok) throw new Error(gistErrorHelp(resp.status, 'read'));
   const gist = await resp.json();
-  const raw = gist.files?.[GIST_FILE]?.content;
-  if (!raw) throw new Error(`File "${GIST_FILE}" not found in Gist`);
-  return JSON.parse(raw);
+  const file = gist.files?.[GIST_FILE];
+  if (!file) throw new Error(`File "${GIST_FILE}" not found in Gist`);
+
+  let raw = file.content;
+  if (file.truncated || !raw) {
+    if (!file.raw_url) {
+      throw new Error('Your Gist is too large for the API to return and no raw URL was offered. Trim stored job descriptions in Sync, or export a backup and start a fresh Gist.');
+    }
+    // Belt and braces. ghWrite refuses to push past GIST_WRITE_CEILING, so a
+    // gist this app wrote should never land here; this covers one that grew
+    // some other way (an older build, or an edit made on github.com).
+    // raw_url is on gist.githubusercontent.com, a different host from the API.
+    // Fetch it WITHOUT the Authorization header: the token is not valid there,
+    // and sending it forces a CORS preflight that would fail.
+    let r2;
+    try {
+      r2 = await fetch(file.raw_url);
+    } catch (e) {
+      throw new Error('Your Gist exceeded the size the API returns inline, and the full copy could not be fetched from GitHub. Trim stored job descriptions in Sync to bring it back under the limit.');
+    }
+    if (!r2.ok) throw new Error(`Gist is truncated and the full copy failed to load (${r2.status}).`);
+    raw = await r2.text();
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    throw new Error('Gist data could not be parsed. If it has grown very large, trim stored job descriptions in Sync; otherwise check the Gist for manual edits.');
+  }
 }
 
 // Settings that live in their own localStorage keys but should follow you to
@@ -1123,18 +1495,19 @@ function applyCloudData(data) {
 // Write everything that syncs to the Gist (debounced via save())
 async function ghWrite() {
   if (!state.ghToken || !state.ghGistId) return;
-  const payload = {
-    apps: state.apps, contacts: state.contacts,
-    tasks: state.tasks, referrals: state.referrals,
-    prefs: collectPrefs(),
-    version: 3, updatedAt: new Date().toISOString()
-  };
+  const payload = cloudPayload();
+  const size = payloadBytes(payload);
+  if (size > GIST_WRITE_CEILING) {
+    // Fail here rather than writing something the next read cannot pull back
+    // inline. Local storage has already saved, so nothing is lost.
+    throw new Error(`Payload is ${fmtBytes(size)}, at the ~1MB ceiling the Gist API returns inline. Trim stored job descriptions in Sync, then sync again.`);
+  }
   const resp = await fetch(`${GIST_API}/${state.ghGistId}`, {
     method: 'PATCH',
     headers: ghHeaders(),
     body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload) } } })
   });
-  if (!resp.ok) throw new Error(`Write failed ${resp.status}`);
+  if (!resp.ok) throw new Error(gistErrorHelp(resp.status, 'write'));
 }
 
 // ── PERSISTENCE ───────────────────────────────────────────────────────────────
@@ -1143,8 +1516,6 @@ async function ghWrite() {
 function saveCredentials() {
   if (state.ghToken)  localStorage.setItem('gh_token',   state.ghToken);
   if (state.ghGistId) localStorage.setItem('gh_gist_id', state.ghGistId);
-  if (state.adzunaId)  localStorage.setItem('adzuna_id',   state.adzunaId);
-  if (state.adzunaKey) localStorage.setItem('adzuna_key',  state.adzunaKey);
 }
 
 // Debounced cloud save — batches rapid changes into one write, 1.5s after last change
@@ -1294,7 +1665,6 @@ const sel = (id, opts, val) => `<select id="${id}">${opts.map(o=>`<option value=
 const btn = (id, label, cls='', onclick='') => `<button id="${id}" class="${cls}" onclick="${onclick}">${label}</button>`;
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const fmtDate = d => { if(!d) return ''; const days=Math.floor((Date.now()-new Date(d))/86400000); return days===0?'today':days===1?'yesterday':`${days}d ago`; };
-const fmtSal = j => { if(!j.salary_min&&!j.salary_max) return null; const f=n=>n>=1000?`$${Math.round(n/1000)}K`:`$${n}`; if(j.salary_min&&j.salary_max) return `${f(j.salary_min)}–${f(j.salary_max)}${j.salary_is_predicted?' (est.)':''}`; return j.salary_min?`${f(j.salary_min)}+`:null; };
 
 // ── API CALLS ─────────────────────────────────────────────────────────────────
 
@@ -1398,17 +1768,493 @@ async function claudeJSON(prompt) {
 }
 
 
-async function adzunaSearch({q,where,salary,days,page=1,perPage=20}) {
-  const p = new URLSearchParams({
-    app_id:state.adzunaId, app_key:state.adzunaKey,
-    results_per_page:perPage, what:q, 'content-type':'application/json', sort_by:'date'
-  });
-  if(where) p.set('where',where);
-  if(salary) p.set('salary_min',salary);
-  if(days) p.set('max_days_old',days);
-  const resp = await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/${page}?${p}`);
-  if(!resp.ok){ const e=await resp.text(); throw new Error(`Adzuna ${resp.status}: ${e.slice(0,200)}`); }
+
+// ── BOARD AGGREGATOR (v1_4_0) ────────────────────────────────────────────────
+// Talks to functions/api/jobs.js, which fans out to the public Greenhouse,
+// Lever, Ashby and Remotive board APIs server-side. Same origin, no keys in
+// the browser, and the response carries per-slug status so a wrong slug is
+// reported rather than looking like a company with no openings.
+
+const JOBS_URL = '/api/jobs';
+
+async function boardsFetch(params) {
+  const p = new URLSearchParams(params);
+  let resp;
+  try {
+    resp = await fetch(`${JOBS_URL}?${p}`);
+  } catch(e) {
+    throw new Error('Could not reach /api/jobs. If you are opening this file directly, the aggregator only runs on the deployed Cloudflare Pages site.');
+  }
+  if (!resp.ok) {
+    if (resp.status === 404) throw new Error('/api/jobs is not responding. Make sure functions/api/jobs.js was deployed at that exact path, then redeploy.');
+    throw new Error(`Board search failed (${resp.status}).`);
+  }
   return resp.json();
+}
+
+// Normalises one aggregator posting into the tracker's app-record shape.
+// Deliberately mirrors saveAnalyzedCard() so nothing downstream has to learn
+// that a second intake path exists.
+function boardJobToApp(j) {
+  const now = new Date().toISOString();
+  const fitNum = Number(j.fit) || 0;
+  return {
+    id:         Date.now() + Math.floor(Math.random() * 1000),
+    company:    j.company || '',
+    role:       j.role || '',
+    reqNum:     '',
+    salary:     j.salary || '',
+    location:   j.location || '',
+    fit:        fitNum ? String(fitNum) : '',
+    fitSource:  fitNum ? 'claude' : '',
+    keyReqs:    '',
+    gaps:       j.fitReason || '',
+    jdText:     bdTrimJd(j.jdText || ''),
+    jobUrl:     j.url || '',
+    stage:      'Saved',
+    // An unscored posting is unknown, not low. Only a real fit score earns a
+    // priority; otherwise it lands on the same 'Normal' default as a manual add.
+    priority:   !fitNum ? 'Normal' : fitNum >= 8 ? 'High' : fitNum >= 6 ? 'Medium' : 'Low',
+    date:       now.slice(0,10),
+    savedAt:    now.slice(0,10),
+    actLog:     [{date: now.slice(0,10), note: `Saved from ${j.source || 'board search'}`}],
+    updatedAt:  now,
+  };
+}
+
+// Truncates a JD to the retained length, on a word boundary so the stored copy
+// does not end mid-word, with a marker making it clear it was shortened.
+function bdTrimJd(text) {
+  const keep = Number(getBoardOpts().keepJdChars) || 0;
+  const s = String(text || '');
+  if (!keep || s.length <= keep) return s;
+  const cut = s.slice(0, keep);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > keep * 0.8 ? cut.slice(0, sp) : cut) + ' …[trimmed]';
+}
+
+// Bytes currently held in stored job descriptions, which is the part of the
+// payload that grows fastest and the first thing worth reclaiming.
+function storedJdBytes() {
+  return (state.apps || []).reduce((n, a) => n + payloadBytes(a.jdText || ''), 0);
+}
+function trimmableApps() {
+  const keep = Number(getBoardOpts().keepJdChars) || 0;
+  if (!keep) return [];
+  return (state.apps || []).filter(a => (a.jdText || '').length > keep);
+}
+
+// One-time pass over JDs saved before the retention setting existed, or saved
+// when it was higher.
+function trimStoredJds() {
+  const targets = trimmableApps();
+  if (!targets.length) { showToast('Stored job descriptions are already within the limit'); return; }
+  const before = storedJdBytes();
+  const keep = Number(getBoardOpts().keepJdChars) || 0;
+  if (!confirm(`Shorten ${targets.length} stored job description${targets.length===1?'':'s'} to ${keep} characters each?\n\nThis frees roughly ${fmtBytes(before - targets.length*keep)} in your cloud payload. The full text stays on the job board; only your saved copy is shortened.\n\nUndo from this tab.`)) return;
+
+  snapshotApps(`Trimmed ${targets.length} stored job description${targets.length===1?'':'s'}`);
+  const ids = new Set(targets.map(a => a.id));
+  state.apps = state.apps.map(a => ids.has(a.id) ? {...a, jdText: bdTrimJd(a.jdText)} : a);
+  save();
+  showToast(`Freed ${fmtBytes(before - storedJdBytes())} · undo in Sync`);
+  render('sync');
+}
+
+function bdParseCsv(s) {
+  return String(s || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+}
+
+function bdJobAgeDays(updatedAt) {
+  if (!updatedAt) return null;
+  const t = new Date(updatedAt).getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.max(0, Math.floor((Date.now() - t) / 86400000));
+}
+
+// Highest figure mentioned in a salary string, in thousands.
+function bdMaxSalaryK(s) {
+  if (!s) return 0;
+  const nums = [...String(s).matchAll(/(\d{2,3})\s?[kK]|\$?(\d{2,3}),\d{3}/g)]
+    .map(m => Number(m[1] || m[2])).filter(Boolean);
+  return nums.length ? Math.max(...nums) : 0;
+}
+
+// Rules run client-side over fetched results, so changing one re-filters
+// instantly without another round trip to the boards.
+function bdMatchesRules(j) {
+  const r = bdRules();
+  if (state.bdHidden[j.id]) return false;
+
+  const inc = bdParseCsv(r.include);
+  const exc = bdParseCsv(r.exclude);
+  const locs = bdParseCsv(r.locations);
+  const locText = String(j.location || '').toLowerCase();
+  // Exclude scans the JD too, so "clearance" catches a requirement buried in
+  // the body. Include stays on title and company to avoid false positives
+  // from a passing mention deep in a description.
+  const titleCo = `${j.role || ''} ${j.company || ''}`.toLowerCase();
+  const deep = `${titleCo} ${locText} ${String(j.jdText || '').slice(0,1500)}`.toLowerCase();
+
+  if (exc.length && exc.some(t => deep.includes(t))) return false;
+  if (inc.length && !inc.some(t => titleCo.includes(t))) return false;
+  if (r.remoteOnly && !locText.includes('remote') && j.source !== 'Remotive') return false;
+  if (locs.length && !locs.some(l => locText.includes(l))) return false;
+  if (Number(r.minFit) > 0 && (!j.fit || Number(j.fit) < Number(r.minFit))) return false;
+
+  const age = bdJobAgeDays(j.updatedAt);
+  if (Number(r.maxAgeDays) > 0 && age !== null && age > Number(r.maxAgeDays)) return false;
+  if (Number(r.minSalaryK) > 0) {
+    const maxK = bdMaxSalaryK(j.salary);
+    if (!maxK || maxK < Number(r.minSalaryK)) return false;
+  }
+  return true;
+}
+
+// A posting's board, as 'Greenhouse:lirio'. Remotive has no slug, so it is just
+// its own name.
+function bdBoardKey(j) {
+  return j.sourceSlug && j.sourceSlug !== '-' ? `${j.source}:${j.sourceSlug}` : String(j.source || 'Unknown');
+}
+function bdBoardLabel(key) {
+  const [src, slug] = String(key).split(':');
+  return slug ? `${src} · ${slug}` : src;
+}
+
+// Board counts across everything the rules let through, so the chips show what
+// each board would give you rather than what survives the current board filter.
+function bdBoardCounts() {
+  const counts = new Map();
+  (state.bdJobs || []).filter(bdMatchesRules).forEach(j => {
+    const k = bdBoardKey(j);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function bdSetSourceFilter(key) {
+  state.bdSourceFilter = state.bdSourceFilter === key ? '' : key;
+  render('board');
+}
+
+function bdVisible() {
+  const list = (state.bdJobs || []).filter(bdMatchesRules);
+  return state.bdSourceFilter ? list.filter(j => bdBoardKey(j) === state.bdSourceFilter) : list;
+}
+
+// Postings already in the tracker are dropped at fetch time so the list only
+// ever shows things you have not acted on.
+function bdAlreadyTracked(j) {
+  const url = (j.url || '').split('?')[0].toLowerCase();
+  const key = `${(j.company||'').toLowerCase()}|${(j.role||'').toLowerCase()}`;
+  return (state.apps || []).some(a =>
+    (url && (a.jobUrl || '').split('?')[0].toLowerCase() === url) ||
+    `${(a.company||'').toLowerCase()}|${(a.role||'').toLowerCase()}` === key
+  );
+}
+
+async function runBoardSearch() {
+  const prof = getProfile() || {};
+  const gh = (prof.ghSlugs || '').trim();
+  const lever = (prof.leverSlugs || '').trim();
+  const ashby = (prof.ashbySlugs || '').trim();
+
+  state.bdLoading = true; state.bdError = ''; state.bdPreview = null;
+  state.bdHidden = {};
+  state.bdSourceFilter = '';   // a stale board filter would hide the new results
+  render('board');
+
+  try {
+    const o = getBoardOpts();
+    const params = { q: state.bdQ || '' };
+    if (gh) params.gh = gh;
+    if (lever) params.lever = lever;
+    if (ashby) params.ashby = ashby;
+    // Everything below is a saved setting, not a constant in the code.
+    if (!o.useRemotive) params.remotive = '0';
+    params.limit = o.maxResults;
+    params.jd = o.jdChars;
+    params.timeout = o.timeoutMs;
+
+    const data = await boardsFetch(params);
+    const fetched = data.jobs || [];
+    state.bdJobs = o.hideTracked ? fetched.filter(j => !bdAlreadyTracked(j)) : fetched;
+    state.bdSources = data.sources || [];
+    state.bdSearched = true;
+    const dropped = fetched.length - state.bdJobs.length;
+    if (dropped > 0) showToast(`${dropped} posting${dropped===1?'':'s'} already in your tracker — hidden`);
+  } catch(e) {
+    state.bdError = e.message;
+    state.bdJobs = []; state.bdSources = [];
+  }
+  state.bdLoading = false;
+  render('board');
+}
+
+// Reads the live rules, seeding from the saved profile the first time.
+function bdRules() {
+  if (!state.bdRules) state.bdRules = getBoardRules();
+  return state.bdRules;
+}
+
+// Persisting on every keystroke would re-stringify the whole profile (which
+// carries resumeText and the cover-letter sample) on each character. Debounce
+// instead: the screen updates live, storage catches up a beat later.
+let bdRulesTimer = null;
+function bdPersistRulesSoon() {
+  clearTimeout(bdRulesTimer);
+  bdRulesTimer = setTimeout(() => {
+    const prof = getProfile() || {...EMPTY_PROFILE};
+    prof.boardRules = {...bdRules()};
+    saveProfile(prof);
+  }, 600);
+}
+
+function bdSetRule(key, val) {
+  bdRules()[key] = val;
+  bdPersistRulesSoon();
+  render('board');
+}
+
+// Text inputs call this on every keystroke for live filtering, but skip the
+// re-render so the caret does not jump while typing.
+function bdSetRuleLive(key, val) {
+  bdRules()[key] = val;
+  bdPersistRulesSoon();
+  const host = document.getElementById('bd-results-host');
+  if (host) host.innerHTML = renderBoardResults();
+  const cnt = document.getElementById('bd-visible-count');
+  if (cnt) cnt.textContent = `showing ${bdVisible().length} of ${state.bdJobs.length} fetched`;
+}
+
+function bdSaveOpts() {
+  const num = (id, dflt, lo, hi) => {
+    const v = Number(document.getElementById(id)?.value);
+    return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : dflt;
+  };
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  prof.boardRules = {
+    include:    document.getElementById('bs-include')?.value.trim() || '',
+    exclude:    document.getElementById('bs-exclude')?.value.trim() || '',
+    locations:  document.getElementById('bs-locations')?.value.trim() || '',
+    remoteOnly: Boolean(document.getElementById('bs-remote')?.checked),
+    minFit:     num('bs-minfit', 0, 0, 10),
+    maxAgeDays: num('bs-maxage', 0, 0, 365),
+    minSalaryK: num('bs-minsal', 0, 0, 999),
+  };
+  prof.boardOpts = {
+    useRemotive: Boolean(document.getElementById('bs-remotive')?.checked),
+    hideTracked: Boolean(document.getElementById('bs-hidetracked')?.checked),
+    maxResults:  num('bs-maxresults', 120, 10, 300),
+    jdChars:     num('bs-jdchars', 6000, 500, 20000),
+    keepJdChars: num('bs-keepjd', 1500, 0, 20000),
+    triageBatch: num('bs-triagebatch', 10, 1, 25),
+    timeoutMs:   num('bs-timeout', 8000, 2000, 20000),
+  };
+  saveProfile(prof);
+  state.bdRules = {...prof.boardRules};   // keep the live copy in step
+  showToast('Search settings saved ✓');
+  render('sync');
+}
+
+function bdResetOpts() {
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  prof.boardRules = {...BOARD_RULES_DEFAULT};
+  prof.boardOpts  = {...BOARD_OPTS_DEFAULT};
+  saveProfile(prof);
+  state.bdRules = {...BOARD_RULES_DEFAULT};
+  showToast('Search settings reset to defaults');
+  render('sync');
+}
+
+function bdToggleRules() { state.bdShowRules = !state.bdShowRules; render('board'); }
+
+function bdTogglePreview(id) {
+  state.bdPreview = state.bdPreview === id ? null : id;
+  render('board');
+}
+
+function bdHide(id) { state.bdHidden[id] = true; render('board'); }
+
+// Clears the rules for this session's filtering and persists the cleared set,
+// so "Clear rules" means the same thing after a reload.
+function bdClearRules() {
+  state.bdRules = {include:'', exclude:'', locations:'', remoteOnly:false, minFit:0, maxAgeDays:0, minSalaryK:0};
+  bdPersistRulesSoon();
+  render('board');
+}
+
+function bdSavePreset() {
+  const name = prompt('Name this search (e.g. "Behavioral health PM, remote"):');
+  if (!name || !name.trim()) return;
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  prof.boardPresets = Array.isArray(prof.boardPresets) ? prof.boardPresets : [];
+  prof.boardPresets.push({ id: Date.now().toString(36), name: name.trim(), ...bdRules() });
+  saveProfile(prof);
+  showToast('Search saved ✓');
+  render('board');
+}
+
+function bdApplyPreset(id) {
+  const prof = getProfile() || {};
+  const p = (prof.boardPresets || []).find(x => x.id === id);
+  if (!p) return;
+  state.bdRules = {
+    include: p.include || '', exclude: p.exclude || '', locations: p.locations || '',
+    remoteOnly: Boolean(p.remoteOnly), minFit: Number(p.minFit) || 0,
+    maxAgeDays: Number(p.maxAgeDays) || 0, minSalaryK: Number(p.minSalaryK) || 0,
+  };
+  bdPersistRulesSoon();
+  render('board');
+}
+
+function bdDeletePreset(id) {
+  const prof = getProfile() || {};
+  prof.boardPresets = (prof.boardPresets || []).filter(x => x.id !== id);
+  saveProfile(prof);
+  render('board');
+}
+
+function bdSaveJob(id) {
+  const j = (state.bdJobs || []).find(x => x.id === id);
+  if (!j) return;
+  state.apps.push(boardJobToApp(j));
+  save();
+  state.bdJobs = state.bdJobs.filter(x => x.id !== id);
+  if (state.bdPreview === id) state.bdPreview = null;
+  showToast(`${j.company} · ${j.role} → tracker ✓`);
+  render('board');
+}
+
+// ── BATCH TRIAGE ─────────────────────────────────────────────────────────────
+// One Claude call scores up to ten visible postings, which is far cheaper than
+// a call per job. Routes through the existing claudeStream so the proxy, the
+// SSE parsing and friendlyClaudeError all stay in one place.
+
+async function bdTriage() {
+  const batch = getBoardOpts().triageBatch;
+  const slice = bdVisible().slice(0, batch);
+  if (!slice.length) { showToast('Nothing to score — search first'); return; }
+
+  const prof = getProfile() || {};
+  const bg = [
+    prof.titles && `Target roles: ${prof.titles}`,
+    prof.focus && `Focus: ${prof.focus}`,
+    prof.yearsExp && `Years of experience: ${prof.yearsExp}`,
+    prof.background && `Background: ${String(prof.background).slice(0,900)}`,
+    prof.specialties && `Specialties: ${String(prof.specialties).slice(0,500)}`,
+    (prof.salaryMin || prof.salaryMax) && `Target comp: ${prof.salaryMin||'?'}–${prof.salaryMax||'?'}`,
+    prof.location && `Based in: ${prof.location}${prof.noReloc ? ' (will not relocate)' : ''}`,
+    prof.redFlagSignals && `Dealbreakers (cap the score at 3 if violated): ${prof.redFlagSignals}`,
+  ].filter(Boolean).join('\n');
+
+  const payload = slice.map(j => ({
+    id: j.id,
+    company: j.company,
+    role: j.role,
+    location: j.location,
+    snippet: String(j.jdText || '').replace(/\s+/g,' ').slice(0, 900),
+  }));
+
+  const prompt = `You are a selective executive recruiter scoring job fit. Be calibrated and do not inflate:
+- 9-10: bullseye on function, seniority and domain.
+- 7-8: strong core match, minor domain gap bridged by transferable experience.
+- 5-6: partial fit (adjacent function, or off by one seniority level).
+- 1-4: mismatch on function or seniority, or hits a dealbreaker.
+
+CANDIDATE
+${bg || 'Senior product manager, digital health and medtech.'}
+
+JOBS
+${JSON.stringify(payload)}
+
+Return ONLY a JSON array, no prose and no code fence. Each object exactly:
+{"id": <the id string, unchanged>, "fit": <integer 1-10>, "reason": "<max 15 words: the strongest hook or the biggest gap>"}`;
+
+  state.bdTriaging = true; render('board');
+
+  const raw = await claudeStream(prompt, null, {
+    onError: (msg) => { showToast(msg); }
+  });
+
+  state.bdTriaging = false;
+
+  if (!raw) { render('board'); return; }
+
+  let scores;
+  try {
+    const cleaned = raw.replace(/```json|```/gi, '').trim();
+    const a = cleaned.indexOf('['), b = cleaned.lastIndexOf(']');
+    if (a === -1 || b <= a) throw new Error('no array');
+    scores = JSON.parse(cleaned.slice(a, b + 1));
+  } catch(e) {
+    showToast('AI returned an unexpected format — scores not applied');
+    render('board');
+    return;
+  }
+
+  const byId = new Map(scores.filter(s => s && s.id).map(s => [String(s.id), s]));
+  let applied = 0;
+  state.bdJobs = state.bdJobs.map(j => {
+    const s = byId.get(String(j.id));
+    if (!s) return j;
+    const fit = Math.max(1, Math.min(10, Number(s.fit) || 0));
+    if (!fit) return j;
+    applied++;
+    return { ...j, fit, fitReason: String(s.reason || '').slice(0, 160) };
+  });
+  // Scored first, best first; unscored keep their recency order below.
+  state.bdJobs.sort((a, b) => (Number(b.fit) || 0) - (Number(a.fit) || 0));
+  showToast(applied ? `Scored ${applied} posting${applied===1?'':'s'} ✓` : 'No scores returned');
+  render('board');
+}
+
+// ── SLUG PROBE ───────────────────────────────────────────────────────────────
+// ATS slugs are unguessable (Headspace is "hs", WellPower is
+// "mentalhealthcenterofdenver"). The probe resolves a company name to slugs
+// that actually answer, so discovery is not the user's problem.
+
+async function bdProbe() {
+  const q = (document.getElementById('bd-probe-q')?.value || '').trim();
+  if (!q) { showToast('Type a company name first'); return; }
+  state.bdProbeQ = q;
+  state.bdProbeLoading = true; state.bdProbeHits = null; state.bdProbeNote = '';
+  render('sync');
+  try {
+    const data = await boardsFetch({ probe: q });
+    state.bdProbeHits = data.hits || [];
+    state.bdProbeNote = data.note || '';
+  } catch(e) {
+    state.bdProbeHits = [];
+    state.bdProbeNote = e.message;
+  }
+  state.bdProbeLoading = false;
+  render('sync');
+}
+
+const BD_SLUG_FIELD = { greenhouse:'ghSlugs', lever:'leverSlugs', ashby:'ashbySlugs' };
+
+function bdAddSlug(ats, slug) {
+  const field = BD_SLUG_FIELD[ats];
+  if (!field) return;
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  const existing = bdParseCsv(prof[field]);
+  if (existing.includes(String(slug).toLowerCase())) { showToast('Already in your list'); return; }
+  existing.push(String(slug).toLowerCase());
+  prof[field] = existing.join(', ');
+  saveProfile(prof);
+  showToast(`${slug} added to ${ats} ✓`);
+  render('sync');
+}
+
+function bdSaveSlugs() {
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  prof.ghSlugs    = bdParseCsv(document.getElementById('bd-gh')?.value).join(', ');
+  prof.leverSlugs = bdParseCsv(document.getElementById('bd-lever')?.value).join(', ');
+  prof.ashbySlugs = bdParseCsv(document.getElementById('bd-ashby')?.value).join(', ');
+  saveProfile(prof);
+  showToast('Boards saved ✓');
+  render('sync');
 }
 
 // ── JOB BOARD — SMART SEARCH LAUNCHER ───────────────────────────────────────
@@ -1882,6 +2728,177 @@ function dismissSetupBanner() {
   render('board');
 }
 
+// ── LIVE BOARD SEARCH (v1_4_0) ───────────────────────────────────────────────
+// Renders above the launcher. Every interpolation goes through esc(), including
+// jdText, which is up to 6000 characters of third-party board content.
+
+// Renders just the results list. Kept separate from renderBoardSearch so a
+// keystroke in the rules drawer can repaint the list in place, instead of
+// re-rendering the whole tab and blurring the input mid-word.
+function renderBoardResults() {
+  const prof = getProfile() || {};
+  const anySlugs = [prof.ghSlugs, prof.leverSlugs, prof.ashbySlugs].some(s => (s||'').trim());
+  const visible = bdVisible();
+  if (state.bdLoading) return `<div style="padding:14px;font-size:12px;color:var(--muted)">Searching your boards…</div>`;
+  if (state.bdError) return `<div style="padding:12px;border-radius:6px;background:var(--amber-bg);border:1px solid var(--amber-dim);font-size:11.5px;color:var(--tx);line-height:1.6">${esc(state.bdError)}</div>`;
+  if (!anySlugs) return `
+    <div style="padding:12px;border-radius:6px;background:rgba(0,0,0,0.18);border:1px dashed var(--brd2);font-size:11.5px;color:var(--muted);line-height:1.6">
+      No boards configured yet. Go to <strong style="color:var(--tx)">Sync → Job boards</strong> and look up a company by name to find its board.
+      <div style="margin-top:4px;color:var(--faint)">Remotive (remote-only listings) is searched either way.</div>
+    </div>`;
+  if (!state.bdSearched) return `<div style="padding:14px;font-size:12px;color:var(--muted)">Enter a keyword and search, or search empty to pull everything your boards have open.</div>`;
+  if (!state.bdJobs.length) return `<div style="padding:14px;font-size:12px;color:var(--muted)">No new postings. Anything already in your tracker is filtered out.</div>`;
+  if (!visible.length && state.bdSourceFilter) return `<div style="padding:14px;font-size:12px;color:var(--muted)">Nothing from <strong style="color:var(--tx)">${esc(bdBoardLabel(state.bdSourceFilter))}</strong> passes your current rules. <button onclick="bdSetSourceFilter('')" style="font-size:11px;margin-left:6px">Show all boards</button></div>`;
+  if (!visible.length) return `<div style="padding:14px;font-size:12px;color:var(--muted)">All ${state.bdJobs.length} fetched postings are hidden by your current rules.</div>`;
+
+  return visible.map(j => {
+    const age = bdJobAgeDays(j.updatedAt);
+    const open = state.bdPreview === j.id;
+    const fitNum = Number(j.fit) || 0;
+    const fitBadge = fitNum
+      ? `<span class="pill" style="background:rgba(201,138,14,0.12);border-color:rgba(201,138,14,0.35);color:#E8C97A">✦ fit: ${fitNum}/10</span>`
+      : '';
+    return `
+    <div class="card" style="margin-bottom:8px;padding:11px 13px;border-left:3px solid ${fitNum>=8?'var(--jade)':fitNum>=6?'var(--amber-dim)':'var(--brd2)'}">
+      <div class="bd-row" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div class="bd-row-main" style="min-width:0;flex:1 1 60%">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px">
+            <span style="font-size:13px;font-weight:600;color:var(--tx)">${esc(j.role)}</span>
+            ${fitBadge}
+          </div>
+          <div style="font-size:11px;color:var(--muted)">
+            ${esc(j.company)} · ${esc(j.location)} · ${esc(j.source)}${j.salary?` · ${esc(j.salary)}`:''}${age!==null?` · ${age}d ago`:''}
+          </div>
+          ${j.fitReason?`<div style="font-size:11px;color:var(--sky-blue-light);margin-top:3px;font-style:italic">${esc(j.fitReason)}</div>`:''}
+        </div>
+        <div class="bd-row-actions" style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start">
+          <button onclick="bdTogglePreview('${esc(j.id)}')" style="font-size:11px">${open?'Hide JD':'JD'}</button>
+          ${j.url?`<button onclick="window.open('${esc(j.url)}','_blank')" style="font-size:11px">Open ↗</button>`:''}
+          <button onclick="bdSaveJob('${esc(j.id)}')" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:var(--jade-pale)">+ Track</button>
+          <button onclick="bdHide('${esc(j.id)}')" title="Not interested" style="font-size:10px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10);padding:4px 7px;line-height:1">×</button>
+        </div>
+      </div>
+      ${open?`
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)">
+        <div style="max-height:300px;overflow-y:auto;font-size:11.5px;line-height:1.6;color:var(--muted);white-space:pre-wrap;padding-right:6px">${esc(j.jdText) || 'This board returned no description text. Use Open ↗ to read it on the company site.'}</div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderBoardSearch() {
+  const prof = getProfile() || {};
+  const anySlugs = [prof.ghSlugs, prof.leverSlugs, prof.ashbySlugs].some(s => (s||'').trim());
+  const r = bdRules();
+  const opts = getBoardOpts();
+  const visible = bdVisible();
+  const presets = prof.boardPresets || [];
+
+  const failed = (state.bdSources || []).filter(s => !s.ok);
+  const okCount = (state.bdSources || []).filter(s => s.ok).length;
+
+  const sourceLine = state.bdSearched && state.bdSources.length ? `
+    <div style="font-size:10.5px;color:var(--faint);margin-top:8px;line-height:1.6">
+      ${okCount} board${okCount===1?'':'s'} answered${failed.length ? ` · <span style="color:var(--amber)">${failed.length} failed:</span> ${failed.map(s=>esc(`${s.ats}:${s.slug}`)).join(', ')}` : ''}
+      ${failed.length ? `<br><span style="color:var(--muted)">A failed board is almost always a wrong slug. Look it up in <strong>Sync → Job boards</strong>.</span>` : ''}
+    </div>` : '';
+
+  const rulesDrawer = state.bdShowRules ? `
+    <div style="padding:12px;margin-bottom:10px;border-radius:7px;background:rgba(0,0,0,0.20);border:1px solid var(--brd);display:grid;gap:10px">
+      ${presets.length ? `
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase">Saved</span>
+        ${presets.map(p => `
+          <span style="display:inline-flex;align-items:center;gap:2px">
+            <button onclick="bdApplyPreset('${esc(p.id)}')" style="font-size:11px;padding:4px 10px;border-radius:6px;color:var(--sky-blue-light);border:0.5px solid var(--sky-blue-mid);background:var(--sky-blue-pale)">${esc(p.name)}</button>
+            <button onclick="bdDeletePreset('${esc(p.id)}')" title="Delete" style="font-size:10px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10);padding:3px 6px;border-radius:5px;line-height:1">×</button>
+          </span>`).join('')}
+      </div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">
+        <div>${lbl('Exclude (comma-separated, scans the JD)')}<input id="bd-exc" value="${esc(r.exclude)}" placeholder="intern, director, clearance" oninput="bdSetRuleLive('exclude', this.value)" style="width:100%"></div>
+        <div>${lbl('Locations (blank = any)')}<input id="bd-loc" value="${esc(r.locations)}" placeholder="remote, minneapolis, mn" oninput="bdSetRuleLive('locations', this.value)" style="width:100%"></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--muted)">
+        <!-- white-space:nowrap keeps each label on one line; the row wraps between labels instead -->
+        <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
+          <input type="checkbox" ${r.remoteOnly?'checked':''} onchange="bdSetRule('remoteOnly',this.checked)" style="width:auto"> Remote only
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap">Posted
+          <select onchange="bdSetRule('maxAgeDays',Number(this.value))" style="font-size:11px;padding:3px 6px">
+            <option value="0" ${Number(r.maxAgeDays)===0?'selected':''}>any time</option>
+            <option value="7" ${Number(r.maxAgeDays)===7?'selected':''}>last 7d</option>
+            <option value="14" ${Number(r.maxAgeDays)===14?'selected':''}>last 14d</option>
+            <option value="30" ${Number(r.maxAgeDays)===30?'selected':''}>last 30d</option>
+          </select>
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap">Min salary $K
+          <input type="number" min="0" step="10" value="${esc(r.minSalaryK||'')}" placeholder="120" onchange="bdSetRule('minSalaryK',Number(this.value||0))" style="width:70px;font-size:11px;padding:3px 6px">
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap">Min AI fit
+          <select onchange="bdSetRule('minFit',Number(this.value))" style="font-size:11px;padding:3px 6px">
+            <option value="0" ${Number(r.minFit)===0?'selected':''}>any</option>
+            <option value="6" ${Number(r.minFit)===6?'selected':''}>6+</option>
+            <option value="7" ${Number(r.minFit)===7?'selected':''}>7+</option>
+            <option value="8" ${Number(r.minFit)===8?'selected':''}>8+</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="bdSavePreset()" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:var(--jade-pale)">+ Save this search</button>
+        <button onclick="bdClearRules()" style="font-size:11px">Clear rules</button>
+      </div>
+    </div>` : '';
+
+  const body = renderBoardResults();
+
+  return `
+    <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
+      <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.10em;text-transform:uppercase;white-space:nowrap">Live Board Search</span>
+      <div style="flex:1;height:1px;background:linear-gradient(to right,var(--brd2),transparent)"></div>
+    </div>
+
+    <div class="card" style="padding:14px 16px;border-top:3px solid var(--jade);margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px">
+        <div style="font-size:13px;font-weight:600;color:var(--jade);letter-spacing:.03em">🛰 Board aggregator</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="bdToggleRules()" style="font-size:11px">${state.bdShowRules?'Hide rules':'Rules'}</button>
+          <button onclick="bdTriage()" ${visible.length && !state.bdTriaging?'':'disabled'} style="font-size:11px;color:#E8C97A;border-color:var(--amber-dim);background:rgba(201,138,14,0.10)">${state.bdTriaging?'Scoring…':`✦ Score top ${opts.triageBatch}`}</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Searches the Greenhouse, Lever and Ashby boards you've saved, plus Remotive. Full job descriptions come back with the results.</div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <input id="bd-q" value="${esc(state.bdQ)}" placeholder="Keyword (e.g. product manager) — or leave blank for everything"
+               oninput="state.bdQ=this.value" onkeydown="if(event.key==='Enter')runBoardSearch()"
+               style="flex:1;min-width:220px">
+        <button class="amber" onclick="runBoardSearch()" ${state.bdLoading?'disabled':''} style="padding:7px 16px;font-size:12px;background:var(--jade);border-color:var(--jade)">${state.bdLoading?'Searching…':'Search boards'}</button>
+      </div>
+
+      ${rulesDrawer}
+
+      ${(() => {
+        const counts = bdBoardCounts();
+        if (!state.bdSearched || state.bdLoading || counts.length < 2) return '';
+        const total = counts.reduce((s, [, n]) => s + n, 0);
+        return `<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;margin-right:2px">Board</span>
+          <button class="tag ${state.bdSourceFilter===''?'on':''}" onclick="bdSetSourceFilter('')" style="font-size:10px">All (${total})</button>
+          ${counts.map(([k, n]) => `<button class="tag ${state.bdSourceFilter===k?'on':''}" onclick="bdSetSourceFilter('${esc(k)}')" style="font-size:10px">${esc(bdBoardLabel(k))} (${n})</button>`).join('')}
+        </div>`;
+      })()}
+
+      ${state.bdSearched && !state.bdLoading && state.bdJobs.length ? `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase">
+        <span>Results</span>
+        <span id="bd-visible-count" style="font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;color:var(--faint)">showing ${visible.length} of ${state.bdJobs.length} fetched</span>
+      </div>` : ''}
+
+      <div id="bd-results-host">${body}</div>
+      ${sourceLine}
+    </div>
+  `;
+}
+
 function renderBoard(el) {
   renderSetupFloat();
   const liURL = buildLinkedInURL();
@@ -1913,7 +2930,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + `
+  el.innerHTML = setupBanner() + renderHQHero() + renderBoardSearch() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
@@ -2320,6 +3337,7 @@ function renderTracker(el) {
           </div>
           <div style="color:var(--muted);margin-bottom:5px;font-size:12px;white-space:normal;word-break:break-word">${esc(app.role||'')}</div>
           ${details?`<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:2px">${details}</div>`:''}
+          ${renderAppContactBadge(app)}
           ${app.netContact&&app.netContact!=='—'
             ? `<div style="font-size:11px;color:var(--teal);margin-bottom:3px;font-weight:500">🤝 ${isGuest()?'<span class="redacted">'+esc(app.netContact)+'</span>':esc(app.netContact)}${netRel?` <span style="font-weight:400;color:var(--faint)">· ${esc(netRel)}</span>`:''}</div>`
             : (contactLine?`<div style="font-size:11px;color:var(--faint);margin-bottom:3px">👤 ${contactLine}</div>`:'')}
@@ -2440,6 +3458,14 @@ function renderTracker(el) {
     </div>
     <div style="display:flex;gap:6px;margin-bottom:${state.appSelectMode?'8':'14'}px;align-items:center;flex-wrap:wrap">
       <span style="font-size:11px;color:var(--faint)">Sort:</span>${sortBtns}
+      ${isGuest() ? '' : (() => {
+        const n = staleApps().length;
+        return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--faint);margin-left:6px">
+          <button class="tag" onclick="sweepStaleApps()" ${n?'':'disabled'} title="Move applications with no activity in ${getStaleDays()}+ days to Ghosted" style="font-size:10px">🧹 Sweep stale${n?` (${n})`:''}</button>
+          <input type="number" min="7" max="365" step="5" value="${getStaleDays()}" onchange="setStaleDays(this.value)" title="Days of silence before an application counts as stale" style="width:52px;font-size:10px;padding:2px 4px">
+          <span>d</span>
+        </span>`;
+      })()}
       ${isGuest() ? '' : `<button class="tag ${state.appSelectMode?'on':''}" onclick="toggleAppSelectMode()" style="font-size:10px;margin-left:auto">${state.appSelectMode?'✓ Done selecting':'☐ Select'}</button>`}
     </div>
     ${state.appSelectMode ? (() => {
@@ -3651,6 +4677,169 @@ function daysAgo(dateStr) {
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
+// ── KEYBOARD (v1_4_5) ────────────────────────────────────────────────────────
+// Escape backs out of the board search's transient UI. Registered once at load,
+// and it deliberately does nothing while focus is in a text field, so Escape
+// keeps its native meaning while you are typing.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const t = e.target;
+  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  if (typing) return;
+  if (state.bdPreview) { state.bdPreview = null; render('board'); return; }
+  if (state.bdShowRules) { state.bdShowRules = false; render('board'); return; }
+});
+
+// ── STALE APPLICATION SWEEP (v1_4_5) ─────────────────────────────────────────
+// Moves applications that have genuinely gone quiet to Ghosted. Keyed on last
+// ACTIVITY, not the date the card was added: a role you worked last week is not
+// stale just because you saved it two months ago.
+
+const STALE_DAYS_DEFAULT = 45;
+// Only stages where silence actually means something. A card sitting in Saved
+// is a backlog item, not a ghosting, so it is left alone.
+const SWEEPABLE_STAGES = ['Applied', 'Phone Screen', 'Interview', 'Final Round'];
+
+function getStaleDays() {
+  const n = Number((getProfile() || {}).staleDays);
+  return Number.isFinite(n) && n > 0 ? n : STALE_DAYS_DEFAULT;
+}
+
+function setStaleDays(v) {
+  const n = Math.max(7, Math.min(365, Number(v) || STALE_DAYS_DEFAULT));
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  prof.staleDays = n;
+  saveProfile(prof);
+  render('tracker');
+}
+
+// The most recent thing that happened to this card, from any evidence we have.
+function lastActivityISO(a) {
+  const dates = [];
+  (a.actLog || []).forEach(l => { if (l && l.date) dates.push(String(l.date).slice(0,10)); });
+  if (a.updatedAt) dates.push(String(a.updatedAt).slice(0,10));
+  if (a.nextDate)  dates.push(String(a.nextDate).slice(0,10));
+  if (a.date)      dates.push(String(a.date).slice(0,10));
+  dates.sort();
+  return dates.length ? dates[dates.length - 1] : '';
+}
+
+function staleApps() {
+  const cutoff = new Date(Date.now() - getStaleDays() * 86400000).toISOString().slice(0,10);
+  return (state.apps || []).filter(a => {
+    if (!SWEEPABLE_STAGES.includes(a.stage)) return false;
+    const last = lastActivityISO(a);
+    return last && last < cutoff;
+  });
+}
+
+function sweepStaleApps() {
+  const targets = staleApps();
+  if (!targets.length) { showToast(`Nothing has been quiet for ${getStaleDays()}+ days`); return; }
+
+  const names = targets.slice(0,4).map(a => `${a.company} · ${a.role}`).join('\n');
+  const more = targets.length > 4 ? `\n…and ${targets.length - 4} more` : '';
+  if (!confirm(`Move ${targets.length} application${targets.length===1?'':'s'} to Ghosted?\n\nNo activity in ${getStaleDays()}+ days:\n${names}${more}\n\nYou can undo this from the Sync tab.`)) return;
+
+  // Same undo path as import and bulk delete, so a mistaken sweep is recoverable.
+  snapshotApps(`Swept ${targets.length} stale application${targets.length===1?'':'s'}`);
+
+  const ids = new Set(targets.map(a => a.id));
+  const now = new Date().toISOString(), today = now.slice(0,10);
+  state.apps = state.apps.map(a => ids.has(a.id) ? {
+    ...a,
+    stage: 'Ghosted',
+    updatedAt: now,
+    actLog: [...(a.actLog || []), {date: today, note: `Stage → Ghosted (no activity in ${getStaleDays()}d)`}],
+  } : a);
+  save();
+  showToast(`${targets.length} moved to Ghosted · undo in Sync`);
+  render('tracker');
+}
+
+// ── CONTACT ↔ APPLICATION AUTO-LINK (v1_4_4) ─────────────────────────────────
+// app.netContact has always been free text with no connection to state.contacts,
+// so the tracker and the CRM never knew about each other. These match on company
+// name instead, which needs no data migration and works on every existing card.
+
+// Reduces a company name to a comparison key. Parenthetical owners are dropped
+// first, because the tracker often carries them and a contact record rarely
+// does: 'Shockwave Medical (J&J)' and 'Shockwave Medical' must land on the same
+// key. Then the usual corporate and sector suffixes go, so 'Inspire Medical'
+// matches 'Inspire'.
+function normalizeCompany(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\b(inc|corp|corporation|llc|ltd|co|company|labs|health|healthcare|medical|technologies|technology|group|holdings)\b\.?/g, ' ')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+// Contacts at the same company as this application, warmest first so the most
+// useful name is the one you see when the badge is truncated.
+const HEAT_RANK = { warm: 0, new: 1, nudge: 2, cold: 3 };
+function getContactsForCompany(company) {
+  const key = normalizeCompany(company);
+  if (!key) return [];
+  return (state.contacts || [])
+    .filter(c => normalizeCompany(c.company) === key)
+    .sort((a, b) => (HEAT_RANK[contactHeat(a)] ?? 9) - (HEAT_RANK[contactHeat(b)] ?? 9));
+}
+
+// Opens the Network tab with this contact expanded and scrolled into view.
+function jumpToContact(contactId) {
+  state.netExpanded = state.netExpanded || {};
+  state.netExpanded[contactId] = true;
+  // Clear any active filter first, or the contact may be filtered out of the
+  // list we are about to scroll to.
+  state.netFilter = {...NET_FILTER_DEFAULT};
+  showTab('network');
+  setTimeout(() => {
+    const el = document.getElementById('net-card-' + contactId);
+    if (el) {
+      el.scrollIntoView({behavior: 'smooth', block: 'center'});
+      el.style.transition = 'box-shadow .4s';
+      el.style.boxShadow = '0 0 0 2px var(--teal)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 1600);
+    }
+  }, 80);
+}
+
+// The badge itself. Returns '' when there is nobody at that company, so an
+// application with no network shows nothing rather than an empty shell.
+function renderAppContactBadge(app) {
+  const matches = getContactsForCompany(app.company);
+  if (!matches.length) return '';
+
+  const SHOW = 3;
+  const shown = matches.slice(0, SHOW);
+  const extra = matches.length - shown.length;
+
+  const chips = shown.map(c => {
+    const hm = heatMeta(contactHeat(c)) || heatMeta('new');
+    const name = isGuest() ? '•••' : esc(c.name);
+    return `<button onclick="jumpToContact(${c.id})" title="${esc(c.name)} · ${esc(c.role || '')} · ${hm.label}"
+      style="font-size:10px;padding:2px 7px;border-radius:7px;line-height:1.5;color:${hm.col};background:${hm.bg};border:0.5px solid ${hm.brd};white-space:nowrap">${name} · ${hm.label}</button>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">
+      <!-- The company is already the card title directly above, so the count
+           alone is enough; repeating the name just crowds the row. -->
+      <span style="font-size:11px;color:var(--teal);font-weight:500;white-space:nowrap">🤝 ${matches.length} contact${matches.length===1?'':'s'}</span>
+      ${chips}
+      ${extra ? `<button onclick="jumpToCompanyContacts('${esc(app.company)}')" style="font-size:10px;padding:2px 7px;border-radius:7px;line-height:1.5;color:var(--faint);background:rgba(0,0,0,0.14);border:0.5px solid var(--brd)">+${extra} more</button>` : ''}
+    </div>`;
+}
+
+// '+N more' lands on the Network tab with the company typed into its search,
+// rather than expanding an arbitrary one of them.
+function jumpToCompanyContacts(company) {
+  const first = getContactsForCompany(company)[0];
+  if (first) jumpToContact(first.id);
+  else showTab('network');
+}
+
 function contactHeat(c) {
   const days = daysAgo(c.last);
   if(days === null) return 'new';
@@ -3878,7 +5067,7 @@ function renderNetwork(el) {
       </div>` : '';
 
 
-    return `<div class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
+    return `<div id="net-card-${c.id}" class="card net-card${isExpanded?' net-card-expanded':''}" style="margin-bottom:7px;border-left:3px solid ${hm.col};border-radius:0 10px 10px 0;padding:10px 12px;opacity:${isCold && !isExpanded?'0.82':'1'}">
       <div class="net-row" style="display:flex;gap:0;align-items:stretch">
         <!-- LEFT: who -->\
         <div style="flex:1;min-width:0;padding-right:10px;cursor:pointer" onclick="state.netExpanded=state.netExpanded||{};state.netExpanded[${c.id}]=!state.netExpanded[${c.id}];render('network')">
@@ -3992,7 +5181,19 @@ function renderNetwork(el) {
 
     ${state.netShowAdd ? contactForm('net') : ''}
     <div style="position:relative">
-      ${cards || '<div class="empty">No contacts yet — add people from your network above.</div>'}
+      ${cards || (() => {
+        // Two different nothings: an empty CRM, or a filter that matches none.
+        // The old copy said 'No contacts yet' for both, which was wrong in the
+        // second case and offered no way back out of the filter.
+        const totalContacts = (state.contacts || []).length;
+        if (totalContacts) return `<div class="empty">No contacts match this view.<br><button onclick="state.netFilter={...NET_FILTER_DEFAULT};render('network')" style="font-size:11px;margin-top:8px">Clear filters</button></div>`;
+        return `<div class="empty" style="line-height:1.7">
+          <div style="font-size:13px;color:var(--tx);font-weight:500;margin-bottom:4px">No contacts yet</div>
+          <div style="font-size:12px;color:var(--muted);max-width:46ch;margin:0 auto 10px">Add the people you have talked to, or import a CSV from Sync. Once a contact's company matches one of your applications, that application card links to them automatically.</div>
+          ${isGuest() ? '' : `<button style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px" onclick="state.netShowAdd=true;state.netEditing=null;render('network')">+ Add your first contact</button>
+          <button onclick="showTab('sync')" style="font-size:11px;margin-left:6px">Import from CSV</button>`}
+        </div>`;
+      })()}
       ${isGuest() ? `<div style="position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to bottom, transparent, var(--navy-deep) 90%);pointer-events:none;border-radius:0 0 8px 8px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:18px"><span style="font-size:11px;color:var(--muted);letter-spacing:.06em;background:rgba(255,255,255,.04);border:1px solid var(--navy-border2);padding:5px 14px;border-radius:20px">+ more contacts in full view</span></div>` : ''}
     </div>
   `;
@@ -5273,6 +6474,10 @@ function renderSync(el) {
       </p>
     </div>
 
+    ${renderBoardSlugs()}
+
+    ${renderBoardSettings()}
+
     <div class="card" style="margin-bottom:16px;border-color:${cloudConnected?'var(--green-dim)':'var(--amber-dim)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div class="row">${cloudBadge}</div>
@@ -5280,6 +6485,7 @@ function renderSync(el) {
           ? `<div class="row" style="gap:6px"><button onclick="flushCloudSave()" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">⟳ Sync now</button><button class="danger" onclick="disconnectCloud()" style="font-size:11px">Disconnect</button></div>`
           : ''}
       </div>
+      ${cloudConnected ? renderPayloadMeter() : ''}
       ${cloudConnected ? `
         <p style="font-size:12px;color:var(--muted);line-height:1.6">Every change saves instantly on this device and syncs to GitHub Gist in batches (about every 30s, and whenever you close the tab). Hit <strong style="color:var(--tx)">Sync now</strong> to push immediately.</p>
         <div style="margin-top:10px;padding:8px 12px;border-radius:6px;background:var(--surf2);border:1px solid var(--brd);font-size:11px;color:var(--faint)">
@@ -5303,6 +6509,8 @@ function renderSync(el) {
           <div style="font-size:11px;color:var(--faint);margin-top:4px">The hex string in your Gist URL: gist.github.com/username/<strong>this-part</strong></div>
         </div>
         <div id="setup-error" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px"></div>
+        <div id="gist-diag" style="font-size:11.5px;margin-bottom:10px"></div>
+        <button onclick="runGistDiagnostic()" style="width:100%;padding:7px 0;font-size:11.5px;margin-bottom:6px">Test connection</button>
         <button id="setup-btn" class="amber" style="width:100%;padding:9px 0;font-size:13px" onclick="doCloudSetup()">Connect →</button>
       `}
     </div>
@@ -5502,6 +6710,175 @@ function doImportContacts() {
   reader.readAsText(file, 'UTF-8');
 }
 
+// ── JOB BOARDS / SLUG MANAGER (v1_4_0) ───────────────────────────────────────
+// Lives in Sync because the slugs are configuration, and because sitting on the
+// profile means they ride the existing Gist prefs sync to your other devices.
+
+function renderBoardSlugs() {
+  const prof = getProfile() || {};
+  const counts = {
+    gh: bdParseCsv(prof.ghSlugs).length,
+    lever: bdParseCsv(prof.leverSlugs).length,
+    ashby: bdParseCsv(prof.ashbySlugs).length,
+  };
+  const total = counts.gh + counts.lever + counts.ashby;
+
+  const probeBlock = (() => {
+    if (state.bdProbeLoading) return `<div style="font-size:11.5px;color:var(--muted);padding:8px 0">Checking Greenhouse, Lever and Ashby for “${esc(state.bdProbeQ)}”…</div>`;
+    if (state.bdProbeHits === null) return '';
+    if (!state.bdProbeHits.length) return `
+      <div style="margin-top:10px;padding:10px 12px;border-radius:6px;background:rgba(0,0,0,0.18);border:1px solid var(--brd);font-size:11.5px;color:var(--muted);line-height:1.6">
+        No public board for <strong style="color:var(--tx)">${esc(state.bdProbeQ)}</strong>.
+        ${state.bdProbeNote?`<div style="margin-top:4px;color:var(--faint)">${esc(state.bdProbeNote)}</div>`:''}
+      </div>`;
+    return `
+      <div style="margin-top:10px;display:grid;gap:6px">
+        ${state.bdProbeHits.map(h => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 11px;border-radius:6px;background:var(--jade-pale);border:1px solid var(--jade-border);flex-wrap:wrap">
+            <div style="font-size:11.5px;color:var(--tx);min-width:0">
+              <strong style="color:var(--jade)">${esc(h.ats)}</strong> ·
+              <code style="font-size:11px;background:var(--surf2);padding:1px 5px;border-radius:3px">${esc(h.slug)}</code>
+              <span style="color:var(--muted)"> · ${Number(h.openings)||0} opening${Number(h.openings)===1?'':'s'}</span>
+            </div>
+            <button onclick="bdAddSlug('${esc(h.ats)}','${esc(h.slug)}')" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:rgba(0,0,0,0.14);white-space:nowrap">+ Add</button>
+          </div>`).join('')}
+      </div>`;
+  })();
+
+  return `
+    <div class="card" style="margin-bottom:16px;border-color:var(--teal-border);border-left:3px solid var(--teal-light)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500;color:var(--tx)">🛰 Job boards</div>
+        <span style="font-size:11px;color:var(--muted)">${total} board${total===1?'':'s'} saved</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 14px">
+        Powers <strong style="color:var(--tx)">Live Board Search</strong> on the board tab. Each company publishes under a slug on its
+        applicant tracking system, and the slug is rarely the company name — Headspace is
+        <code style="background:var(--surf2);padding:1px 5px;border-radius:3px;font-size:11px">hs</code>.
+        Look a company up below rather than guessing.
+      </p>
+
+      <div style="padding:11px 13px;border-radius:7px;background:rgba(0,0,0,0.20);border:1px solid var(--brd);margin-bottom:14px">
+        ${lbl('Find a company\'s board')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input id="bd-probe-q" value="${esc(state.bdProbeQ)}" placeholder="Company name (e.g. Spring Health)"
+                 onkeydown="if(event.key==='Enter')bdProbe()" style="flex:1;min-width:180px">
+          <button onclick="bdProbe()" ${state.bdProbeLoading?'disabled':''} style="font-size:11px;color:var(--teal-light);border-color:var(--teal-border);background:rgba(0,0,0,0.14);white-space:nowrap">${state.bdProbeLoading?'Checking…':'Look up'}</button>
+        </div>
+        ${probeBlock}
+      </div>
+
+      <div style="display:grid;gap:10px;margin-bottom:12px">
+        <div>${lbl(`Greenhouse slugs${counts.gh?` (${counts.gh})`:''}`)}<input id="bd-gh" value="${esc(prof.ghSlugs||'')}" placeholder="lirio, hs, daybreakhealth" style="width:100%"></div>
+        <div>${lbl(`Lever slugs${counts.lever?` (${counts.lever})`:''}`)}<input id="bd-lever" value="${esc(prof.leverSlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
+        <div>${lbl(`Ashby slugs${counts.ashby?` (${counts.ashby})`:''}`)}<input id="bd-ashby" value="${esc(prof.ashbySlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
+      </div>
+
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button onclick="bdSaveSlugs()" style="font-size:11px;color:var(--teal-light);border-color:var(--teal-border);background:rgba(0,0,0,0.18)">Save boards</button>
+        <span style="font-size:10.5px;color:var(--faint);line-height:1.5">Large medtech (Medtronic, Boston Scientific, Abbott, Stryker) runs on Workday, which has no public board API — keep using the launcher below for those.</span>
+      </div>
+    </div>
+  `;
+}
+
+// ── CLOUD PAYLOAD METER (v1_4_6) ─────────────────────────────────────────────
+// The Gist API stops returning a file inline past about 1MB. Before this the
+// number was invisible until a sync broke, so the meter shows it continuously
+// and points at the part worth reclaiming.
+
+function renderPayloadMeter() {
+  const total = payloadBytes(cloudPayload());
+  const jd = storedJdBytes();
+  const pct = Math.min(100, Math.round(total / GIST_INLINE_LIMIT * 100));
+  const warn = total >= GIST_INLINE_LIMIT * GIST_WARN_AT;
+  const over = total >= GIST_INLINE_LIMIT;
+  const col = over ? 'var(--red)' : warn ? 'var(--amber)' : 'var(--green-dim)';
+  const jdPct = total ? Math.round(jd / total * 100) : 0;
+  const trimCount = trimmableApps().length;
+
+  return `
+    <div style="margin:4px 0 12px;padding:10px 12px;border-radius:7px;background:rgba(0,0,0,0.20);border:1px solid ${warn?'var(--amber-dim)':'var(--brd)'}">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--muted)">Cloud payload</span>
+        <span style="font-size:11px;color:${col};font-weight:600;font-variant-numeric:tabular-nums">${fmtBytes(total)} / ~1 MB${pct>=10?` · ${pct}%`:''}</span>
+      </div>
+      <div style="height:5px;border-radius:99px;background:rgba(0,0,0,0.30);overflow:hidden">
+        <div style="height:100%;width:${Math.max(2,pct)}%;background:${col};border-radius:99px"></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--faint);margin-top:7px;line-height:1.55">
+        ${jd ? `Stored job descriptions are ${fmtBytes(jd)} of that${jdPct>=5?` (${jdPct}%)`:''}.` : 'No stored job descriptions yet.'}
+        ${over
+          ? `<span style="color:var(--red)"> Past this point GitHub stops returning the file inline, so syncing will fail until it comes down.</span>`
+          : warn ? `<span style="color:var(--amber)"> Approaching the limit GitHub returns inline.</span>` : ''}
+      </div>
+      ${trimCount ? `<button onclick="trimStoredJds()" style="font-size:11px;margin-top:9px;color:var(--amber);border-color:var(--amber-dim);background:rgba(201,138,14,0.10)">Trim ${trimCount} stored description${trimCount===1?'':'s'}</button>` : ''}
+    </div>`;
+}
+
+// ── SEARCH SETTINGS (v1_4_2) ─────────────────────────────────────────────────
+// Everything that shapes a board search, editable here instead of in code. The
+// rules half is the same object the board tab's drawer edits, so a change in
+// either place is the same change.
+
+function renderBoardSettings() {
+  const r = getBoardRules();
+  const o = getBoardOpts();
+  const num = (id, val, ph, min, max, step) =>
+    `<input id="${id}" type="number" min="${min}" max="${max}" step="${step||1}" value="${esc(val)}" placeholder="${esc(ph)}" style="width:100%">`;
+
+  return `
+    <div class="card" style="margin-bottom:16px;border-color:var(--sky-blue-mid);border-left:3px solid var(--sky-blue)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:500;color:var(--tx)">🔎 Search rules &amp; limits</div>
+        <button onclick="bdResetOpts()" style="font-size:11px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10)">Reset to defaults</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 14px">
+        The starting rules for every board search, and the limits the aggregator runs under.
+        The <strong style="color:var(--tx)">Rules</strong> drawer on the board tab edits the same values, so tweaks you make
+        mid-search are saved here too. Everything on this card syncs with your profile.
+      </p>
+
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;margin-bottom:8px">Filter rules</div>
+      <div style="display:grid;gap:10px;margin-bottom:8px">
+        <div>${lbl('Default keyword(s) — prefills the search box')}<input id="bs-include" value="${esc(r.include)}" placeholder="product manager, senior product manager" style="width:100%"></div>
+        <div>${lbl('Exclude — hides a posting if any term appears in its title, company, location or JD')}<input id="bs-exclude" value="${esc(r.exclude)}" placeholder="intern, director, vp, clearance" style="width:100%"></div>
+        <div>${lbl('Allowed locations — blank means anywhere')}<input id="bs-locations" value="${esc(r.locations)}" placeholder="remote, minneapolis, mn" style="width:100%"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:8px">
+        <div>${lbl('Min salary ($K)')}${num('bs-minsal', r.minSalaryK || '', '0 = off', 0, 999, 5)}</div>
+        <div>${lbl('Posted within (days)')}${num('bs-maxage', r.maxAgeDays || '', '0 = any', 0, 365, 1)}</div>
+        <div>${lbl('Min AI fit (1-10)')}${num('bs-minfit', r.minFit || '', '0 = any', 0, 10, 1)}</div>
+      </div>
+      <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:16px">
+        <input id="bs-remote" type="checkbox" ${r.remoteOnly?'checked':''} style="width:auto"> Remote roles only
+      </label>
+
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase;margin:4px 0 8px;padding-top:12px;border-top:1px solid var(--brd)">Sources &amp; limits</div>
+      <div style="display:grid;gap:8px;margin-bottom:10px">
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted)">
+          <input id="bs-remotive" type="checkbox" ${o.useRemotive?'checked':''} style="width:auto"> Include Remotive (a general remote-jobs feed, searched alongside your own boards)
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted)">
+          <input id="bs-hidetracked" type="checkbox" ${o.hideTracked?'checked':''} style="width:auto"> Hide postings already in the tracker
+        </label>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+        <div>${lbl('Max postings per search')}${num('bs-maxresults', o.maxResults, '120', 10, 300, 10)}</div>
+        <div>${lbl('JD text pulled (characters)')}${num('bs-jdchars', o.jdChars, '6000', 500, 20000, 500)}</div>
+        <div>${lbl('JD text kept per tracked job')}${num('bs-keepjd', o.keepJdChars, '1500', 0, 20000, 250)}</div>
+        <div>${lbl('Postings per AI scoring run')}${num('bs-triagebatch', o.triageBatch, '10', 1, 25, 1)}</div>
+        <div>${lbl('Give up on a board after (ms)')}${num('bs-timeout', o.timeoutMs, '8000', 2000, 20000, 500)}</div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="bdSaveOpts()" class="amber" style="font-size:11px;padding:6px 16px;background:var(--sky-blue);border-color:var(--sky-blue)">Save search settings</button>
+        <span style="font-size:10.5px;color:var(--faint);line-height:1.5">More JD text pulled means sharper AI scores and slower searches. What is <em>kept</em> is separate, and it is the main thing that grows your cloud payload. 0 keeps the full text.</span>
+      </div>
+    </div>
+  `;
+}
+
 // ── CLOUD SETUP SCREEN ────────────────────────────────────────────────────────
 
 function renderCloudSetup(el) {
@@ -5531,79 +6908,14 @@ function renderCloudSetup(el) {
           <p style="font-size:11px;color:var(--faint);margin-top:5px">The long hex string in your Gist URL: gist.github.com/username/<strong>this-part</strong></p>
         </div>
         <div id="setup-error" style="font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px"></div>
+        <div id="gist-diag" style="font-size:11.5px;margin-bottom:10px"></div>
+        <button onclick="runGistDiagnostic()" style="width:100%;padding:7px 0;font-size:11.5px;margin-bottom:6px">Test connection</button>
         <button id="setup-btn" class="amber full" onclick="doCloudSetup()">Connect →</button>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--brd)">
           <button class="ghost" onclick="skipCloudSetup()" style="font-size:11px;width:100%">Skip for now — use this device only</button>
         </div>
       </div>
     </div>`;
-}
-
-async function doMigrateFromJsonBin() {
-  const token  = document.getElementById('setup-gh-token').value.trim();
-  const gistId = document.getElementById('setup-gh-gist').value.trim();
-  const statusEl = document.getElementById('migrate-status');
-  const errEl    = document.getElementById('setup-error');
-  if (!token)  { errEl.textContent = 'Enter your GitHub PAT above first.'; return; }
-  if (!gistId) { errEl.textContent = 'Enter your Gist ID above first.'; return; }
-
-  const btn = document.getElementById('migrate-btn');
-  btn.disabled = true; btn.textContent = 'Reading JSONBin…';
-  statusEl.style.color = 'var(--muted)';
-  statusEl.textContent = 'Step 1 of 3 — reading your data from JSONBin…';
-
-  const oldKey = localStorage.getItem('jb_key');
-  const oldBin = localStorage.getItem('jb_bin');
-
-  try {
-    // Step 1: read from JSONBin using old credentials
-    const jbResp = await fetch('https://api.jsonbin.io/v3/b/' + oldBin + '/latest', {
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': oldKey, 'X-Bin-Meta': 'false' }
-    });
-    if (!jbResp.ok) throw new Error('JSONBin read failed ' + jbResp.status);
-    const jbData = await jbResp.json();
-
-    const appCount = (jbData.apps || []).length;
-    const contactCount = (jbData.contacts || []).length;
-    statusEl.textContent = 'Step 2 of 3 — got ' + appCount + ' apps, ' + contactCount + ' contacts. Connecting to Gist…';
-    btn.textContent = 'Connecting to Gist…';
-
-    // Step 2: verify Gist is reachable
-    state.ghToken = token; state.ghGistId = gistId;
-    await ghRead();
-
-    statusEl.textContent = 'Step 3 of 3 — pushing to Gist…';
-    btn.textContent = 'Pushing to Gist…';
-
-    // Step 3: load JSONBin data into state and push to Gist
-    if (jbData.apps)      state.apps      = jbData.apps;
-    if (jbData.contacts)  state.contacts  = jbData.contacts;
-    if (jbData.tasks)     state.tasks     = jbData.tasks;
-    if (jbData.referrals) state.referrals = jbData.referrals;
-
-    await ghWrite();
-    saveCredentials();
-
-    // Sync localStorage backup to match
-    localStorage.setItem('apps_backup',      JSON.stringify(state.apps));
-    localStorage.setItem('contacts_backup',  JSON.stringify(state.contacts));
-    localStorage.setItem('tasks',            JSON.stringify(state.tasks));
-    localStorage.setItem('referrals',        JSON.stringify(state.referrals));
-    localStorage.setItem('backup_updatedAt', new Date().toISOString());
-
-    statusEl.style.color = 'var(--green)';
-    statusEl.textContent = '✓ Migration complete — ' + appCount + ' apps and ' + contactCount + ' contacts synced to Gist.';
-    setTimeout(() => {
-      showTab('board');
-      setSyncStatus('✓ migrated from JSONBin · ' + appCount + ' apps', false);
-    }, 1500);
-
-  } catch(e) {
-    state.ghToken = ''; state.ghGistId = '';
-    statusEl.style.color = 'var(--red)';
-    statusEl.textContent = 'Migration failed: ' + e.message;
-    btn.disabled = false; btn.textContent = 'Migrate from JSONBin →';
-  }
 }
 
 function skipCloudSetup() {
