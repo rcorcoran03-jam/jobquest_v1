@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.7.1  (date + draft accuracy fixes)       ║
+║  JOBQUEST — Starter Edition  ·  v1.7.2  (savedAt round-trip + repair)       ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.7.2';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -5520,7 +5520,14 @@ function wkStats(days) {
   resurfaced.length = 0;
   trulyResurfaced.forEach(r => resurfaced.push(r));
 
-  const newLeads = apps.filter(a => inWin(a.savedAt || a.date));
+  // The earliest date a card can prove, not whichever field is populated. A
+  // role applied to in May is not a new lead in November just because a CSV
+  // round trip re-stamped savedAt to the day of the import.
+  const firstSeen = a => {
+    const d = [wkDateOnly(a.savedAt), wkDateOnly(a.date)].filter(Boolean).sort();
+    return d[0] || '';
+  };
+  const newLeads = apps.filter(a => inWin(firstSeen(a)));
   const active   = apps.filter(a => !WK_SETBACK.includes(a.stage));
   // Applied counts everything at or past Applied on the ladder, so a role in
   // Final Round still counts as an application that went out.
@@ -6104,6 +6111,83 @@ function applyBackfill() {
   save();
   showToast(`Recovered ${map.size} creation date${map.size===1?'':'s'}.`);
   render('sync');
+}
+
+// ── IMPORT-STAMP REPAIR (v1_7_2) ─────────────────────────────────────────────
+// Until v1.7.2 the CSV export left savedAt out, so an export/import round trip
+// re-stamped every card with the day of the import. The tell is a card that
+// was applied to BEFORE it supposedly entered the tracker, which cannot
+// happen: the Date Applied is real history and the savedAt is an artifact.
+// Those are repairable without guessing, because the earlier date is already
+// on the card.
+
+function stampRepairPlan() {
+  const apps = (state.apps || []).filter(a => a && typeof a === 'object');
+  const fixable = [], undated = [];
+  const stamps = {};
+  apps.forEach(a => {
+    const sv = wkDateOnly(a.savedAt), dt = wkDateOnly(a.date);
+    if (sv) stamps[sv] = (stamps[sv] || 0) + 1;
+    if (!sv && !dt) undated.push(a);
+    if (sv && dt && dt < sv) fixable.push({ app: a, from: sv, to: dt });
+  });
+  const cluster = Object.entries(stamps).sort((x,y)=>y[1]-x[1])[0] || null;
+  return {
+    fixable, undated,
+    cluster: cluster && cluster[1] >= Math.max(10, Math.round(apps.length * 0.25))
+      ? { date: cluster[0], n: cluster[1] } : null,
+    total: apps.length,
+  };
+}
+
+function applyStampRepair() {
+  const plan = stampRepairPlan();
+  if (!plan.fixable.length) { showToast('No mis-stamped dates found.'); return; }
+  if (!confirm(`Move the tracker-entry date back to the application date on ${plan.fixable.length} card${plan.fixable.length===1?'':'s'}?\n\nThese were applied to before they supposedly entered the tracker, which means the entry date came from an import rather than from you. Only those cards change, and only that one field.`)) return;
+  const map = new Map(plan.fixable.map(f => [f.app.id, f.to]));
+  state.apps = state.apps.map(a => map.has(a.id) ? { ...a, savedAt: map.get(a.id) } : a);
+  save();
+  showToast(`Repaired ${map.size} entry date${map.size===1?'':'s'}.`);
+  render('sync');
+}
+
+function renderStampRepair() {
+  const plan = stampRepairPlan();
+  if (!plan.fixable.length && !plan.cluster && !plan.undated.length) return '';
+
+  const clusterLine = plan.cluster
+    ? `<div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:8px">
+         <strong style="color:var(--tx)">${plan.cluster.n} of ${plan.total} cards share one tracker-entry date (${esc(plan.cluster.date)}).</strong>
+         That is the signature of a CSV round trip, not of a day you added ${plan.cluster.n} roles. While it stands, the weekly
+         <strong style="color:var(--tx)">New</strong> count reads the same number in every time window.
+       </div>` : '';
+
+  const fixLine = plan.fixable.length
+    ? `<div style="font-size:11.5px;color:var(--muted);line-height:1.6">
+         ${plan.fixable.length} card${plan.fixable.length===1?' was':'s were'} applied to <em>before</em> the recorded entry date, which cannot happen.
+         For ${plan.fixable.length===1?'that one':'those'} the real date is already on the card and can be moved back with no guessing.
+       </div>
+       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:11px">
+         <button onclick="applyStampRepair()" style="font-size:11px;color:var(--teal);border-color:var(--teal-dim);background:rgba(45,212,191,0.10)">Repair ${plan.fixable.length} entry date${plan.fixable.length===1?'':'s'}</button>
+         <span style="font-size:10.5px;color:var(--faint);line-height:1.5">Changes the entry date only. Date Applied, stage and activity are untouched.</span>
+       </div>`
+    : `<div style="font-size:11px;color:var(--faint);line-height:1.6">Nothing is repairable automatically: these cards carry no Date Applied to fall back on. Exports from v1.7.2 onward include the entry date, so this will not happen again.</div>`;
+
+  const undatedLine = plan.undated.length
+    ? `<div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:10px;padding-top:9px;border-top:1px solid var(--brd)">
+         <strong style="color:var(--tx)">${plan.undated.length} card${plan.undated.length===1?' has':'s have'} no date of any kind.</strong>
+         Nothing records when ${plan.undated.length===1?'it':'they'} entered the tracker, so ${plan.undated.length===1?'it is':'they are'} left out of the weekly
+         <strong style="color:var(--tx)">New</strong> count rather than counted as added today. Set a Date Applied on any that matter,
+         or run the creation-date recovery above if ${plan.undated.length===1?'its id carries':'their ids carry'} a usable timestamp.
+       </div>` : '';
+
+  return `
+  <div class="card" style="margin-bottom:16px;border-color:var(--amber-dim);border-left:3px solid var(--amber)">
+    <div style="font-size:13px;font-weight:500;color:var(--tx);margin-bottom:6px">📅 Tracker-entry dates</div>
+    ${clusterLine}
+    ${fixLine}
+    ${undatedLine}
+  </div>`;
 }
 
 function renderDataHealth() {
@@ -7089,8 +7173,13 @@ async function genRefMsg(id) {
   );
   save();
 }
-const APP_COLS  = ['Company','Role Title','Salary Range','Location / Remote','Date Applied','Stage','Priority','Fit Score','Key Requirement Match','Gaps / Notes','Next Step','Next Step Date','Recruiter / Contact','Link / Source','Req #','Networking Contact','Relationship / Status','Notes','Job Link','Page URL'];
-const APP_KEYS  = ['company','role','salary','location','date','stage','priority','fit','keyReqs','gaps','nextStep','nextDate','contact','source','reqNum','netContact','netRel','notes','jobLink','pageUrl'];
+// 'Date Added' carries savedAt. Leaving it out of the export meant every
+// export/import round trip destroyed the date each role entered the tracker
+// and reset it to the day of the import, which made the weekly New count read
+// the same number in every time window. It is last so older exports, which
+// have 20 columns, still line up.
+const APP_COLS  = ['Company','Role Title','Salary Range','Location / Remote','Date Applied','Stage','Priority','Fit Score','Key Requirement Match','Gaps / Notes','Next Step','Next Step Date','Recruiter / Contact','Link / Source','Req #','Networking Contact','Relationship / Status','Notes','Job Link','Page URL','Date Added'];
+const APP_KEYS  = ['company','role','salary','location','date','stage','priority','fit','keyReqs','gaps','nextStep','nextDate','contact','source','reqNum','netContact','netRel','notes','jobLink','pageUrl','savedAt'];
 const NET_COLS  = ['Company','Role','Alumni Contact','Relationship','Last Touch','Next Touch','Status','Notes'];
 const NET_KEYS  = ['company','role','name','rel','last','next','status','notes'];
 
@@ -7392,6 +7481,7 @@ const IMPORT_HEADER_ALIASES = {
   'follow-up date':'nextDate', 'follow up date':'nextDate', 'followup date':'nextDate', 'follow-up':'nextDate',
   'date applied':'date', 'applied':'date', 'applied date':'date',
   'created':'createdAt', 'created time':'createdAt', 'createdat':'createdAt',
+  'date added':'savedAt', 'savedat':'savedAt', 'saved at':'savedAt', 'added':'savedAt',
   'source':'source', 'location':'location', 'salary':'salary', 'priority':'priority',
 };
 
@@ -7561,7 +7651,14 @@ function importFieldsToNewCard(f, today, now) {
     actLog: [{date: today, note: 'Imported from CSV'}],
   };
   if (!['High','Medium','Low'].includes(card.priority)) card.priority = 'Medium';
-  card.savedAt = (f.createdAt||'').slice(0,10) || today;
+  // Prefer a creation date the file actually carries, and leave it BLANK when
+  // the file carries none. Defaulting to today is what stamped a whole
+  // imported tracker with one date and made every roll-up window read the
+  // same number. A card typed in by hand today really was added today, so
+  // addApp still stamps it; a row imported from a file of unknown age is of
+  // unknown age, and saying otherwise puts a made-up date in the weekly
+  // Update. Blank is excluded from New rather than counted as new.
+  card.savedAt = wkDateOnly(f.savedAt) || wkDateOnly(f.createdAt) || wkDateOnly(f.date) || '';
   return card;
 }
 
@@ -7615,7 +7712,9 @@ function importMergeCard(existing, f, keysInFile, today, now, derived={}, opts={
   });
   if (merged.stage !== existing.stage) {
     merged.actLog = [...(existing.actLog||[]), {date: today, note: `Stage → ${merged.stage} (import)`}];
-    if (!merged.savedAt) merged.savedAt = today;
+    // Same reasoning as importFieldsToNewCard: only adopt a date the file
+    // actually supplies, never today.
+    if (!merged.savedAt) merged.savedAt = wkDateOnly(f.savedAt) || wkDateOnly(f.createdAt) || wkDateOnly(f.date) || '';
   }
   merged.updatedAt = now;
   return merged;
@@ -7954,6 +8053,8 @@ function renderSync(el) {
     ${renderKbSettings()}
 
     ${renderDataHealth()}
+
+    ${renderStampRepair()}
 
     <div class="card" style="margin-bottom:16px;border-color:${cloudConnected?'var(--green-dim)':'var(--amber-dim)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
