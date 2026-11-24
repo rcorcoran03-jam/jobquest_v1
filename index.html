@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.5.3  (token swap + sync guard)            ║
+║  JOBQUEST — Starter Edition  ·  v1.6.0  (date recovery + two-row KPIs)       ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.6.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -3736,11 +3736,15 @@ function addApp() {
   const fields = readAppForm('add');
   if(!fields.company) return;
   const now = new Date().toISOString();
-  const savedAt = fields.stage === 'Saved' ? now.slice(0,10) : '';
+  // Every record gets a creation date, whatever stage it starts at. Gating
+  // this on stage 'Saved' meant a role added straight to Applied carried no
+  // date at all, so it could never count as a new lead in the weekly update.
+  const savedAt = now.slice(0,10);
   state.apps.push({
     id: Date.now(),
     ...fields,
     savedAt,
+    date: now.slice(0,10),
     actLog: [{date: now.slice(0,10), note: 'Added to tracker'}],
     updatedAt: now
   });
@@ -5166,6 +5170,10 @@ function wkStats(days) {
 
   const newLeads = apps.filter(a => inWin(a.savedAt || a.date));
   const active   = apps.filter(a => !WK_SETBACK.includes(a.stage));
+  // Applied counts everything at or past Applied on the ladder, so a role in
+  // Final Round still counts as an application that went out.
+  const WK_APPLIED_IDX = WK_PROGRESS.indexOf('Applied');
+  const applied  = active.filter(a => WK_PROGRESS.indexOf(a.stage) >= WK_APPLIED_IDX);
   const interviewing = apps.filter(a => INTERVIEW_STAGES.includes(a.stage));
   const offers   = apps.filter(a => a.stage === 'Offer');
 
@@ -5213,6 +5221,7 @@ function wkStats(days) {
       // Event counts include what you added by hand; pipeline counts (active,
       // interviewing, total tracked) stay strictly from tracked records.
       newLeads: newLeads.length + man.lead.length,
+      applied: applied.length,
       interviewing: interviewing.length, offers: offers.length,
       contacts: contacts.length, touched: touched.length + man.network.length,
       overdue: overdue.length,
@@ -5228,8 +5237,8 @@ function wkFactsForAI(s) {
   return JSON.stringify({
     period: `${s.start} to ${s.end}`,
     totals: s.totals,
-    movedForward: s.movedForward.slice(0,8).map(m=>`${m.app.company} ${m.app.role}: ${m.from} → ${m.to}`),
-    stumbled:     s.stumbled.slice(0,6).map(m=>`${m.app.company} ${m.app.role}: ${m.to}`),
+    advanced: s.movedForward.slice(0,8).map(m=>`${m.app.company} ${m.app.role}: ${m.from} → ${m.to}`),
+    closed:   s.stumbled.slice(0,6).map(m=>`${m.app.company} ${m.app.role}: ${m.to}`),
     newLeads:     s.newLeads.slice(0,8).map(a=>`${a.company} ${a.role}`),
     resurfaced:   s.resurfaced.slice(0,5).map(r=>`${r.app.company} after ${r.quietDays}d quiet`),
     contactsTouched: s.touched.slice(0,8).map(c=>`${c.name} (${c.company})`),
@@ -5238,8 +5247,8 @@ function wkFactsForAI(s) {
     // Written by the candidate about things the tracker never recorded. Treat
     // as fact and weave in; these are often the most important items.
     addedByHand: {
-      movedForward: s.man.forward.map(m=>m.text),
-      stumbled:     s.man.stumbled.map(m=>m.text),
+      advanced: s.man.forward.map(m=>m.text),
+      closed:   s.man.stumbled.map(m=>m.text),
       newLeads:     s.man.lead.map(m=>m.text),
       networking:   s.man.network.map(m=>m.text),
       other:        s.man.note.map(m=>m.text),
@@ -5367,24 +5376,24 @@ function wkDocBody(s, narrative) {
 
     <div class="kpis">
       <div class="kpi"><b>${s.totals.active}</b><span>Active</span></div>
-      <div class="kpi"><b>${s.totals.newLeads}</b><span>New</span></div>
+      <div class="kpi"><b>${s.totals.applied}</b><span>Applied</span></div>
       <div class="kpi"><b>${s.totals.interviewing}</b><span>Interviewing</span></div>
-      <div class="kpi"><b>${s.totals.touched}</b><span>Contacts touched</span></div>
-      <div class="kpi"><b>${s.totals.all}</b><span>Total tracked</span></div>
+      <div class="kpi"><b>${s.totals.newLeads}</b><span>New</span></div>
+      <div class="kpi"><b>${s.totals.touched}</b><span>Outreach</span></div>
     </div>
 
     <div class="narr">${narrHtml}</div>
 
-    <h2>Moved forward (${s.movedForward.length + s.man.forward.length})</h2>${wkList(fwd,'fwd')}${more(s.movedForward,6)}
-    <h2>Stumbled (${s.stumbled.length + s.man.stumbled.length})</h2>${wkList(bad,'bad')}${more(s.stumbled,4)}
+    <h2>Advanced (${s.movedForward.length + s.man.forward.length})</h2>${wkList(fwd,'fwd')}${more(s.movedForward,6)}
+    <h2>Closed (${s.stumbled.length + s.man.stumbled.length})</h2>${wkList(bad,'bad')}${more(s.stumbled,4)}
 
     <div class="cols">
       <div><h2>New leads (${s.newLeads.length + s.man.lead.length})</h2>${wkList(nw)}${more(s.newLeads,5)}</div>
-      <div><h2>Resurfaced (${s.resurfaced.length})</h2>${wkList(re_)}${more(s.resurfaced,4)}</div>
+      <div><h2>Reopened (${s.resurfaced.length})</h2>${wkList(re_)}${more(s.resurfaced,4)}</div>
     </div>
 
     <div class="cols">
-      <div><h2>Networking this period (${s.touched.length + s.man.network.length})</h2>${wkList(tc)}${more(s.touched,5)}</div>
+      <div><h2>Outreach (${s.touched.length + s.man.network.length})</h2>${wkList(tc)}${more(s.touched,5)}</div>
       <div><h2>Follow-ups due (${s.upcoming.length}${s.totals.overdue?`, ${s.totals.overdue} overdue`:''})</h2>${wkList(up)}</div>
     </div>
 
@@ -5434,8 +5443,8 @@ function wkPrint() {
 // ── MANUAL EVENTS (v1_5_1) ───────────────────────────────────────────────────
 
 const WK_KINDS = [
-  { v:'forward',  l:'Moved forward' },
-  { v:'stumbled', l:'Stumbled' },
+  { v:'forward',  l:'Advanced' },
+  { v:'stumbled', l:'Closed' },
   { v:'lead',     l:'New lead' },
   { v:'network',  l:'Networking' },
   { v:'note',     l:'Also this period' },
@@ -5557,14 +5566,36 @@ function renderWeekly() {
   const opts = [7,14,30].map(d =>
     `<button class="tag ${state.wkDays===d?'on':''}" onclick="wkSetDays(${d})" style="font-size:10px">${d}d</button>`).join('');
 
+  // Two rows on purpose. The top row is pipeline state and does NOT move with
+  // the 7/14/30 toggle. The bottom row is events inside the window and does.
+  // One strip mixing the two was most of why these numbers read as confusing.
+  // Each tile carries its definition in a tooltip so the meaning lives next to
+  // the number instead of in a changelog.
+  const kpiTile = ([l,n,t]) => `
+    <div title="${esc(t)}" style="background:rgba(0,0,0,0.20);border:1px solid var(--brd);border-radius:7px;padding:7px 9px;cursor:help">
+      <div style="font-size:17px;font-weight:600;color:${n?'var(--tx)':'var(--faint)'};line-height:1.1">${n}</div>
+      <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${l}</div>
+    </div>`;
+  const kpiRow = (items) => `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:8px">${items.map(kpiTile).join('')}</div>`;
+  const kpiCap = (t) => `<div style="font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em">${esc(t)}</div>`;
+
   const counts = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:8px;margin:10px 0 12px">
-      ${[['Active',s.totals.active],['New',s.totals.newLeads],['Forward',s.movedForward.length],
-         ['Stumbled',s.stumbled.length],['Touched',s.totals.touched],['Resurfaced',s.resurfaced.length]]
-        .map(([l,n])=>`<div style="background:rgba(0,0,0,0.20);border:1px solid var(--brd);border-radius:7px;padding:7px 9px">
-          <div style="font-size:17px;font-weight:600;color:${n?'var(--tx)':'var(--faint)'};line-height:1.1">${n}</div>
-          <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${l}</div>
-        </div>`).join('')}
+    <div style="display:flex;flex-direction:column;gap:6px;margin:10px 0 13px">
+      ${kpiCap('Pipeline \u00b7 where things stand today')}
+      ${kpiRow([
+        ['Active', s.totals.active, 'Every tracked role that is not Rejected or Ghosted. Does not change with the day range.'],
+        ['Applied', s.totals.applied, 'Roles at Applied or further along: Applied, Phone Screen, Interview, Final Round, Offer.'],
+        ['Interviewing', s.totals.interviewing, 'Roles currently at Phone Screen, Interview or Final Round.'],
+        ['Offers', s.totals.offers, 'Roles currently at Offer.'],
+      ])}
+      ${kpiCap(`Last ${s.days} days \u00b7 what changed`)}
+      ${kpiRow([
+        ['New', s.totals.newLeads, `Roles added to the tracker in the last ${s.days} days, plus any new leads you added by hand below.`],
+        ['Advanced', s.movedForward.length, 'Stage moves up the ladder in this period. Counts moves, not roles, so two moves on one role count twice.'],
+        ['Closed', s.stumbled.length, 'Stage moves to Rejected or Ghosted in this period. Someone else usually decided this, which is why it is no longer called Stumbled.'],
+        ['Outreach', s.totals.touched, `Contacts whose last contact date falls in the last ${s.days} days, plus networking you added by hand below.`],
+        ['Reopened', s.resurfaced.length, `A role that went quiet for ${WK_RESURFACE_GAP}+ days and then saw activity. Anything already counted under Advanced or Closed is left out so one company does not appear three times.`],
+      ])}
     </div>`;
 
   const body = state.wkOpen ? `
@@ -5631,6 +5662,131 @@ function renderWeekly() {
 // does: 'Shockwave Medical (J&J)' and 'Shockwave Medical' must land on the same
 // key. Then the usual corporate and sector suffixes go, so 'Inspire Medical'
 // matches 'Inspire'.
+// ── DATA HEALTH / CREATION-DATE RECOVERY (v1_6_0) ────────────────────────────
+// addApp() used to stamp savedAt only when the new record's stage was exactly
+// 'Saved'. A role added straight to Applied therefore carried no creation date
+// at all, and the weekly update's New counter could never see it. The records
+// themselves still know: addApp(), the CSV importer and the JD analyzer all
+// mint ids with Date.now(), so the id IS the millisecond the record was
+// created. This reads a timestamp that was already written. It does not invent
+// one, and anything whose id is not a plausible timestamp is left alone.
+
+const ID_DATE_FLOOR = Date.parse('2024-01-01T00:00:00Z');
+
+function idToDate(id) {
+  const n = Number(id);
+  if (!Number.isFinite(n)) return '';
+  const ms = Math.floor(n);
+  // Demo rows use id 1, 2, 3. Anything below the floor or in the future is not
+  // a timestamp and gets no date rather than a wrong one.
+  if (ms < ID_DATE_FLOOR || ms > Date.now() + 86400000) return '';
+  const d = new Date(ms);
+  return isNaN(d) ? '' : d.toISOString().slice(0,10);
+}
+
+function backfillPlan() {
+  const apps = state.apps || [];
+  const fixable = [], unrecoverable = [];
+  apps.forEach(a => {
+    const dated = (a.savedAt && String(a.savedAt).slice(0,10))
+               || (a.date && String(a.date).slice(0,10));
+    if (dated) return;
+    const d = idToDate(a.id);
+    if (d) fixable.push({ app: a, date: d });
+    else unrecoverable.push(a);
+  });
+  fixable.sort((x, y) => y.date.localeCompare(x.date));
+  const today = wkToday();
+  const within = n => fixable.filter(f => wkDays(f.date, today) <= n).length;
+  const byMonth = {};
+  fixable.forEach(f => { const m = f.date.slice(0,7); byMonth[m] = (byMonth[m]||0) + 1; });
+  return {
+    fixable, unrecoverable, byMonth,
+    d7: within(7), d14: within(14), d30: within(30),
+    total: apps.length,
+    alreadyDated: apps.length - fixable.length - unrecoverable.length,
+  };
+}
+
+function applyBackfill() {
+  const plan = backfillPlan();
+  if (!plan.fixable.length) { showToast('Nothing to backfill.'); return; }
+  const msg = `Fill the creation date on ${plan.fixable.length} record${plan.fixable.length===1?'':'s'} from the timestamp stored in each record's id?\n\n`
+            + `Only records with no date at all are touched. Nothing already dated is changed, and no activity entries are added.`;
+  if (!confirm(msg)) return;
+  const map = new Map(plan.fixable.map(f => [f.app.id, f.date]));
+  state.apps = state.apps.map(a => map.has(a.id) ? { ...a, savedAt: map.get(a.id) } : a);
+  save();
+  showToast(`Recovered ${map.size} creation date${map.size===1?'':'s'}.`);
+  render('sync');
+}
+
+function renderDataHealth() {
+  const plan = backfillPlan();
+  const broken = plan.fixable.length;
+  const stuck  = plan.unrecoverable.length;
+
+  // Nothing wrong and nothing unrecoverable means no panel. A settings page
+  // full of green all-clear cards is just noise.
+  if (!broken && !stuck) return '';
+
+  if (!broken) {
+    return `
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:500;color:var(--tx);margin-bottom:6px">🩺 Data health</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0">
+        Every record that can carry a creation date has one.
+        ${stuck} record${stuck===1?'':'s'} ${stuck===1?'has':'have'} no recoverable date (demo rows, or imported without one);
+        ${stuck===1?'it':'they'} will not appear in the New count.
+      </p>
+    </div>`;
+  }
+
+  const months = Object.keys(plan.byMonth).sort().reverse().slice(0, 8);
+  const peak = Math.max(1, ...months.map(m => plan.byMonth[m]));
+  const bars = months.map(m => {
+    const n = plan.byMonth[m];
+    const pct = Math.round((n / peak) * 100);
+    const label = new Date(m + '-15T12:00:00').toLocaleDateString('en-US', { month:'short', year:'numeric' });
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:3px">
+      <span style="width:62px;color:var(--muted);flex-shrink:0">${esc(label)}</span>
+      <span style="flex:1;height:9px;background:rgba(0,0,0,0.22);border-radius:3px;overflow:hidden">
+        <span style="display:block;height:100%;width:${pct}%;background:var(--teal);border-radius:3px"></span>
+      </span>
+      <span style="width:26px;text-align:right;color:var(--tx);font-weight:600;flex-shrink:0">${n}</span>
+    </div>`;
+  }).join('');
+
+  const recent = [
+    ['Last 7 days',  plan.d7],
+    ['Last 14 days', plan.d14],
+    ['Last 30 days', plan.d30],
+  ].map(([l,n]) => `<div style="background:rgba(0,0,0,0.20);border:1px solid var(--brd);border-radius:7px;padding:7px 9px">
+      <div style="font-size:17px;font-weight:600;color:${n?'var(--teal)':'var(--faint)'};line-height:1.1">${n}</div>
+      <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${l}</div>
+    </div>`).join('');
+
+  return `
+  <div class="card" style="margin-bottom:16px;border-color:var(--amber-dim);border-left:3px solid var(--amber)">
+    <div style="font-size:13px;font-weight:500;color:var(--tx);margin-bottom:6px">🩺 Data health · ${broken} record${broken===1?'':'s'} missing a creation date</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 10px">
+      Until v1.6.0 a record only got a creation date when it was added at stage <strong style="color:var(--tx)">Saved</strong>.
+      Anything added straight to Applied has no date, so the weekly update's <strong style="color:var(--tx)">New</strong> count
+      has been reading low. Each of these records still carries the moment it was created inside its id.
+      Recovering it reads a timestamp that was already stored.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:8px;margin-bottom:11px">${recent}</div>
+    <div style="font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">What would be recovered, by month added</div>
+    ${bars}
+    <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px">
+      <button onclick="applyBackfill()" style="font-size:11px;color:var(--teal);border-color:var(--teal-dim);background:rgba(45,212,191,0.10)">Recover ${broken} creation date${broken===1?'':'s'}</button>
+      <span style="font-size:10.5px;color:var(--faint);line-height:1.5">
+        Fills blanks only. Nothing dated is overwritten${stuck?`, and ${stuck} record${stuck===1?'':'s'} with no recoverable timestamp ${stuck===1?'is':'are'} skipped`:''}.
+      </span>
+    </div>
+  </div>`;
+}
+
 function normalizeCompany(name) {
   return String(name || '')
     .toLowerCase()
@@ -7020,7 +7176,7 @@ function importFieldsToNewCard(f, today, now) {
     actLog: [{date: today, note: 'Imported from CSV'}],
   };
   if (!['High','Medium','Low'].includes(card.priority)) card.priority = 'Medium';
-  if (card.stage === 'Saved') card.savedAt = (f.createdAt||'').slice(0,10) || today;
+  card.savedAt = (f.createdAt||'').slice(0,10) || today;
   return card;
 }
 
@@ -7044,7 +7200,7 @@ function importMergeCard(existing, f, keysInFile, today, now, derived={}) {
   });
   if (merged.stage !== existing.stage) {
     merged.actLog = [...(existing.actLog||[]), {date: today, note: `Stage → ${merged.stage} (import)`}];
-    if (merged.stage === 'Saved' && !merged.savedAt) merged.savedAt = today;
+    if (!merged.savedAt) merged.savedAt = today;
   }
   merged.updatedAt = now;
   return merged;
@@ -7343,6 +7499,8 @@ function renderSync(el) {
     ${renderBoardSettings()}
 
     ${renderKbSettings()}
+
+    ${renderDataHealth()}
 
     <div class="card" style="margin-bottom:16px;border-color:${cloudConnected?'var(--green-dim)':'var(--amber-dim)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
