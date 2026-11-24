@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.7.2  (savedAt round-trip + repair)       ║
+║  JOBQUEST — Starter Edition  ·  v1.8.0  (contacts export: flags + activity) ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.8.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -5455,6 +5455,11 @@ function wkDateOnly(v) {
     const yr = m[3].length === 2 ? `20${m[3]}` : m[3];
     return wkValidYmd(`${yr}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`);
   }
+  // Last resort. Date's own parser is too willing: new Date('5/29') quietly
+  // returns May 2001, inventing a year nobody wrote. Only hand it strings
+  // that actually contain a four-digit year, so a yearless date stays
+  // unparseable and gets reported rather than silently dated.
+  if (!/\b\d{4}\b/.test(t)) return '';
   const d = new Date(t);
   return isNaN(d) ? '' : d.toISOString().slice(0,10);
 }
@@ -6149,6 +6154,130 @@ function applyStampRepair() {
   save();
   showToast(`Repaired ${map.size} entry date${map.size===1?'':'s'}.`);
   render('sync');
+}
+
+// ── CONTACT DATA HEALTH (v1_8_0) ─────────────────────────────────────────────
+// Four defects that a September Notion sync and years of hand entry left in
+// the network, all detectable without knowing anything about the records
+// beyond their own internal contradictions. Nothing here deletes or rewrites
+// on its own; each repair is a button, and the destructive one names what it
+// will remove before it runs.
+
+const CH_SENTENCE = /[.!?]\s|\s(the|and|then|with|he|she|they|from|about|more)\s/i;
+
+function contactHealth() {
+  const cs = (state.contacts || []).filter(c => c && typeof c === 'object');
+
+  // 1. Dates that are not YYYY-MM-DD. Mixed formats sort wrong and compare
+  //    wrong, which is how follow-ups go missing.
+  const odd = cs.filter(c => ['last','next'].some(k => {
+    const raw = String(c[k] || '').trim();
+    return raw && raw !== wkDateOnly(raw);
+  }));
+
+  // 2. A next touch earlier than the last touch means the follow-up was never
+  //    actually rescheduled after the last conversation.
+  const stale = cs.filter(c => {
+    const l = wkDateOnly(c.last), n = wkDateOnly(c.next);
+    return l && n && n < l;
+  });
+
+  // 3. A date with no year at all ("5/29"). wkDateOnly rejects these, so they
+  //    are invisible everywhere rather than merely wrong.
+  const noYear = cs.filter(c => ['last','next'].some(k =>
+    /^\d{1,2}[\/.-]\d{1,2}$/.test(String(c[k] || '').trim())));
+
+  // 4. Records whose NAME reads like note prose rather than a person, and
+  //    whose text already appears in another contact's notes. That is the
+  //    signature of a sync that wrote each notes field back as a new contact.
+  const norm = t => String(t||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>3);
+  const realNotes = cs.map(c => new Set(norm(c.notes)));
+  const phantom = cs.filter((c, i) => {
+    const nm = String(c.name || '');
+    if (nm.length < 25 && !CH_SENTENCE.test(nm)) return false;   // looks like a name
+    const words = norm(nm);
+    if (words.length < 4) return false;
+    return realNotes.some((set, j) => {
+      if (j === i || !set.size) return false;
+      const hit = words.filter(w => set.has(w)).length;
+      return hit / words.length >= 0.8;
+    });
+  });
+
+  return { total: cs.length, odd, stale, noYear, phantom };
+}
+
+function fixContactDates() {
+  const h = contactHealth();
+  if (!h.odd.length) { showToast('All contact dates are already in a single format.'); return; }
+  if (!confirm(`Rewrite ${h.odd.length} contact date${h.odd.length===1?'':'s'} to YYYY-MM-DD?\n\nOnly the format changes. A date with no year is left alone, because the year cannot be guessed.`)) return;
+  const ids = new Set(h.odd.map(c => c.id));
+  let n = 0;
+  state.contacts = state.contacts.map(c => {
+    if (!ids.has(c.id)) return c;
+    const out = {...c};
+    ['last','next'].forEach(k => {
+      const fixed = wkDateOnly(out[k]);
+      if (fixed && fixed !== out[k]) { out[k] = fixed; n++; }
+    });
+    return out;
+  });
+  save(); showToast(`Reformatted ${n} date${n===1?'':'s'}.`); render('sync');
+}
+
+function clearStaleNextDates() {
+  const h = contactHealth();
+  if (!h.stale.length) return;
+  if (!confirm(`Clear the next-touch date on ${h.stale.length} contact${h.stale.length===1?'':'s'}?\n\nEach has a next touch earlier than its own last touch, so the follow-up was never rescheduled. Clearing puts them back in the queue to be set properly. The last touch and the notes are untouched.`)) return;
+  const ids = new Set(h.stale.map(c => c.id));
+  state.contacts = state.contacts.map(c => ids.has(c.id) ? {...c, next:'', nextType:'', nextNote:''} : c);
+  save(); showToast(`Cleared ${ids.size} stale follow-up date${ids.size===1?'':'s'}.`); render('sync');
+}
+
+function removePhantomContacts() {
+  const h = contactHealth();
+  if (!h.phantom.length) return;
+  const names = h.phantom.slice(0,6).map(c => '· ' + String(c.name).slice(0,70)).join('\n');
+  if (!confirm(`Delete ${h.phantom.length} record${h.phantom.length===1?'':'s'} whose name is note text already stored on another contact?\n\n${names}${h.phantom.length>6?`\n· …and ${h.phantom.length-6} more`:''}\n\nThis cannot be undone from here. Export your contacts first if you want a copy.`)) return;
+  const ids = new Set(h.phantom.map(c => c.id));
+  const before = state.contacts.length;
+  state.contacts = state.contacts.filter(c => !ids.has(c.id));
+  save(); showToast(`Removed ${before - state.contacts.length} phantom record${before-state.contacts.length===1?'':'s'}.`); render('sync');
+}
+
+function renderContactHealth() {
+  const h = contactHealth();
+  if (!h.total) return '';
+  const issues = h.odd.length + h.stale.length + h.noYear.length + h.phantom.length;
+  if (!issues) return '';
+
+  const row = (n, text, btn) => n ? `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--brd)">
+      <div style="flex:1;min-width:200px;font-size:11.5px;color:var(--muted);line-height:1.6">${text}</div>
+      ${btn || ''}
+    </div>` : '';
+
+  return `
+  <div class="card" style="margin-bottom:16px;border-color:var(--amber-dim);border-left:3px solid var(--amber)">
+    <div style="font-size:13px;font-weight:500;color:var(--tx);margin-bottom:4px">🧹 Contact data health · ${issues} issue${issues===1?'':'s'} across ${h.total} contacts</div>
+    <div style="font-size:11px;color:var(--faint);line-height:1.6">Each of these is a record contradicting itself, so none of it depends on guessing what you meant.</div>
+
+    ${row(h.odd.length,
+      `<strong style="color:var(--tx)">${h.odd.length} contact${h.odd.length===1?' has a date':'s have dates'} in a non-standard format.</strong> Mixed formats sort and compare wrong, which is how a follow-up silently stops appearing in the weekly roll-up.`,
+      `<button onclick="fixContactDates()" style="font-size:11px;flex-shrink:0">Reformat dates</button>`)}
+
+    ${row(h.stale.length,
+      `<strong style="color:var(--tx)">${h.stale.length} next-touch date${h.stale.length===1?' is':'s are'} earlier than ${h.stale.length===1?'its':'their'} own last touch.</strong> The follow-up was never rescheduled after the last conversation. Names: ${h.stale.slice(0,4).map(c=>esc(c.name||'?')).join(', ')}${h.stale.length>4?` +${h.stale.length-4}`:''}.`,
+      `<button onclick="clearStaleNextDates()" style="font-size:11px;flex-shrink:0">Clear those dates</button>`)}
+
+    ${row(h.noYear.length,
+      `<strong style="color:var(--tx)">${h.noYear.length} date${h.noYear.length===1?' has':'s have'} no year</strong> (${h.noYear.slice(0,3).map(c=>esc(c.name||'?')).join(', ')}${h.noYear.length>3?` +${h.noYear.length-3}`:''}). The year cannot be guessed, so these need setting by hand on the card. Until then they are invisible to every date calculation.`,
+      '')}
+
+    ${row(h.phantom.length,
+      `<strong style="color:var(--tx)">${h.phantom.length} record${h.phantom.length===1?' looks':'s look'} like note text saved as a person.</strong> The name reads as prose and already appears in another contact's notes, which is what a sync writing the notes field back as a new contact produces. Check a few before deleting, and export first.`,
+      `<button class="danger" onclick="removePhantomContacts()" style="font-size:11px;flex-shrink:0">Review and delete</button>`)}
+  </div>`;
 }
 
 function renderStampRepair() {
@@ -7180,8 +7309,50 @@ async function genRefMsg(id) {
 // have 20 columns, still line up.
 const APP_COLS  = ['Company','Role Title','Salary Range','Location / Remote','Date Applied','Stage','Priority','Fit Score','Key Requirement Match','Gaps / Notes','Next Step','Next Step Date','Recruiter / Contact','Link / Source','Req #','Networking Contact','Relationship / Status','Notes','Job Link','Page URL','Date Added'];
 const APP_KEYS  = ['company','role','salary','location','date','stage','priority','fit','keyReqs','gaps','nextStep','nextDate','contact','source','reqNum','netContact','netRel','notes','jobLink','pageUrl','savedAt'];
-const NET_COLS  = ['Company','Role','Alumni Contact','Relationship','Last Touch','Next Touch','Status','Notes'];
-const NET_KEYS  = ['company','role','name','rel','last','next','status','notes'];
+// 'Status' is gone: nothing in the app has ever written c.status, so it
+// exported as an empty column on every row. Everything added below is on the
+// contact card and was missing from the file — the flags, the kind of the last
+// and next touch, and the heat pill. Temperature is derived by contactHeat()
+// rather than stored, so it is computed at export time.
+const NET_COLS  = ['Company','Role','Alumni Contact','Relationship','Last Touch','Next Touch','Notes','Temperature','Champion','Starred','Last Touch Type','Next Touch Type','Next Label'];
+const NET_KEYS  = ['company','role','name','rel','last','next','notes','temperature','champion','star','lastActivityType','nextType','nextNote'];
+
+const ACT_COLS = ['Contact','Company','Date','Type','Detail'];
+
+const yesNo = v => v ? 'yes' : '';
+const typeLabel = (list, key) => (list.find(t => t.key === key) || {}).label || (key || '');
+
+// One projection, used by the CSV and the XLSX paths, so the two can never
+// drift apart again.
+function contactRow(c) {
+  return NET_KEYS.map(k => {
+    if (k === 'temperature')      return contactHeat(c);
+    if (k === 'champion')         return yesNo(c.champion);
+    if (k === 'star')             return yesNo(c.star);
+    if (k === 'lastActivityType') return typeLabel(ACTIVITY_TYPES, c.lastActivityType);
+    if (k === 'nextType')         return typeLabel(NEXT_TYPES, c.nextType);
+    return c[k] || '';
+  });
+}
+
+// The activity log is the other half of the network, and the flat contact file
+// cannot hold it: one person has many entries, and an 'Intro made' entry names
+// another contact, so flattening to a last-touch date throws away every edge
+// between people. One row per entry keeps them.
+function activityRows() {
+  const out = [];
+  (state.contacts || []).forEach(c => {
+    (c.activityLog || []).forEach(e => {
+      out.push([c.name || '', c.company || '', wkDateOnly(e.date) || (e.date || ''),
+                typeLabel(ACTIVITY_TYPES, e.type), e.note || '']);
+    });
+  });
+  return out.sort((a,b) => String(b[2]).localeCompare(String(a[2])));
+}
+
+function activityToCSV() {
+  return [ACT_COLS.join(','), ...activityRows().map(r => r.map(csvEscape).join(','))].join('\n');
+}
 
 function csvEscape(v) {
   const s = String(v == null ? '' : v);
@@ -7202,9 +7373,7 @@ function appsToCSV() {
 
 function contactsToCSV() {
   const header = NET_COLS.join(',');
-  const rows = state.contacts.map(c =>
-    NET_KEYS.map(k => csvEscape(c[k]||'')).join(',')
-  );
+  const rows = state.contacts.map(c => contactRow(c).map(csvEscape).join(','));
   return [header, ...rows].join('\n');
 }
 
@@ -7420,7 +7589,7 @@ function exportAppsXLSX() {
 
 function exportContactsXLSX() {
   const wb = XLSX.utils.book_new();
-  const dataRows = state.contacts.map(c => NET_KEYS.map(k => c[k]||''));
+  const dataRows = state.contacts.map(contactRow);
   const wsData = buildDataSheet(NET_COLS, dataRows, '#1F5A3A', '#E9F6EE');
   const wsSummary = buildContactsSummarySheet();
   XLSX.utils.book_append_sheet(wb, wsData,    'Contacts');
@@ -7963,23 +8132,79 @@ function bulkDeleteApps() {
   showToast(`${ids.size} cards deleted · undo in Sync`);
 }
 
+// Accepts either a key ('intro') or the label the export writes ('Intro made').
+function keyFromLabel(list, v) {
+  const t = String(v||'').trim().toLowerCase();
+  if (!t) return '';
+  const hit = list.find(x => x.key.toLowerCase() === t || String(x.label||'').toLowerCase() === t);
+  return hit ? hit.key : '';
+}
+const truthy = v => ['yes','y','true','1','x','✓'].includes(String(v||'').trim().toLowerCase());
+const pick = (row, ...names) => { for (const n of names) if (row[n] != null && row[n] !== '') return row[n]; return ''; };
+
+// The activity file is recognised by its own header rather than by a separate
+// button, so one import box takes either file.
+function looksLikeActivityCSV(rows) {
+  if (!rows.length) return false;
+  const k = Object.keys(rows[0]).map(x => x.toLowerCase());
+  return k.includes('contact') && k.includes('date') && k.includes('type')
+      && (k.includes('detail') || k.includes('note'));
+}
+
+function importActivityCSV(rows) {
+  let added = 0, dupe = 0, orphan = 0;
+  const byName = new Map();
+  state.contacts.forEach((c,i) => byName.set(String(c.name||'').trim().toLowerCase(), i));
+  rows.forEach(row => {
+    const who = String(pick(row,'Contact','contact')).trim().toLowerCase();
+    const idx = byName.get(who);
+    if (idx === undefined) { orphan++; return; }
+    const c = state.contacts[idx];
+    const entry = {
+      date: wkDateOnly(pick(row,'Date','date')) || String(pick(row,'Date','date')).trim(),
+      type: keyFromLabel(ACTIVITY_TYPES, pick(row,'Type','type')) || 'message',
+      note: String(pick(row,'Detail','detail','Note','note')).trim(),
+    };
+    if (!entry.date) { orphan++; return; }
+    const log = c.activityLog || (c.activityLog = []);
+    if (log.some(e => e.date === entry.date && e.type === entry.type && (e.note||'') === entry.note)) { dupe++; return; }
+    log.push(entry);
+    log.sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
+    added++;
+  });
+  save();
+  return {count:added, skipped:dupe+orphan,
+          msg:`Done — ${added} activity entries added${dupe?`, ${dupe} already present`:''}${orphan?`, ${orphan} with no matching contact`:''}.`};
+}
+
 function importContactsCSV(text) {
   const rows = parseCSV(text);
   if(!rows.length) return {count:0, msg:'No rows found.'};
+  if (looksLikeActivityCSV(rows)) return importActivityCSV(rows);
+
   let added=0, skipped=0;
-  const existingNames = state.contacts.map(c=>c.name.toLowerCase().trim());
+  const existingNames = state.contacts.map(c=>String(c.name||'').toLowerCase().trim());
   rows.forEach(row => {
-    const name = (row['Alumni Contact']||row['Name']||row['name']||'').trim();
+    const name = String(pick(row,'Alumni Contact','Name','name','Contact')).trim();
     if(!name){skipped++;return;}
     if(existingNames.includes(name.toLowerCase())){skipped++;return;}
+    // Every field the card holds, not just the seven this used to read. A
+    // round trip that silently drops the flags and the touch types is how the
+    // export came to look lossy in the first place.
     state.contacts.push({
       id: Date.now()+Math.random(), name,
-      company: row['Company']||row['company']||'',
-      role: row['Role']||row['role']||'',
-      rel: row['Relationship']||row['rel']||'Connection',
-      last: row['Last Touch']||row['last']||'',
-      next: row['Next Touch']||row['next']||'',
-      notes: row['Notes']||row['notes']||'',
+      company: pick(row,'Company','company'),
+      role:    pick(row,'Role','role'),
+      rel:     pick(row,'Relationship','rel') || 'Connection',
+      last:    wkDateOnly(pick(row,'Last Touch','last')) || pick(row,'Last Touch','last'),
+      next:    wkDateOnly(pick(row,'Next Touch','next')) || pick(row,'Next Touch','next'),
+      notes:   pick(row,'Notes','notes'),
+      champion: truthy(pick(row,'Champion','champion')),
+      star:     truthy(pick(row,'Starred','star','Star')),
+      lastActivityType: keyFromLabel(ACTIVITY_TYPES, pick(row,'Last Touch Type','lastActivityType','last_type')),
+      nextType:         keyFromLabel(NEXT_TYPES,     pick(row,'Next Touch Type','nextType','next_type')),
+      nextNote: pick(row,'Next Label','nextNote','next_label'),
+      activityLog: [],
     });
     added++;
   });
@@ -8055,6 +8280,8 @@ function renderSync(el) {
     ${renderDataHealth()}
 
     ${renderStampRepair()}
+
+    ${renderContactHealth()}
 
     <div class="card" style="margin-bottom:16px;border-color:${cloudConnected?'var(--green-dim)':'var(--amber-dim)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -8235,12 +8462,21 @@ function exportContacts(fmt) {
   const note = document.getElementById('export-note');
   const date = new Date().toISOString().slice(0,10);
   if (fmt === 'csv') {
-    const csv = 'data:text/csv;charset=utf-8,' + encodeURIComponent(
-      [NET_KEYS.join(','), ...state.contacts.map(c => NET_KEYS.map(k => csvEscape(c[k]||'')).join(','))].join('\n')
-    );
-    const a = Object.assign(document.createElement('a'), {href: csv, download: `contacts_${date}.csv`});
-    a.click();
-    if (note) note.textContent = `✓ Downloaded ${state.contacts.length} contacts (CSV)`;
+    // Two files, because the data is two shapes. This path used to write the
+    // raw internal keys as its header while contactsToCSV() wrote the readable
+    // ones, so the same button produced different files depending on which
+    // code path ran. Both go through contactsToCSV() now.
+    const dl = (text, name) => {
+      const a = Object.assign(document.createElement('a'), {
+        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(text), download: name });
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+    const acts = activityRows().length;
+    dl(contactsToCSV(), `contacts_${date}.csv`);
+    if (acts) setTimeout(() => dl(activityToCSV(), `contacts_activity_${date}.csv`), 400);
+    if (note) note.textContent = acts
+      ? `✓ Downloaded ${state.contacts.length} contacts and ${acts} activity entries (2 CSV files)`
+      : `✓ Downloaded ${state.contacts.length} contacts (CSV)`;
   } else {
     exportContactsXLSX();
     if (note) note.textContent = `✓ Downloaded ${state.contacts.length} contacts (XLSX)`;
