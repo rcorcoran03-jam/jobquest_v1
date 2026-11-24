@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.4.7  (gist diagnostics)                   ║
+║  JOBQUEST — Starter Edition  ·  v1.5.1  (manual update entries)              ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -137,6 +137,88 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator).║
+║  v1_5_1  Manual events in the weekly update, for anything the tracker never  ║
+║          saw: a referral someone promised, a conversation at an event, a     ║
+║          recruiter call about no role in particular. Rather than a free-text ║
+║          box appended to the draft, each entry carries a DATE and a KIND, so ║
+║          it behaves like every other event: it files into Moved forward,     ║
+║          Stumbled, New lead, Networking or Also this period, it counts       ║
+║          toward that section's heading, and it leaves the window by date     ║
+║          instead of accumulating forever. Entries live on the profile so     ║
+║          they sync, are pruned past 180 days to keep the Gist payload down,  ║
+║          and edit through a working copy with a 500ms debounce so typing     ║
+║          never re-serialises the profile or moves the caret. The row editor  ║
+║          is date + kind + text + remove, with Enter adding another row of    ║
+║          the same kind and focus following it. Event counts in the KPI strip ║
+║          (new, contacts touched) include hand-added entries; pipeline counts ║
+║          (active, interviewing, total tracked) stay strictly from tracked    ║
+║          records, because those describe state rather than activity. The     ║
+║          facts handed to the model carry them under addedByHand with the     ║
+║          prompt saying they are the candidate's own account of untracked     ║
+║          events, are fact, and are often the most significant thing in the   ║
+║          period, so a quiet week on paper is not written up as quiet when it ║
+║          was not.                                                            ║
+║  v1_5_0  Weekly status update on HQ. Every figure is computed, never written ║
+║          by a model: wkTransitions() replays each app's actLog in date order ║
+║          to reconstruct its stage history, so 'moved forward' means the      ║
+║          stage index actually rose and 'stumbled' means it landed on         ║
+║          Rejected or Ghosted, rather than guessing from the current stage.   ║
+║          Resurfaced means activity in the window preceded by 21+ days of     ║
+║          silence. New leads come from savedAt. Networking reads contact last ║
+║          and next dates, splitting follow-ups due from overdue. Hot to       ║
+║          follow ranks active roles on fit, stage depth, warm contacts at     ║
+║          that company via getContactsForCompany, priority, and a nudge for   ║
+║          anything going quiet, then says why in a few words. The AI writes   ║
+║          only the opening summary and writes it FROM those figures, with the ║
+║          prompt forbidding any number or company not in the facts it is      ║
+║          handed; the draft lands in an editable box, so publishing is always ║
+║          on prose you approved. One builder (wkDocBody) produces both the    ║
+║          on-screen preview and the downloaded file, so the proof is the      ║
+║          artefact. The document is light on white because paper is, with     ║
+║          @page letter and 0.5in margins, per-section caps to hold two pages, ║
+║          and headings that still carry the true totals. Print hides          ║
+║          everything but the paper block rather than opening a popup, so no   ║
+║          blocker and no CSP change. Download writes a self-contained .html   ║
+║          via a Blob.                                                         ║
+║  v1_4_9  Keyboard shortcuts. '/' jumps to the board search from any tab; 'g' ║
+║          then h/a/n/f/s switches tab on the Gmail and GitHub two-key         ║
+║          pattern, with a 1.2s window so a stray g does nothing; on the       ║
+║          board, j and k walk the results with the highlighted row ringed and ║
+║          scrolled into view, Enter toggles its JD, s saves it to the tracker ║
+║          and o opens it on the job board, which makes triaging a search      ║
+║          mouse-free; '?' opens a cheatsheet overlay. KB_SHORTCUTS is a       ║
+║          single array driving the handler, the cheatsheet and the Settings   ║
+║          listing, so the documentation cannot describe a key that does       ║
+║          something else. Guards: nothing fires while focus is in an input,   ║
+║          textarea or select; anything held with Cmd, Ctrl or Alt is left to  ║
+║          the browser; Escape stays unconditional even when shortcuts are     ║
+║          off, since otherwise the cheatsheet could be opened and not closed. ║
+║          Sync gains a Keyboard shortcuts card with an on/off toggle          ║
+║          (profile.kbShortcuts, on unless turned off) above the full key      ║
+║          list. j/k repaint only the results list through the shared          ║
+║          bdRepaintResults(), which also replaces the duplicated repaint      ║
+║          inside bdSetRuleLive, so the page does not jump to the top on each  ║
+║          press. A new search clears the cursor.                              ║
+║  v1_4_8  Touch and keyboard pass, from measuring every control at 390px      ║
+║          rather than eyeballing. (1) Champion and High Priority were 13x16   ║
+║          hit areas sitting side by side, so a near miss on a phone set the   ║
+║          wrong flag. They now carry .flag-btn: the glyph stays 13px and only ║
+║          the area around it grows, to 28px with a pointer and the full 44px  ║
+║          on mobile. (2) Keyboard focus was invisible. The input base rule    ║
+║          sets outline:none and nothing put it back, so Tab navigation was    ║
+║          guesswork on the dark surfaces. Added a :focus-visible ring in sky  ║
+║          blue, which fires on Tab but not on a mouse click, so pointer users ║
+║          see no change. Added a prefers-reduced-motion block at the same     ║
+║          time, since the app animates and had none. (3) sel() takes an       ║
+║          optional label that becomes aria-label; both stage dropdowns now    ║
+║          announce as 'Stage for <company>, <role>' instead of eleven         ║
+║          identical unnamed combo boxes, and the two CSV import inputs got    ║
+║          names too. (4) Mobile hit heights: most controls sat near 22px, so  ║
+║          buttons, tags and selects inside the content panes get min-height   ║
+║          34px and checkboxes 20px, inside the existing 640px breakpoint and  ║
+║          scoped to [id^=pane-] so neither the desktop layout nor the nav's   ║
+║          own sizing changes. Audit also confirmed no horizontal scroll, no   ║
+║          duplicate ids, no missing alt text, no clipped text.                ║
 ║  v1_4_7  Gist connection diagnostics. 'Could not connect: Write failed 403'  ║
 ║          named nothing and sent a debugging session down the wrong path,     ║
 ║          because a status code alone never separates a missing scope from a  ║
@@ -453,8 +535,8 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.4.7">
-<meta name="jq-base" content="32">
+<meta name="jq-version" content="1.5.1">
+<meta name="jq-base" content="36">
 <meta name="jq-date" content="2026-11-23">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
@@ -578,6 +660,32 @@
     padding: 7px 11px;
     outline: none;
     width: 100%;
+  }
+  /* The rule above sets outline:none, which removes the only cue a keyboard
+     user has. Put it back for keyboard focus specifically: :focus-visible
+     fires on Tab but not on a mouse click, so pointer users see no ring. */
+  button:focus-visible, select:focus-visible, input:focus-visible,
+  textarea:focus-visible, a:focus-visible, summary:focus-visible,
+  [tabindex]:focus-visible, [onclick]:focus-visible {
+    outline: 2px solid var(--sky-blue);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Some people get motion sick from transitions; honour the OS setting. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  /* Champion / High Priority toggles. The glyph stays 13px; only the area
+     around it grows, so the card looks the same but is hittable. */
+  .flag-btn {
+    display: inline-grid; place-items: center;
+    min-width: 28px; min-height: 28px; padding: 0;
+    border-radius: 6px;
   }
   input::placeholder, textarea::placeholder { color: var(--faint); }
   textarea { resize: vertical; }
@@ -783,7 +891,51 @@
   /* Tab label variants — .tab-short only shows at mobile breakpoint */
   #tab-tracker .tab-short { display: none; }
 
+  /* Printing. Only the published Update goes on paper.
+     Two earlier attempts were wrong in instructive ways, so the reasoning is
+     recorded here. `body > *:not(#pane-board)` printed a BLANK page, because
+     #pane-board is not a child of body: the real chain is
+     body > #main > #pane-board > .wk-card > #wk-doc > #wk-paper, so that rule
+     hid the Update's own ancestor. Switching to visibility:hidden printed the
+     content but added a blank trailing page, because hidden boxes keep their
+     height and the app is taller than two sheets. So: display:none down the
+     verified chain, which both hides and collapses. If that chain changes,
+     this block has to change with it.
+     Scoped to :has(#wk-paper) so that printing any other page of the app,
+     with no Update published, behaves normally instead of printing nothing. */
+  @media print {
+    body:has(#wk-paper) > *:not(#main)        { display: none !important; }
+    body:has(#wk-paper) #main > *:not(#pane-board)   { display: none !important; }
+    body:has(#wk-paper) #pane-board > *:not(.wk-card){ display: none !important; }
+    body:has(#wk-paper) .wk-card > *:not(#wk-doc)    { display: none !important; }
+    body:has(#wk-paper) #wk-doc > *:not(#wk-paper)   { display: none !important; }
+    body:has(#wk-paper) .wk-card, body:has(#wk-paper) #wk-doc, body:has(#wk-paper) #main {
+      border: 0 !important; padding: 0 !important; margin: 0 !important;
+      background: #fff !important; box-shadow: none !important; max-width: none !important;
+    }
+    #wk-paper { box-shadow: none !important; border-radius: 0 !important; background: #fff !important; }
+    html, body { background: #fff !important; }
+  }
+
   @media (max-width: 640px) {
+    /* Tap targets. The compact pill styling reads well with a mouse and is
+       tight under a thumb: most controls sit around 22px tall. Widths are
+       already fine, so raise only the vertical hit area, and only here, so
+       the desktop layout is untouched. Scoped to the content panes to leave
+       the nav's own sizing alone. */
+    [id^="pane-"] button,
+    [id^="pane-"] .tag,
+    [id^="pane-"] select { min-height: 34px; }
+    [id^="pane-"] input[type="checkbox"],
+    [id^="pane-"] input[type="radio"] { min-width: 20px; min-height: 20px; }
+    /* A checkbox wrapped in a label is tappable across the whole label, so the
+       label is the real target and it was still only 20px tall. */
+    [id^="pane-"] label:has(input[type="checkbox"]),
+    [id^="pane-"] label:has(input[type="radio"]) { min-height: 34px; align-items: center; }
+    /* Champion / High Priority sit side by side, so a near miss sets the
+       wrong flag. These get the full 44px. */
+    [id^="pane-"] .flag-btn { min-width: 44px; min-height: 44px; }
+
     /* Nav: stay one tidy row, let tabs scroll horizontally */
     #nav { padding: 0 10px; gap: 6px; }
     #nav .brand-year { display: none; }
@@ -991,7 +1143,13 @@ const EMPTY_PROFILE = {
   // v1_4_2 — everything that shapes a board search now lives here rather than
   // in code, so it is editable in Settings, persists, and rides the Gist prefs
   // sync. The board tab's rules drawer edits these same values.
-  boardRules:null, boardOpts:null
+  boardRules:null, boardOpts:null,
+  // v1_5_1 — things that happened but were never tracked as an app or contact:
+  // a referral promised, a conference conversation, a recruiter call about no
+  // role in particular. Each carries a date and a kind so it behaves like any
+  // other event: it files into the right section and leaves the window on its
+  // own instead of piling up. {id,date,kind,text}
+  wkManual:[]
 };
 
 // Defaults for the board search. A profile saved before v1_4_2 has null for
@@ -1191,7 +1349,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.4.7';
+const APP_VERSION = '1.5.1';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1229,6 +1387,9 @@ let state = {
   bdShowRules: false, bdPreview: null, bdTriaging: false, bdHidden: {},
   bdProbeQ: '', bdProbeHits: null, bdProbeLoading: false, bdProbeNote: '',
   bdSourceFilter: '',   // '' = all boards; otherwise 'Greenhouse:lirio' style key
+  bdCursor: null,       // index into bdVisible() for j/k navigation
+  wkOpen: false, wkDays: 7, wkNarrative: '', wkLoading: false, wkPublished: false,
+  kbPending: false, kbPendingTimer: null, kbHelp: false,
   tasks: JSON.parse(localStorage.getItem('tasks')||'null') || [
     {id:1,  text:'Fill in your profile (Sync tab → Edit profile)',     done:false, cat:'today',   due:'', priority:'high'},
     {id:2,  text:'Analyze your first job description',                  done:false, cat:'today',   due:'', priority:'high'},
@@ -1661,7 +1822,10 @@ const fitPill = (app) => {
 const lbl = text => `<div class="lbl">${text}</div>`;
 const inp = (id, val, ph, style='') => `<input id="${id}" value="${esc(val)}" placeholder="${esc(ph)}" style="${style}">`;
 const ta = (id, val, ph, rows=5) => `<textarea id="${id}" placeholder="${esc(ph)}" rows="${rows}">${esc(val)}</textarea>`;
-const sel = (id, opts, val) => `<select id="${id}">${opts.map(o=>`<option value="${esc(o.v||o)}" ${(o.v||o)==val?'selected':''}>${esc(o.l||o)}</option>`).join('')}</select>`;
+// `label` is optional and becomes the accessible name. A bare <select> with a
+// visible stage value still announces as an unnamed combo box, which on the
+// tracker means eleven identical ones with no way to tell them apart.
+const sel = (id, opts, val, label) => `<select id="${id}"${label?` aria-label="${esc(label)}"`:''}>${opts.map(o=>`<option value="${esc(o.v||o)}" ${(o.v||o)==val?'selected':''}>${esc(o.l||o)}</option>`).join('')}</select>`;
 const btn = (id, label, cls='', onclick='') => `<button id="${id}" class="${cls}" onclick="${onclick}">${label}</button>`;
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const fmtDate = d => { if(!d) return ''; const days=Math.floor((Date.now()-new Date(d))/86400000); return days===0?'today':days===1?'yesterday':`${days}d ago`; };
@@ -1962,6 +2126,7 @@ async function runBoardSearch() {
   state.bdLoading = true; state.bdError = ''; state.bdPreview = null;
   state.bdHidden = {};
   state.bdSourceFilter = '';   // a stale board filter would hide the new results
+  state.bdCursor = null;
   render('board');
 
   try {
@@ -2021,10 +2186,7 @@ function bdSetRule(key, val) {
 function bdSetRuleLive(key, val) {
   bdRules()[key] = val;
   bdPersistRulesSoon();
-  const host = document.getElementById('bd-results-host');
-  if (host) host.innerHTML = renderBoardResults();
-  const cnt = document.getElementById('bd-visible-count');
-  if (cnt) cnt.textContent = `showing ${bdVisible().length} of ${state.bdJobs.length} fetched`;
+  bdRepaintResults();
 }
 
 function bdSaveOpts() {
@@ -2751,7 +2913,7 @@ function renderBoardResults() {
   if (!visible.length && state.bdSourceFilter) return `<div style="padding:14px;font-size:12px;color:var(--muted)">Nothing from <strong style="color:var(--tx)">${esc(bdBoardLabel(state.bdSourceFilter))}</strong> passes your current rules. <button onclick="bdSetSourceFilter('')" style="font-size:11px;margin-left:6px">Show all boards</button></div>`;
   if (!visible.length) return `<div style="padding:14px;font-size:12px;color:var(--muted)">All ${state.bdJobs.length} fetched postings are hidden by your current rules.</div>`;
 
-  return visible.map(j => {
+  return visible.map((j, idx) => {
     const age = bdJobAgeDays(j.updatedAt);
     const open = state.bdPreview === j.id;
     const fitNum = Number(j.fit) || 0;
@@ -2759,7 +2921,7 @@ function renderBoardResults() {
       ? `<span class="pill" style="background:rgba(201,138,14,0.12);border-color:rgba(201,138,14,0.35);color:#E8C97A">✦ fit: ${fitNum}/10</span>`
       : '';
     return `
-    <div class="card" style="margin-bottom:8px;padding:11px 13px;border-left:3px solid ${fitNum>=8?'var(--jade)':fitNum>=6?'var(--amber-dim)':'var(--brd2)'}">
+    <div class="card" data-bd-idx="${idx}" style="margin-bottom:8px;padding:11px 13px;border-left:3px solid ${fitNum>=8?'var(--jade)':fitNum>=6?'var(--amber-dim)':'var(--brd2)'}${state.bdCursor===idx?';box-shadow:0 0 0 2px var(--sky-blue)':''}">
       <div class="bd-row" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div class="bd-row-main" style="min-width:0;flex:1 1 60%">
           <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px">
@@ -2930,7 +3092,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + renderBoardSearch() + `
+  el.innerHTML = setupBanner() + renderHQHero() + renderWeekly() + renderBoardSearch() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
@@ -3223,7 +3385,7 @@ function renderTracker(el) {
               ${nextLine?`<div style="font-size:11px;color:var(--amber);margin-bottom:3px">→ ${nextLine}</div>`:''}
             </div>
             <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
-              ${sel('stg-top-'+a.id,STAGES,a.stage)}
+              ${sel('stg-top-'+a.id,STAGES,a.stage,`Stage for ${a.company}${a.role?', '+a.role:''}`)}
               <button onclick="setAppStage(${a.id},document.getElementById('stg-top-${a.id}').value)" style="font-size:11px">Save</button>
               <button onclick="toggleHighPriority(${a.id})" title="Remove from high priority" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)">⭐</button>
               <button onclick="openProfilePanel(${a.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Profile</button>
@@ -3347,7 +3509,7 @@ function renderTracker(el) {
         <div class="app-card-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
           ${isGuest()
             ? `<button onclick="toggleExpand(${app.id})" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">${isExpanded?'▴ Details':'▾ Details'}</button>`
-            : `${sel(`stg-${app.id}`,STAGES,app.stage)}
+            : `${sel(`stg-${app.id}`,STAGES,app.stage,`Stage for ${app.company}${app.role?', '+app.role:''}`)}
             <button onclick="setAppStage(${app.id},document.getElementById('stg-${app.id}').value)" style="font-size:11px">Save</button>
             <button onclick="toggleHighPriority(${app.id})" style="font-size:11px;${isHigh?'color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)':'color:var(--faint)'}" title="${isHigh?'Unpin':'Pin priority'}">⭐</button>
             <button onclick="openProfilePanel(${app.id})" style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600">✦ Profile</button>
@@ -4677,17 +4839,158 @@ function daysAgo(dateStr) {
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
-// ── KEYBOARD (v1_4_5) ────────────────────────────────────────────────────────
-// Escape backs out of the board search's transient UI. Registered once at load,
-// and it deliberately does nothing while focus is in a text field, so Escape
-// keeps its native meaning while you are typing.
+// ── KEYBOARD (v1_4_9) ────────────────────────────────────────────────────────
+// One table drives the handler, the ? cheatsheet and the Settings listing, so
+// the documentation cannot drift from what the keys actually do.
+
+const KB_TAB = { h:'board', a:'tracker', n:'network', f:'pomodoro', s:'sync' };
+
+const KB_SHORTCUTS = [
+  { keys:'/',        where:'Anywhere',     desc:'Jump to the board search box' },
+  { keys:'g then h', where:'Anywhere',     desc:'Go to HQ' },
+  { keys:'g then a', where:'Anywhere',     desc:'Go to Apps' },
+  { keys:'g then n', where:'Anywhere',     desc:'Go to Network' },
+  { keys:'g then f', where:'Anywhere',     desc:'Go to Focus' },
+  { keys:'g then s', where:'Anywhere',     desc:'Go to Sync' },
+  { keys:'j / k',    where:'Board search', desc:'Move down / up through results' },
+  { keys:'Enter',    where:'Board search', desc:'Show or hide the job description' },
+  { keys:'s',        where:'Board search', desc:'Save the highlighted result to the tracker' },
+  { keys:'o',        where:'Board search', desc:'Open the highlighted result on the job board' },
+  { keys:'Esc',      where:'Anywhere',     desc:'Close the cheatsheet, the JD preview, then the rules drawer' },
+  { keys:'?',        where:'Anywhere',     desc:'Show this list' },
+];
+
+function kbEnabled() {
+  const v = (getProfile() || {}).kbShortcuts;
+  return v === undefined || v === null ? true : Boolean(v);   // on unless turned off
+}
+function setKbEnabled(on) {
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  prof.kbShortcuts = Boolean(on);
+  saveProfile(prof);
+  if (!on) { state.kbPending = false; state.kbHelp = false; renderKbHelp(); }
+  showToast(on ? 'Keyboard shortcuts on' : 'Keyboard shortcuts off');
+  render('sync');
+}
+
+function kbKbd(keys, size) {
+  const s = size || 11;
+  return keys.split(' then ')
+    .map(k => `<kbd style="display:inline-block;font-family:ui-monospace,monospace;font-size:${s-0.5}px;background:rgba(255,255,255,0.08);border:1px solid var(--brd2);border-bottom-width:2px;border-radius:5px;padding:1px 7px;color:var(--tx)">${esc(k)}</kbd>`)
+    .join('<span style="color:var(--faint);font-size:10px;margin:0 4px">then</span>');
+}
+
+function kbToggleHelp(force) {
+  state.kbHelp = force === undefined ? !state.kbHelp : Boolean(force);
+  renderKbHelp();
+}
+
+// Appended to the body rather than a tab, so it can open from anywhere.
+function renderKbHelp() {
+  let el = document.getElementById('kb-help');
+  if (!state.kbHelp) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'kb-help';
+    el.setAttribute('style','position:fixed;inset:0;z-index:9999;background:rgba(5,10,20,0.72);display:grid;place-items:center;padding:20px');
+    el.addEventListener('click', (ev) => { if (ev.target === el) kbToggleHelp(false); });
+    document.body.appendChild(el);
+  }
+  const rows = KB_SHORTCUTS.map(s => `
+    <tr>
+      <td style="padding:5px 14px 5px 0;white-space:nowrap;vertical-align:top">${kbKbd(s.keys)}</td>
+      <td style="padding:5px 12px 5px 0;font-size:12px;color:var(--tx);vertical-align:top">${esc(s.desc)}</td>
+      <td style="padding:5px 0;font-size:10.5px;color:var(--faint);white-space:nowrap;vertical-align:top">${esc(s.where)}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" class="card" style="max-width:560px;width:100%;max-height:82vh;overflow:auto;padding:20px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:var(--tx)">Keyboard shortcuts</div>
+        <button onclick="kbToggleHelp(false)" style="font-size:11px">Close (Esc)</button>
+      </div>
+      <table style="border-collapse:collapse;width:100%">${rows}</table>
+      <div style="font-size:10.5px;color:var(--faint);margin-top:14px;line-height:1.6">
+        Shortcuts never fire while you are typing in a field. Turn them off in Sync → Keyboard shortcuts.
+      </div>
+    </div>`;
+}
+
+// Repaints only the results list. Shared by live rule edits and by j/k, so the
+// page does not scroll back to the top on every keystroke.
+function bdRepaintResults() {
+  const host = document.getElementById('bd-results-host');
+  if (host) host.innerHTML = renderBoardResults();
+  const cnt = document.getElementById('bd-visible-count');
+  if (cnt) cnt.textContent = `showing ${bdVisible().length} of ${state.bdJobs.length} fetched`;
+}
+
+function bdMoveCursor(delta) {
+  const list = bdVisible();
+  if (!list.length) return;
+  const cur = Number.isInteger(state.bdCursor) ? state.bdCursor : -1;
+  state.bdCursor = Math.max(0, Math.min(list.length - 1, cur + delta));
+  bdRepaintResults();
+  const el = document.querySelector(`[data-bd-idx="${state.bdCursor}"]`);
+  if (el) el.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+function bdCursorJob() {
+  const list = bdVisible();
+  return Number.isInteger(state.bdCursor) ? list[state.bdCursor] : null;
+}
+
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
   const t = e.target;
-  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-  if (typing) return;
-  if (state.bdPreview) { state.bdPreview = null; render('board'); return; }
-  if (state.bdShowRules) { state.bdShowRules = false; render('board'); return; }
+  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+
+  // Escape is a dismissal, not a shortcut: it keeps working with shortcuts off,
+  // because otherwise the cheatsheet could be opened and never closed.
+  if (e.key === 'Escape') {
+    if (typing) return;
+    if (state.kbHelp)      { kbToggleHelp(false); return; }
+    if (state.bdPreview)   { state.bdPreview = null; render('board'); return; }
+    if (state.bdShowRules) { state.bdShowRules = false; render('board'); return; }
+    return;
+  }
+
+  if (!kbEnabled() || typing) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;   // leave browser shortcuts alone
+
+  // 'g' opens a short window for a second key: the Gmail / GitHub pattern.
+  if (state.kbPending) {
+    state.kbPending = false;
+    clearTimeout(state.kbPendingTimer);
+    const dest = KB_TAB[e.key.toLowerCase()];
+    if (dest) { e.preventDefault(); showTab(dest); }
+    return;
+  }
+  if (e.key === 'g') {
+    state.kbPending = true;
+    clearTimeout(state.kbPendingTimer);
+    state.kbPendingTimer = setTimeout(() => { state.kbPending = false; }, 1200);
+    return;
+  }
+
+  if (e.key === '?') { e.preventDefault(); kbToggleHelp(); return; }
+
+  if (e.key === '/') {
+    e.preventDefault();
+    if (state.tab !== 'board') showTab('board');
+    setTimeout(() => { const q = document.getElementById('bd-q'); if (q) { q.focus(); q.select(); } }, 60);
+    return;
+  }
+
+  // The rest only mean something against a list of search results.
+  if (state.tab !== 'board' || !bdVisible().length) return;
+  const k = e.key.toLowerCase();
+  if (k === 'j') { e.preventDefault(); bdMoveCursor(1);  return; }
+  if (k === 'k') { e.preventDefault(); bdMoveCursor(-1); return; }
+
+  const job = bdCursorJob();
+  if (!job) return;
+  if (e.key === 'Enter') { e.preventDefault(); bdTogglePreview(job.id); return; }
+  if (k === 's') { e.preventDefault(); bdSaveJob(job.id); return; }
+  if (k === 'o') { e.preventDefault(); if (job.url) window.open(job.url, '_blank', 'noopener'); return; }
 });
 
 // ── STALE APPLICATION SWEEP (v1_4_5) ─────────────────────────────────────────
@@ -4756,6 +5059,534 @@ function sweepStaleApps() {
   showToast(`${targets.length} moved to Ghosted · undo in Sync`);
   render('tracker');
 }
+
+
+// ── WEEKLY STATUS (v1_5_0) ───────────────────────────────────────────────────
+// Every number here is computed from actLog, stage history and contact dates.
+// The AI only writes the narrative paragraph, and it writes it FROM these
+// numbers, so a figure in the Update can never be something a model invented.
+
+const WK_PROGRESS = ['Saved','Coffee / Networking','Applied','Phone Screen','Interview','Final Round','Offer'];
+const WK_SETBACK  = ['Rejected','Ghosted'];
+const WK_RESURFACE_GAP = 21;   // days of silence before a return counts as a resurface
+
+const wkToday = () => new Date().toISOString().slice(0,10);
+const wkShift = (days) => new Date(Date.now() - days*86400000).toISOString().slice(0,10);
+const wkDays  = (from, to) => Math.round((new Date(to) - new Date(from)) / 86400000);
+const wkPretty = (iso) => { if(!iso) return ''; const d=new Date(iso+'T12:00:00');
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
+
+// Walks an app's actLog in order and returns its stage transitions.
+function wkTransitions(app) {
+  const out = [];
+  let prev = 'Saved';
+  [...(app.actLog||[])]
+    .filter(l => l && l.date)
+    .sort((a,b) => String(a.date).localeCompare(String(b.date)))
+    .forEach(l => {
+      const m = /Stage\s*→\s*(.+?)(?:\s*\(|$)/.exec(l.note || '');
+      if (!m) return;
+      const to = m[1].trim();
+      if (!STAGES.includes(to)) return;
+      out.push({ date: String(l.date).slice(0,10), from: prev, to });
+      prev = to;
+    });
+  return out;
+}
+
+function wkLastActivity(app) { return lastActivityISO(app); }
+
+function wkStats(days) {
+  const start = wkShift(days), end = wkToday();
+  const inWin = d => d && String(d).slice(0,10) >= start && String(d).slice(0,10) <= end;
+  const apps = state.apps || [], contacts = state.contacts || [];
+
+  const movedForward = [], stumbled = [], resurfaced = [];
+
+  apps.forEach(a => {
+    const trs = wkTransitions(a).filter(t => inWin(t.date));
+    trs.forEach(t => {
+      const fi = WK_PROGRESS.indexOf(t.from), ti = WK_PROGRESS.indexOf(t.to);
+      if (WK_SETBACK.includes(t.to)) stumbled.push({ app:a, date:t.date, from:t.from, to:t.to });
+      else if (ti > -1 && (fi === -1 || ti > fi)) movedForward.push({ app:a, date:t.date, from:t.from, to:t.to });
+    });
+
+    // Anything that happened in the window, stage change or not.
+    const hits = (a.actLog||[]).filter(l => inWin(l.date)).map(l => String(l.date).slice(0,10)).sort();
+    if (hits.length) {
+      const before = (a.actLog||[]).map(l=>String(l.date||'').slice(0,10))
+        .filter(d => d && d < start).sort();
+      const prior = before.length ? before[before.length-1] : null;
+      if (prior && wkDays(prior, hits[0]) >= WK_RESURFACE_GAP) {
+        resurfaced.push({ app:a, date:hits[0], quietDays: wkDays(prior, hits[0]) });
+      }
+    }
+  });
+
+  // A role that already appears under moved forward or stumbled is not a
+  // resurface, it is this week's news. Without this, Abbott shows up three
+  // times and a two-page document fills with the same company.
+  const loudIds = new Set([...movedForward, ...stumbled].map(x => x.app.id));
+  const trulyResurfaced = resurfaced.filter(r => !loudIds.has(r.app.id));
+  resurfaced.length = 0;
+  trulyResurfaced.forEach(r => resurfaced.push(r));
+
+  const newLeads = apps.filter(a => inWin(a.savedAt || a.date));
+  const active   = apps.filter(a => !WK_SETBACK.includes(a.stage));
+  const interviewing = apps.filter(a => INTERVIEW_STAGES.includes(a.stage));
+  const offers   = apps.filter(a => a.stage === 'Offer');
+
+  // Networking
+  const touched = contacts.filter(c => inWin(c.last));
+  const overdue = contacts.filter(c => c.next && String(c.next).slice(0,10) < end);
+  const upcoming = contacts.filter(c => c.next && String(c.next).slice(0,10) >= end
+                                     && wkDays(end, String(c.next).slice(0,10)) <= 14)
+                           .sort((a,b)=>String(a.next).localeCompare(String(b.next)));
+
+  // Hot to follow: active roles ranked on fit, how deep they are, whether you
+  // know somebody there, and how long since anything happened.
+  const hot = active.map(a => {
+    const cons = getContactsForCompany(a.company);
+    const warm = cons.filter(c => ['warm','new'].includes(contactHeat(c)));
+    const fit = Number(a.fit) || 0;
+    const depth = Math.max(0, WK_PROGRESS.indexOf(a.stage));
+    const last = wkLastActivity(a);
+    const quiet = last ? wkDays(last, end) : 99;
+    const score = fit * 3
+                + depth * 4
+                + warm.length * 6
+                + cons.length * 2
+                + (a.priority === 'High' ? 6 : a.priority === 'Medium' ? 2 : 0)
+                + Math.min(12, quiet >= 7 ? quiet / 2 : 0);   // nudge the ones going quiet
+    const why = [];
+    if (warm.length) why.push(`${warm.length} warm contact${warm.length===1?'':'s'} at ${a.company}`);
+    else if (cons.length) why.push(`${cons.length} contact${cons.length===1?'':'s'} there`);
+    if (INTERVIEW_STAGES.includes(a.stage)) why.push(`in ${a.stage.toLowerCase()}`);
+    if (fit >= 8) why.push(`fit ${fit}/10`);
+    if (quiet >= 7 && quiet < 99) why.push(`quiet ${quiet}d`);
+    return { app:a, score, why: why.slice(0,3), contacts: cons, quiet };
+  })
+  // A row with nothing to say for itself is filler. Better to show three good
+  // ones than pad to five with dormant backlog.
+  .filter(h => h.why.length > 0)
+  .sort((a,b) => b.score - a.score).slice(0,5);
+
+  const man = wkManualInWindow(start, end);
+
+  return {
+    start, end, days, man,
+    totals: {
+      all: apps.length, active: active.length,
+      // Event counts include what you added by hand; pipeline counts (active,
+      // interviewing, total tracked) stay strictly from tracked records.
+      newLeads: newLeads.length + man.lead.length,
+      interviewing: interviewing.length, offers: offers.length,
+      contacts: contacts.length, touched: touched.length + man.network.length,
+      overdue: overdue.length,
+    },
+    movedForward: movedForward.sort((a,b)=>b.date.localeCompare(a.date)),
+    stumbled:     stumbled.sort((a,b)=>b.date.localeCompare(a.date)),
+    newLeads, resurfaced, touched, upcoming, hot,
+  };
+}
+
+// Compact facts for the model. Names and stages only, no notes or JD text.
+function wkFactsForAI(s) {
+  return JSON.stringify({
+    period: `${s.start} to ${s.end}`,
+    totals: s.totals,
+    movedForward: s.movedForward.slice(0,8).map(m=>`${m.app.company} ${m.app.role}: ${m.from} → ${m.to}`),
+    stumbled:     s.stumbled.slice(0,6).map(m=>`${m.app.company} ${m.app.role}: ${m.to}`),
+    newLeads:     s.newLeads.slice(0,8).map(a=>`${a.company} ${a.role}`),
+    resurfaced:   s.resurfaced.slice(0,5).map(r=>`${r.app.company} after ${r.quietDays}d quiet`),
+    contactsTouched: s.touched.slice(0,8).map(c=>`${c.name} (${c.company})`),
+    followUpsDue: s.upcoming.slice(0,5).map(c=>`${c.name} (${c.company}) on ${c.next}`),
+    hotToFollow:  s.hot.map(h=>`${h.app.company} ${h.app.role} — ${h.why.join(', ')}`),
+    // Written by the candidate about things the tracker never recorded. Treat
+    // as fact and weave in; these are often the most important items.
+    addedByHand: {
+      movedForward: s.man.forward.map(m=>m.text),
+      stumbled:     s.man.stumbled.map(m=>m.text),
+      newLeads:     s.man.lead.map(m=>m.text),
+      networking:   s.man.network.map(m=>m.text),
+      other:        s.man.note.map(m=>m.text),
+    },
+  });
+}
+
+async function wkGenerateNarrative() {
+  const s = wkStats(state.wkDays);
+  state.wkLoading = true; render('board');
+  const prof = getProfile() || {};
+  const prompt = `Write the opening summary of a weekly job-search status update, for ${prof.name || 'the candidate'}.
+
+FACTS (the only source of truth — never state a number or a company that is not here):
+${wkFactsForAI(s)}
+
+Anything under addedByHand was written by the candidate about events the app never recorded. It is fact, it is usually the most significant thing in the period, and it should not be left out just because it has no numbers attached.
+
+Write 2 short paragraphs, 90 words total at most.
+Paragraph 1: what actually moved, named specifically.
+Paragraph 2: where the week was thin, and what the coming week turns on.
+Plain declarative prose. No bullet points, no headings, no em-dashes, no marketing language, no congratulation. If a week was quiet, say so plainly rather than inflating it. Write in the first person.`;
+
+  const text = await claudeStream(prompt, null, { onError: (m)=>showToast(m) });
+  state.wkLoading = false;
+  if (text) state.wkNarrative = text.trim();
+  render('board');
+}
+
+
+
+// ── UPDATE DOCUMENT (v1_5_0) ─────────────────────────────────────────────────
+// One builder produces both the on-screen preview and the downloadable file,
+// so what you proof is byte-for-byte what prints. Light background on purpose:
+// the app is dark, paper is not, and a dark fill wastes a cartridge.
+
+const WK_DOC_CSS = `
+  :root{--ink:#14202e;--mid:#4a5a6b;--soft:#7b8a99;--line:#d8dee5;--accent:#1f6f8b;--good:#1d7a52;--bad:#a33a3a}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);
+       font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{max-width:7.1in;margin:0 auto;padding:0.3in 0.1in}
+  h1{font-size:19px;margin:0 0 2px;letter-spacing:-0.01em}
+  .sub{font-size:11px;color:var(--soft);margin:0 0 14px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:0 0 14px;
+        border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:9px 0}
+  .kpi b{display:block;font-size:17px;line-height:1.15}
+  .kpi span{font-size:9.5px;color:var(--soft);text-transform:uppercase;letter-spacing:.06em}
+  .narr{margin:0 0 14px;font-size:12.5px;line-height:1.6}
+  .narr p{margin:0 0 7px}
+  h2{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);
+     margin:11px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+  /* Never strand a heading at the foot of a page. */
+  h2{break-after:avoid;page-break-after:avoid}
+  table{break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  ul{margin:0;padding:0;list-style:none}
+  li{padding:2px 0;font-size:12px;display:flex;gap:7px;align-items:baseline}
+  li .co{font-weight:600;white-space:nowrap}
+  li .de{color:var(--mid);min-width:0}
+  li .dt{margin-left:auto;color:var(--soft);font-size:10.5px;white-space:nowrap;padding-left:8px}
+  .fwd .co{color:var(--good)} .bad .co{color:var(--bad)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+  /* Explicit rows: with auto-placement the full-width .de claims row 2 and
+     pushes .dt onto a row of its own, stranding the date under the text. */
+  .cols li{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:3px 0;align-items:baseline}
+  .cols li .co{grid-row:1;grid-column:1;white-space:normal}
+  .cols li .dt{grid-row:1;grid-column:2;margin-left:0;padding-left:0}
+  .cols li .de{grid-row:2;grid-column:1/-1;font-size:10.5px;line-height:1.35}
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);
+     padding:0 6px 3px 0;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:4px 6px 4px 0;border-bottom:1px solid #eef1f4;vertical-align:top}
+  td.n{text-align:right;white-space:nowrap;color:var(--mid)}
+  .why{color:var(--mid);font-size:10.5px}
+  .none{color:var(--soft);font-size:11.5px;font-style:italic;padding:2px 0}
+  .foot{margin-top:16px;padding-top:7px;border-top:1px solid var(--line);
+        font-size:9.5px;color:var(--soft);display:flex;justify-content:space-between;gap:10px}
+  @page{size:letter;margin:0.5in}
+  @media print{ .wrap{padding:0;max-width:none} body{font-size:12px} }
+`;
+
+function wkList(items, cls) {
+  if (!items.length) return '<div class="none">Nothing this period.</div>';
+  return `<ul class="${cls||''}">` + items.map(i =>
+    `<li>${i.co?`<span class="co">${esc(i.co)}</span>`:''}<span class="de">${esc(i.de)}</span>${i.dt?`<span class="dt">${esc(i.dt)}</span>`:''}</li>`
+  ).join('') + '</ul>';
+}
+
+// Caps per section keep the document inside two pages; the counts in the
+// headings still tell you the real total.
+function wkDocBody(s, narrative) {
+  const prof = getProfile() || {};
+  const cap = (arr, n) => arr.slice(0, n);
+  const more = (arr, n) => arr.length > n ? ` <span class="dt">+${arr.length-n} more</span>` : '';
+
+  // Hand-added entries sit alongside tracked ones in the same section. They
+  // read as one list because they are one list: both are things that happened.
+  const hand = arr => arr.map(m => ({ co:'', de:m.text, dt:wkPretty(m.date) }));
+
+  const fwd = [...cap(s.movedForward,6).map(m=>({co:m.app.company, de:`${m.app.role} · ${m.from} → ${m.to}`, dt:wkPretty(m.date)})), ...hand(s.man.forward)];
+  const bad = [...cap(s.stumbled,4).map(m=>({co:m.app.company, de:`${m.app.role} · ${m.to}`, dt:wkPretty(m.date)})), ...hand(s.man.stumbled)];
+  const nw  = [...cap(s.newLeads,5).map(a=>({co:a.company, de:a.role, dt:a.fit?`fit ${a.fit}`:''})), ...hand(s.man.lead)];
+  const re_ = cap(s.resurfaced,4).map(r=>({co:r.app.company, de:`${r.app.role} · back after ${r.quietDays}d quiet`, dt:wkPretty(r.date)}));
+  const tc  = [...cap(s.touched,5).map(c=>({co:c.name, de:`${c.company}${c.rel?' · '+c.rel:''}`, dt:wkPretty(c.last)})), ...hand(s.man.network)];
+  const up  = cap(s.upcoming,4).map(c=>({co:c.name, de:`${c.company}${c.nextType?' · '+c.nextType:''}`, dt:wkPretty(c.next)}));
+  const alsoList = hand(s.man.note);
+
+  const hotRows = s.hot.length ? s.hot.map(h=>`
+      <tr><td><strong>${esc(h.app.company)}</strong><br><span class="why">${esc(h.app.role)}</span></td>
+          <td>${esc(h.app.stage)}</td>
+          <td class="why">${esc(h.why.join(' · ') || 'active')}</td>
+          <td class="n">${h.quiet<99?h.quiet+'d':'—'}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="none">No active roles.</td></tr>';
+
+  const narrHtml = String(narrative||'').trim()
+    ? String(narrative).trim().split(/\n{2,}/).map(p=>`<p>${esc(p)}</p>`).join('')
+    : '<p class="none">No summary written.</p>';
+
+  return `
+  <div class="wrap">
+    <h1>Job Search Update</h1>
+    <p class="sub">${esc(wkPretty(s.start))} to ${esc(wkPretty(s.end))} · ${s.days} days${prof.name?` · ${esc(prof.name)}`:''}</p>
+
+    <div class="kpis">
+      <div class="kpi"><b>${s.totals.active}</b><span>Active</span></div>
+      <div class="kpi"><b>${s.totals.newLeads}</b><span>New</span></div>
+      <div class="kpi"><b>${s.totals.interviewing}</b><span>Interviewing</span></div>
+      <div class="kpi"><b>${s.totals.touched}</b><span>Contacts touched</span></div>
+      <div class="kpi"><b>${s.totals.all}</b><span>Total tracked</span></div>
+    </div>
+
+    <div class="narr">${narrHtml}</div>
+
+    <h2>Moved forward (${s.movedForward.length + s.man.forward.length})</h2>${wkList(fwd,'fwd')}${more(s.movedForward,6)}
+    <h2>Stumbled (${s.stumbled.length + s.man.stumbled.length})</h2>${wkList(bad,'bad')}${more(s.stumbled,4)}
+
+    <div class="cols">
+      <div><h2>New leads (${s.newLeads.length + s.man.lead.length})</h2>${wkList(nw)}${more(s.newLeads,5)}</div>
+      <div><h2>Resurfaced (${s.resurfaced.length})</h2>${wkList(re_)}${more(s.resurfaced,4)}</div>
+    </div>
+
+    <div class="cols">
+      <div><h2>Networking this period (${s.touched.length + s.man.network.length})</h2>${wkList(tc)}${more(s.touched,5)}</div>
+      <div><h2>Follow-ups due (${s.upcoming.length}${s.totals.overdue?`, ${s.totals.overdue} overdue`:''})</h2>${wkList(up)}</div>
+    </div>
+
+    ${alsoList.length ? `<h2>Also this period (${alsoList.length})</h2>${wkList(alsoList)}` : ''}
+
+    <h2>Hot to follow</h2>
+    <table><thead><tr><th>Role</th><th>Stage</th><th>Why</th><th class="n">Quiet</th></tr></thead>
+      <tbody>${hotRows}</tbody></table>
+
+    <div class="foot">
+      <span>Generated ${esc(wkPretty(wkToday()))} from JobQuest${prof.name?` · ${esc(prof.name)}`:''}</span>
+      <span>Figures computed from tracked activity</span>
+    </div>
+  </div>`;
+}
+
+function wkDocHtml(s, narrative) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Search Update · ${esc(wkPretty(s.start))} to ${esc(wkPretty(s.end))}</title>
+<style>${WK_DOC_CSS}</style></head><body>${wkDocBody(s, narrative)}</body></html>`;
+}
+
+function wkDownload() {
+  const s = wkStats(state.wkDays);
+  const html = wkDocHtml(s, state.wkNarrative);
+  const name = `job-search-update-${s.end}.html`;
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  showToast(`Saved ${name}`);
+}
+
+// Printing uses the on-page preview with everything else hidden, rather than a
+// popup: no blocker to trip over, and the CSP stays as tight as it is.
+function wkPrint() {
+  if (!state.wkPublished) { showToast('Publish the update first'); return; }
+  window.print();
+}
+
+
+
+
+// ── MANUAL EVENTS (v1_5_1) ───────────────────────────────────────────────────
+
+const WK_KINDS = [
+  { v:'forward',  l:'Moved forward' },
+  { v:'stumbled', l:'Stumbled' },
+  { v:'lead',     l:'New lead' },
+  { v:'network',  l:'Networking' },
+  { v:'note',     l:'Also this period' },
+];
+
+function wkManualAll() {
+  const list = (getProfile() || {}).wkManual;
+  return Array.isArray(list) ? list : [];
+}
+
+let wkManualTimer = null;
+function wkManualSaveSoon() {
+  clearTimeout(wkManualTimer);
+  wkManualTimer = setTimeout(() => {
+    const prof = getProfile() || {...EMPTY_PROFILE};
+    // Drop anything older than six months: these are period notes, not a log,
+    // and they ride the Gist payload.
+    const cutoff = wkShift(180);
+    prof.wkManual = (state.wkManualDraft || []).filter(e => (e.text||'').trim() && (e.date||'') >= cutoff);
+    saveProfile(prof);
+  }, 500);
+}
+
+// The panel edits a working copy so typing never round-trips the whole profile.
+function wkManualList() {
+  if (!state.wkManualDraft) state.wkManualDraft = wkManualAll().map(e => ({...e}));
+  return state.wkManualDraft;
+}
+
+function wkManualAdd(kind) {
+  wkManualList().push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+                        date: wkToday(), kind: kind || 'note', text: '' });
+  state.wkPublished = false;
+  render('board');
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#wk-manual input[data-wk-text]');
+    const last = rows[rows.length-1];
+    if (last) last.focus();
+  }, 40);
+}
+
+function wkManualSet(id, field, val) {
+  const e = wkManualList().find(x => x.id === id);
+  if (!e) return;
+  e[field] = val;
+  wkManualSaveSoon();
+  // Text edits must not re-render, or the caret jumps mid-word.
+  if (field !== 'text') { state.wkPublished = false; render('board'); }
+}
+
+function wkManualRemove(id) {
+  state.wkManualDraft = wkManualList().filter(x => x.id !== id);
+  wkManualSaveSoon();
+  state.wkPublished = false;
+  render('board');
+}
+
+// Entries inside the window, grouped by kind, for both the document and the
+// facts handed to the model.
+function wkManualInWindow(start, end) {
+  const out = { forward:[], stumbled:[], lead:[], network:[], note:[] };
+  wkManualList().forEach(e => {
+    const d = String(e.date||'').slice(0,10);
+    if (!e.text || !e.text.trim() || d < start || d > end) return;
+    (out[e.kind] || out.note).push({ date:d, text:e.text.trim() });
+  });
+  Object.values(out).forEach(a => a.sort((x,y)=>y.date.localeCompare(x.date)));
+  return out;
+}
+
+function renderWkManual() {
+  const rows = wkManualList();
+  const list = rows.length ? rows.map(e => `
+    <div style="display:grid;grid-template-columns:118px 124px 1fr auto;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="date" value="${esc(e.date)}" onchange="wkManualSet('${esc(e.id)}','date',this.value)"
+             aria-label="Date of this entry" style="font-size:11px;padding:4px 6px">
+      <select onchange="wkManualSet('${esc(e.id)}','kind',this.value)" aria-label="Section for this entry"
+              style="font-size:11px;padding:4px 6px;width:auto;min-width:118px">
+        ${WK_KINDS.map(k=>`<option value="${k.v}" ${k.v===e.kind?'selected':''}>${k.l}</option>`).join('')}
+      </select>
+      <input data-wk-text type="text" value="${esc(e.text)}" placeholder="What happened"
+             oninput="wkManualSet('${esc(e.id)}','text',this.value)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();wkManualAdd(this.closest('div').querySelector('select').value);}"
+             aria-label="What happened" style="font-size:11.5px;padding:5px 8px">
+      <button onclick="wkManualRemove('${esc(e.id)}')" title="Remove this entry"
+              style="font-size:11px;color:var(--faint);border-color:rgba(255,255,255,0.10);background:rgba(0,0,0,0.10);padding:4px 9px">×</button>
+    </div>`).join('')
+    : `<div style="font-size:11.5px;color:var(--faint);padding:2px 0 8px;line-height:1.5">
+         Nothing added. Use this for anything the tracker never saw: a referral someone promised, a
+         conversation at an event, a recruiter call about no role in particular.
+       </div>`;
+
+  return `
+    <div id="wk-manual" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--brd)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px">
+        ${lbl('Add anything the data missed')}
+        <span style="font-size:10.5px;color:var(--faint)">Counts toward the update and feeds the draft</span>
+      </div>
+      ${list}
+      <button onclick="wkManualAdd()" style="font-size:11px;color:var(--sky-blue-light);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">+ Add line</button>
+      ${rows.length ? `<span style="font-size:10.5px;color:var(--faint);margin-left:8px">Enter adds another. Entries dated outside the ${state.wkDays}-day window are kept but left out of the update.</span>` : ''}
+    </div>`;
+}
+
+
+// ── WEEKLY STATUS PANEL (v1_5_0) ─────────────────────────────────────────────
+
+function wkToggle() { state.wkOpen = !state.wkOpen; render('board'); }
+function wkSetDays(d) { state.wkDays = Number(d)||7; state.wkPublished = false; render('board'); }
+function wkSetNarrative(v) { state.wkNarrative = v; }
+function wkPublish() {
+  state.wkPublished = true; render('board');
+  setTimeout(()=>{ const el=document.getElementById('wk-doc'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 80);
+}
+function wkUnpublish() { state.wkPublished = false; render('board'); }
+
+function renderWeekly() {
+  const s = wkStats(state.wkDays);
+  const opts = [7,14,30].map(d =>
+    `<button class="tag ${state.wkDays===d?'on':''}" onclick="wkSetDays(${d})" style="font-size:10px">${d}d</button>`).join('');
+
+  const counts = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:8px;margin:10px 0 12px">
+      ${[['Active',s.totals.active],['New',s.totals.newLeads],['Forward',s.movedForward.length],
+         ['Stumbled',s.stumbled.length],['Touched',s.totals.touched],['Resurfaced',s.resurfaced.length]]
+        .map(([l,n])=>`<div style="background:rgba(0,0,0,0.20);border:1px solid var(--brd);border-radius:7px;padding:7px 9px">
+          <div style="font-size:17px;font-weight:600;color:${n?'var(--tx)':'var(--faint)'};line-height:1.1">${n}</div>
+          <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${l}</div>
+        </div>`).join('')}
+    </div>`;
+
+  const body = state.wkOpen ? `
+    ${counts}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
+      ${lbl('Summary — draft it, then edit freely before publishing')}
+      <button onclick="wkGenerateNarrative()" ${state.wkLoading?'disabled':''} style="font-size:11px;color:#E8C97A;border-color:var(--amber-dim);background:rgba(201,138,14,0.10)">${state.wkLoading?'Writing…':'✦ Draft summary'}</button>
+    </div>
+    <textarea id="wk-narr" rows="5" oninput="wkSetNarrative(this.value)" placeholder="Write it yourself, or press Draft summary and edit what comes back."
+      style="width:100%;font-size:12px;line-height:1.6">${esc(state.wkNarrative)}</textarea>
+    <div style="font-size:10.5px;color:var(--faint);margin-top:5px;line-height:1.5">
+      Every figure in the Update is computed from your tracked activity. The draft only writes the prose, from those same figures.
+    </div>
+    ${renderWkManual()}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
+      <button onclick="wkPublish()" class="amber" style="font-size:11px;padding:6px 14px;background:var(--jade);border-color:var(--jade)">Publish update</button>
+      ${state.wkPublished?`
+        <button onclick="wkPrint()" style="font-size:11px">Print</button>
+        <button onclick="wkDownload()" style="font-size:11px">Download .html</button>
+        <button onclick="wkUnpublish()" style="font-size:11px;color:var(--faint)">Back to draft</button>`:''}
+    </div>` : '';
+
+  const doc = state.wkPublished ? `
+    <div id="wk-doc" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase">Preview · this is exactly what prints</span>
+        <span style="font-size:10px;color:var(--faint)">Letter · 0.5in margins</span>
+      </div>
+      <div id="wk-paper" style="background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.4)">
+        <style>${WK_DOC_CSS}</style>
+        ${wkDocBody(s, state.wkNarrative)}
+      </div>
+    </div>` : '';
+
+  return `
+    <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
+      <span style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.10em;text-transform:uppercase;white-space:nowrap">Weekly Status</span>
+      <div style="flex:1;height:1px;background:linear-gradient(to right,var(--brd2),transparent)"></div>
+    </div>
+    <div class="card wk-card" style="padding:14px 16px;border-top:3px solid var(--sky-blue);margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--sky-blue);letter-spacing:.03em">🗞 Weekly status update</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">What moved, what stalled, who to chase. Prints to two pages.</div>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center">
+          ${state.wkOpen?opts:''}
+          <button onclick="wkToggle()" style="font-size:11px">${state.wkOpen?'Hide':'Open'}</button>
+        </div>
+      </div>
+      ${body}
+      ${doc}
+    </div>`;
+}
+
 
 // ── CONTACT ↔ APPLICATION AUTO-LINK (v1_4_4) ─────────────────────────────────
 // app.netContact has always been free text with no connection to state.contacts,
@@ -5075,8 +5906,8 @@ function renderNetwork(el) {
             <span style="font-size:13px;font-weight:600;color:var(--tx)">${esc(c.name)}</span>
             ${heatBadge}
             ${badge(c.rel, REL_COL[c.rel]||'blue', 'padding:1px 7px;font-size:10px;border-radius:8px;font-weight:500')}
-            <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'star')" title="${c.star?'Remove High Priority':'Mark High Priority'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.star?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.star?'1':'0.25'}'">⭐</button>
-            <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'champion')" title="${c.champion?'Remove Champion':'Mark as Champion'}" style="font-size:13px;background:none;border:none;padding:0;cursor:pointer;opacity:${c.champion?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.champion?'1':'0.25'}'">🏆</button>
+            <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'star')" title="${c.star?'Remove High Priority':'Mark High Priority'}" class="flag-btn" style="font-size:13px;background:none;border:none;cursor:pointer;opacity:${c.star?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.star?'1':'0.25'}'">⭐</button>
+            <button onclick="event.stopPropagation();toggleContactFlag(${c.id},'champion')" title="${c.champion?'Remove Champion':'Mark as Champion'}" class="flag-btn" style="font-size:13px;background:none;border:none;cursor:pointer;opacity:${c.champion?'1':'0.25'};line-height:1;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='${c.champion?'1':'0.25'}'">🏆</button>
           </div>
           <div style="color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${[c.role,c.company].filter(Boolean).map(esc).join(' · ')}</div>
           <div style="margin-top:4px;font-size:11px;color:var(--sky-blue);font-weight:500">${isExpanded?'▲ collapse':'▼ expand'}</div>
@@ -6478,6 +7309,8 @@ function renderSync(el) {
 
     ${renderBoardSettings()}
 
+    ${renderKbSettings()}
+
     <div class="card" style="margin-bottom:16px;border-color:${cloudConnected?'var(--green-dim)':'var(--amber-dim)'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div class="row">${cloudBadge}</div>
@@ -6572,7 +7405,7 @@ function renderSync(el) {
           </div>
           <div style="margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber)">Import ↑</div>
         </div>
-        <input type="file" id="import-apps-file" accept=".csv" style="font-size:11px;color:var(--muted);width:100%;background:transparent;border:none;padding:0">
+        <input type="file" id="import-apps-file" aria-label="Choose a CSV file of applications to import" accept=".csv" style="font-size:11px;color:var(--muted);width:100%;background:transparent;border:none;padding:0">
         <button onclick="doImportApps()" style="width:100%;font-size:12px;font-weight:600;background:var(--sky-blue-pale);color:var(--sky-blue);border:1px solid var(--sky-blue-mid);border-radius:8px;padding:9px 12px">↑ Import CSV</button>
       </div>
 
@@ -6586,7 +7419,7 @@ function renderSync(el) {
           </div>
           <div style="margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber)">Import ↑</div>
         </div>
-        <input type="file" id="import-net-file" accept=".csv" style="font-size:11px;color:var(--muted);width:100%;background:transparent;border:none;padding:0">
+        <input type="file" id="import-net-file" aria-label="Choose a CSV file of contacts to import" accept=".csv" style="font-size:11px;color:var(--muted);width:100%;background:transparent;border:none;padding:0">
         <button onclick="doImportContacts()" style="width:100%;font-size:12px;font-weight:600;background:var(--jade-pale);color:var(--jade);border:1px solid var(--jade-border);border-radius:8px;padding:9px 12px">↑ Import CSV</button>
       </div>
 
@@ -6778,6 +7611,39 @@ function renderBoardSlugs() {
         <button onclick="bdSaveSlugs()" style="font-size:11px;color:var(--teal-light);border-color:var(--teal-border);background:rgba(0,0,0,0.18)">Save boards</button>
         <span style="font-size:10.5px;color:var(--faint);line-height:1.5">Large medtech (Medtronic, Boston Scientific, Abbott, Stryker) runs on Workday, which has no public board API — keep using the launcher below for those.</span>
       </div>
+    </div>
+  `;
+}
+
+// ── KEYBOARD SETTINGS (v1_4_9) ───────────────────────────────────────────────
+// Built from KB_SHORTCUTS, the same array the handler and the ? cheatsheet use,
+// so this documentation cannot describe a key that does something else.
+
+function renderKbSettings() {
+  const on = kbEnabled();
+  const rows = KB_SHORTCUTS.map(s => `
+    <tr>
+      <td style="padding:4px 14px 4px 0;white-space:nowrap;vertical-align:top">${kbKbd(s.keys, 10.5)}</td>
+      <td style="padding:4px 12px 4px 0;font-size:11.5px;color:${on?'var(--tx)':'var(--faint)'};vertical-align:top">${esc(s.desc)}</td>
+      <td style="padding:4px 0;font-size:10px;color:var(--faint);white-space:nowrap;vertical-align:top">${esc(s.where)}</td>
+    </tr>`).join('');
+
+  return `
+    <div class="card" style="margin-bottom:16px;border-color:var(--brd2);border-left:3px solid var(--sky-blue)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:500;color:var(--tx)">⌨️ Keyboard shortcuts</div>
+        <label style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:11.5px;color:var(--muted);white-space:nowrap">
+          <input type="checkbox" ${on?'checked':''} onchange="setKbEnabled(this.checked)" style="width:auto">
+          ${on ? 'On' : 'Off'}
+        </label>
+      </div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 12px">
+        Single-key shortcuts for moving around without the mouse. They never fire while you are typing in a
+        field, and never override your browser's own shortcuts. Press <kbd style="font-family:ui-monospace,monospace;font-size:10.5px;background:rgba(255,255,255,0.07);border:1px solid var(--brd2);border-radius:4px;padding:1px 5px">?</kbd>
+        anywhere to see this list without coming back here.
+      </p>
+      <table style="border-collapse:collapse;width:100%">${rows}</table>
+      ${on ? '' : `<div style="font-size:11px;color:var(--amber);margin-top:10px">Currently off. Esc still closes open panels.</div>`}
     </div>
   `;
 }
