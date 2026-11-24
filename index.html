@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.5.2  (sync error visibility)              ║
+║  JOBQUEST — Starter Edition  ·  v1.5.3  (token swap + sync guard)            ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -137,6 +137,25 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator).║
+║  v1_5_3  Replace a token without risking data, and stop a reconnect          ║
+║          overwriting newer local data. Regenerating a PAT on GitHub issues a ║
+║          new value and kills the old one, so fixing a missing scope by       ║
+║          regenerating leaves the stored token dead and every sync 401s. The  ║
+║          only route back was Disconnect then reconnect, and that runs        ║
+║          doCloudSetup, whose applyCloudData() replaces local with the Gist   ║
+║          whenever the Gist has apps. That is correct for a genuinely new     ║
+║          device and wrong for an existing one carrying changes that never    ║
+║          synced, which is precisely the state a run of failed syncs leaves   ║
+║          you in. Two fixes. (1) Replace token, offered inside the sync       ║
+║          failure banner: it validates through diagnoseGist first, keeps the  ║
+║          same Gist, never reads, and PUSHES local data up, restoring the     ║
+║          previous token if the push fails so a bad paste cannot strand the   ║
+║          connection. (2) doCloudSetup now compares the Gist's updatedAt      ║
+║          against the newest local updatedAt and, when the cloud copy is      ║
+║          older, states both counts and dates and makes the choice explicit,  ║
+║          defaulting to keeping the device's data. Silent replacement of      ║
+║          newer records by older ones is the one failure mode here that       ║
+║          cannot be undone from the app.                                      ║
 ║  v1_5_2  Show WHY a sync failed. The full reason has been in                 ║
 ║          state.cloudStatus all along, but the only thing rendered was a nav  ║
 ║          pill reading 'sync failed -> Sync'. Clicking it landed on a tab     ║
@@ -549,8 +568,8 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.5.2">
-<meta name="jq-base" content="37">
+<meta name="jq-version" content="1.5.3">
+<meta name="jq-base" content="38">
 <meta name="jq-date" content="2026-11-23">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
@@ -1363,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -7663,6 +7682,67 @@ function renderKbSettings() {
   `;
 }
 
+// ── REPLACE TOKEN (v1_5_3) ───────────────────────────────────────────────────
+// Regenerating a PAT on GitHub issues a NEW value and kills the old one, so a
+// token fixed by regenerating leaves the stored copy dead and every sync 401s.
+// Until now the only route back was Disconnect and reconnect, which runs the
+// first-device path and can pull an older Gist over newer local data. This
+// swaps the token alone: same Gist, no read, and the first thing it does is
+// PUSH, so local stays the source of truth.
+
+function wkShowTokenSwap() { state.showTokenSwap = !state.showTokenSwap; render('sync'); }
+
+async function replaceToken() {
+  const el = document.getElementById('swap-token');
+  const token = (el?.value || '').trim();
+  const out = document.getElementById('swap-result');
+  if (!token) { if (out) out.innerHTML = '<span style="color:var(--amber)">Paste the new token first.</span>'; return; }
+  if (out) out.innerHTML = '<span style="color:var(--muted)">Checking…</span>';
+
+  const rows = await diagnoseGist(token, state.ghGistId);
+  const bad = rows.find(r => r.ok === false);
+  if (bad) {
+    if (out) out.innerHTML = `<span style="color:var(--red)">${esc(bad.step)}: ${esc(bad.msg)}</span>`;
+    return;
+  }
+
+  const prev = state.ghToken;
+  state.ghToken = token;
+  saveCredentials();
+  if (out) out.innerHTML = '<span style="color:var(--muted)">Pushing your local data…</span>';
+  try {
+    await ghWrite();                       // push, never pull
+    setSyncStatus('✓ synced', false);
+    state.showTokenSwap = false;
+    if (el) el.value = '';
+    showToast('Token replaced and data pushed ✓');
+    render('sync');
+  } catch (e) {
+    state.ghToken = prev; saveCredentials();   // put the old one back
+    if (out) out.innerHTML = `<span style="color:var(--red)">${esc(e.message)}</span>`;
+  }
+}
+
+function renderTokenSwap() {
+  if (!state.showTokenSwap) {
+    return `<button onclick="wkShowTokenSwap()" style="font-size:11px">Replace token</button>`;
+  }
+  return `
+    <div style="width:100%;margin-top:8px;padding:11px 12px;border-radius:7px;background:rgba(0,0,0,0.22);border:1px solid var(--brd)">
+      ${lbl('New GitHub token — same Gist, your local data is pushed up')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input id="swap-token" type="password" placeholder="ghp_… or github_pat_…" autocomplete="off"
+               onkeydown="if(event.key==='Enter')replaceToken()" style="flex:1;min-width:200px">
+        <button onclick="replaceToken()" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:var(--jade-pale);white-space:nowrap">Check &amp; push</button>
+        <button onclick="wkShowTokenSwap()" style="font-size:11px;color:var(--faint)">Cancel</button>
+      </div>
+      <div id="swap-result" style="font-size:11px;margin-top:7px;line-height:1.5"></div>
+      <div style="font-size:10.5px;color:var(--faint);margin-top:6px;line-height:1.5">
+        The token is checked before anything is saved, and your device's data is pushed up rather than the Gist pulled down.
+      </div>
+    </div>`;
+}
+
 // ── LAST SYNC ERROR (v1_5_2) ─────────────────────────────────────────────────
 // The full reason has always been in state.cloudStatus, but the only thing on
 // screen was a nav pill reading 'sync failed → Sync'. Clicking it landed you on
@@ -7677,7 +7757,10 @@ function renderSyncError() {
     <div style="margin:4px 0 12px;padding:11px 13px;border-radius:7px;background:var(--amber-bg);border:1px solid var(--amber-dim)">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         <span style="font-size:11.5px;font-weight:600;color:var(--amber)">⚠ Last sync failed</span>
-        <button onclick="runGistDiagnostic()" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:rgba(0,0,0,0.14)">Test connection</button>
+        <span style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="runGistDiagnostic()" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:rgba(0,0,0,0.14)">Test connection</button>
+          ${renderTokenSwap()}
+        </span>
       </div>
       <div style="font-size:11.5px;color:var(--tx);line-height:1.55">${esc(msg)}</div>
       <div id="gist-diag" style="font-size:11.5px;margin-top:9px"></div>
@@ -7840,9 +7923,29 @@ async function doCloudSetup() {
   try {
     const data = await ghRead();
     // A Gist that already holds data is the source of truth for a newly
-    // connected device: apps, contacts, tasks, referrals, profile, links.
+    // connected device. But reconnecting an EXISTING device is the same code
+    // path, and there the Gist can easily be older than what is on this
+    // machine: that is exactly the situation after a spell of failed syncs.
+    // Overwriting newer local data without asking would be silent loss, so
+    // compare timestamps and make the user choose.
     if (data.apps && data.apps.length > 0) {
-      applyCloudData(data);
+      const localNewest = (state.apps || [])
+        .map(a => String(a.updatedAt || a.date || '')).sort().pop() || '';
+      const cloudStamp = String(data.updatedAt || '');
+      const localCount = (state.apps || []).length;
+      const cloudIsOlder = localCount > 0 && localNewest && cloudStamp &&
+                           cloudStamp.slice(0,10) < localNewest.slice(0,10);
+      if (cloudIsOlder) {
+        const keepLocal = confirm(
+          `This device has newer data than the Gist.\n\n` +
+          `On this device: ${localCount} applications, last change ${localNewest.slice(0,10)}\n` +
+          `In the Gist: ${data.apps.length} applications, last saved ${cloudStamp.slice(0,10)}\n\n` +
+          `OK = keep this device's data and push it up (recommended)\n` +
+          `Cancel = replace this device with the Gist's older copy`);
+        if (!keepLocal) applyCloudData(data);
+      } else {
+        applyCloudData(data);
+      }
     } else if (data.contacts && data.contacts.length > 0) {
       state.contacts = data.contacts;
     }
