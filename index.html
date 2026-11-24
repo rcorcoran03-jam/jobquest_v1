@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.6.0  (date recovery + two-row KPIs)       ║
+║  JOBQUEST — Starter Edition  ·  v1.7.1  (date + draft accuracy fixes)       ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.1';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1421,6 +1421,8 @@ let state = {
   bdProbeQ: '', bdProbeHits: null, bdProbeLoading: false, bdProbeNote: '',
   bdSourceFilter: '',   // '' = all boards; otherwise 'Greenhouse:lirio' style key
   bdCursor: null,       // index into bdVisible() for j/k navigation
+  nsOpen: false,        // Pipeline lens panel (negative space)
+  bdWildOpen: false, bdWilding: false,   // wildcard pass over rule-rejected jobs
   wkOpen: false, wkDays: 7, wkNarrative: '', wkLoading: false, wkPublished: false,
   kbPending: false, kbPendingTimer: null, kbHelp: false,
   tasks: JSON.parse(localStorage.getItem('tasks')||'null') || [
@@ -2981,6 +2983,310 @@ function renderBoardResults() {
   }).join('');
 }
 
+// ── NEGATIVE SPACE (v1_7_0) ──────────────────────────────────────────────────
+// Every other view in this app answers "what should I do about the roles I am
+// tracking". This one answers the opposite question: what is NOT in the
+// pipeline. A search narrows itself over time without anyone deciding to
+// narrow it, and the only way to see that is to look at the shape of what you
+// have collected rather than at the individual cards. Everything here is
+// computed from state.apps. No model is involved, so the numbers cannot drift.
+
+const NS_CONCEPTS = [
+  { k:'behavioral', l:'Behavioral / mental health', core:true,
+    re:/behavio(u)?ral|mental health|psychiatr|psycholog|substance|addiction|\beap\b|\btherapy\b|counsel/i },
+  { k:'navigation', l:'Care navigation / advocacy', core:true,
+    re:/navigat|steerage|advocacy|care coordination|care management|member experience/i },
+  { k:'zeroToOne',  l:'0-to-1 / new product', core:true,
+    re:/\b0\s*[-to]{1,3}\s*1\b|new product|greenfield|incubat|\bnpd\b|net.?new|from scratch/i },
+  { k:'analytics',  l:'Analytics / data product', core:false,
+    re:/analytic|data product|insight|reporting|informatics|intelligence|dashboard/i },
+  { k:'benefits',   l:'Employer-side benefits', core:false,
+    re:/\bbenefits?\b|total rewards|wellbeing|well-being|absence|leave management|\bhsa\b|\bfsa\b/i },
+  { k:'government', l:'Government / Medicaid', core:false,
+    re:/medicaid|medicare|state gov|public sector|\bcms\b|\bduals?\b|federal/i },
+  { k:'ai',         l:'AI / ML', core:false,
+    re:/\bai\b|artificial intelligence|machine learning|agentic|\bllm\b|generative/i },
+  { k:'device',     l:'Device / hardware', core:false,
+    re:/device|implant|catheter|cardiac|surgical|capital equipment|upstream|downstream/i },
+];
+
+const NS_EMPLOYERS = [
+  ['Payer / health plan', /unitedhealth|optum|\buhc\b|aetna|cvs|caremark|humana|cigna|elevance|\bmedica\b|blue cross|ucare|healthpartners/i],
+  ['Medtech / device',    /medtronic|boston scientific|abbott|philips|stryker|teleflex|coloplast|inspire medical|tactile|smiths|integer|surmodics|laborie|livanova|cirtec|histosonics|starkey|solventum|beckman|danaher|imricor|baxter|zimmer|edwards|becton|\b3m\b/i],
+  ['Health system',       /allina|fairview|mayo|park nicollet|essentia|children's|hospital|\bclinic\b|health system/i],
+  ['Digital health',      /equip|instride|concert health|starling|talkspace|headspace|boulder care|ophelia|eleos|\brula\b|omada|hinge health|smile digital|\boura\b|garner|soda health|healthequity|alight|transcarent|included health|accolade|lyra|spring health|teladoc|amwell|maven|progyny|virta/i],
+  ['Retail / consumer',   /target|best buy|chewy|general mills|amazon|walmart|land o.?lakes|cargill/i],
+  ['Bank / insurance',    /u\.?s\.?\s*bank|ameriprise|thrivent|securian|wells fargo|allianz|travelers/i],
+  ['Consulting / advisory',/deloitte|ernst|^ey\b|\bey\s|accenture|mckinsey|bain|\bbcg\b|kpmg|\bpwc\b|mercer|\baon\b|willis|milliman|vizient|hollstadt|berkeley research|ecg management|huron|chartis/i],
+];
+
+const NS_DEAD = ['Rejected','Ghosted'];
+const nsText = a => `${a.role||''} ${a.company||''} ${a.notes||''} ${a.gaps||''} ${a.keyReqs||''}`;
+const nsReached = a => WK_PROGRESS.indexOf(a.stage) >= WK_PROGRESS.indexOf('Applied');
+
+const NS_HEALTHISH = /health|care\b|\bmed\b|medic|clinic|patient|pharma|\brx\b|therapeutic|diagnost|bio|hospital|dental|wellness|benefit/i;
+function nsEmployerType(company) {
+  const c = String(company || '');
+  for (const [label, re] of NS_EMPLOYERS) if (re.test(c)) return label;
+  // The long tail is mostly health-tech companies too small to name. Reading
+  // the name is a worse signal than a curated list but a far better one than
+  // dumping a third of the pipeline into 'Unclassified'.
+  if (NS_HEALTHISH.test(c)) return 'Other health tech';
+  return 'Unclassified';
+}
+
+function nsStats() {
+  const apps = (state.apps || []).filter(a => a && typeof a === 'object');
+  const total = apps.length || 1;
+
+  const byType = {};
+  apps.forEach(a => { const t = nsEmployerType(a.company); byType[t] = (byType[t]||0)+1; });
+  const types = Object.entries(byType).sort((x,y)=>y[1]-x[1]);
+
+  // Per concept: how much of the pipeline touches it, and whether the ones
+  // that do actually convert. Tracked alone says what you look at; applied and
+  // dead together say whether looking there is working.
+  const concepts = NS_CONCEPTS.map(c => {
+    const hits = apps.filter(a => c.re.test(nsText(a)));
+    const applied = hits.filter(nsReached).length;
+    const dead = hits.filter(a => NS_DEAD.includes(a.stage)).length;
+    return { ...c, n: hits.length, pct: Math.round(100*hits.length/total),
+             applied, dead, live: hits.length - dead };
+  }).sort((x,y)=>y.n-x.n);
+
+  // Title shape. 'Manager' swallowing the list is the tell that the search is
+  // keyed on a word rather than on a kind of work.
+  const fam = {};
+  apps.forEach(a => {
+    const r = String(a.role||'').toLowerCase();
+    const k = /\bdirector\b/.test(r) ? 'Director'
+            : /\bprincipal\b/.test(r) ? 'Principal'
+            : /\b(vp|vice president|head of)\b/.test(r) ? 'VP / Head of'
+            : /\b(sr\.?|senior)\s+manager\b/.test(r) ? 'Senior Manager'
+            : /\bproduct manager\b/.test(r) ? 'Product Manager'
+            : /\bmanager\b/.test(r) ? 'Other Manager'
+            : /\bowner\b/.test(r) ? 'Owner'
+            : /\b(lead|strategist|analyst|consultant)\b/.test(r) ? 'Lead / other'
+            : 'Other';
+    fam[k] = (fam[k]||0)+1;
+  });
+  const titles = Object.entries(fam).sort((x,y)=>y[1]-x[1]);
+  const pmShare = Math.round(100*(apps.filter(a=>/\bproduct manager\b/i.test(a.role||'')).length)/total);
+
+  const gaps = concepts.filter(c => c.core && c.pct < 20);
+  const thin = types.filter(([t,n]) => t !== 'Unclassified' && n <= 5).map(([t])=>t);
+  return { apps, total: apps.length, types, concepts, titles, pmShare, gaps, thin };
+}
+
+function nsToggle() { state.nsOpen = !state.nsOpen; render('board'); }
+
+function renderNegativeSpace() {
+  const apps = (state.apps || []);
+  if (apps.length < 25) return '';            // too few rows to have a shape
+  const s = nsStats();
+  const head = s.gaps.length
+    ? `${s.gaps[0].l.toLowerCase()} is ${s.gaps[0].pct}% of ${s.total} tracked`
+    : `${s.pmShare}% of titles are "product manager"`;
+
+  if (!state.nsOpen) return `
+    <div class="card" style="padding:11px 16px;margin-bottom:14px;border-left:3px solid var(--purple)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <span style="font-size:13px;font-weight:500;color:var(--tx)">🔭 Pipeline lens</span>
+          <span style="font-size:11.5px;color:var(--muted);margin-left:8px">What you are <em>not</em> looking at &middot; ${esc(head)}</span>
+        </div>
+        <button onclick="nsToggle()" style="font-size:11px;flex-shrink:0">Open</button>
+      </div>
+    </div>`;
+
+  const bar = (n, max, col) => `<span style="display:inline-block;height:8px;border-radius:3px;background:${col};width:${Math.max(2,Math.round(100*n/Math.max(1,max)))}%"></span>`;
+  const typeMax = Math.max(...s.types.map(t=>t[1]));
+  const typeRows = s.types.map(([t,n]) => `
+    <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:3px">
+      <span style="width:124px;flex-shrink:0;color:${t==='Unclassified'?'var(--faint)':'var(--muted)'}">${esc(t)}</span>
+      <span style="flex:1;background:rgba(0,0,0,0.22);border-radius:3px;overflow:hidden;display:block">${bar(n,typeMax,'var(--sky-blue)')}</span>
+      <span style="width:30px;text-align:right;color:var(--tx);font-weight:600;flex-shrink:0">${n}</span>
+    </div>`).join('');
+
+  const cMax = Math.max(...s.concepts.map(c=>c.n), 1);
+  const conceptRows = s.concepts.map(c => {
+    const flag = c.core && c.pct < 20;
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:3px">
+      <span style="width:150px;flex-shrink:0;color:${flag?'var(--amber)':'var(--muted)'}">${c.core?'★ ':''}${esc(c.l)}</span>
+      <span style="flex:1;background:rgba(0,0,0,0.22);border-radius:3px;overflow:hidden;display:block">${bar(c.n,cMax, flag?'var(--amber)':'var(--teal)')}</span>
+      <span style="width:52px;text-align:right;color:var(--tx);font-weight:600;flex-shrink:0">${c.n} <span style="color:var(--faint);font-weight:400">${c.pct}%</span></span>
+      <span style="width:84px;text-align:right;color:var(--faint);flex-shrink:0">${c.applied} applied &middot; ${c.dead} dead</span>
+    </div>`;
+  }).join('');
+
+  const titleRows = s.titles.map(([t,n]) =>
+    `<span class="pill" style="margin:0 4px 4px 0">${esc(t)} ${n}</span>`).join('');
+
+  const notes = [];
+  if (s.pmShare >= 55) notes.push(`<strong style="color:var(--tx)">${s.pmShare}% of your titles contain "product manager."</strong> The same job is called capability owner, offering manager, business owner, program director or solutions lead elsewhere. A title filter cannot see those.`);
+  if (s.gaps.length) {
+    const list = s.gaps.map(g => `<strong style="color:var(--tx)">${esc(g.l)} ${g.pct}%</strong>`).join(', ');
+    notes.push(`Your stated focus is underweight in your own pipeline: ${list}. That is the axis where you are unusual. The rest of the list is the axis where you are one of many.`);
+    const conv = s.gaps.filter(g => g.applied > 0 || g.dead > 0)
+      .map(g => `${esc(g.l.toLowerCase())} ${g.applied}/${g.dead}`).join(', ');
+    if (conv) notes.push(`<span style="color:var(--faint)">Applied vs dead in those: ${conv}.</span>`);
+  }
+  if (s.thin.length) notes.push(`Barely represented: ${s.thin.map(esc).join(', ')}. Worth asking whether that is a real judgement or just a search that never went there.`);
+  const worst = s.concepts.filter(c=>c.applied>=3).sort((a,b)=> (b.dead/Math.max(1,b.applied)) - (a.dead/Math.max(1,a.applied)))[0];
+  if (worst && worst.dead > worst.applied) notes.push(`<strong style="color:var(--tx)">${esc(worst.l)}</strong> has ${worst.dead} dead against ${worst.applied} that reached Applied. Where you convert and where you spend effort are not the same question.`);
+
+  return `
+  <div class="card" style="padding:14px 16px;margin-bottom:14px;border-left:3px solid var(--purple)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:3px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:500;color:var(--tx)">🔭 Pipeline lens</div>
+      <button onclick="nsToggle()" style="font-size:11px">Hide</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">The shape of ${s.total} tracked roles. Computed from your own cards, not from a model.</div>
+
+    <div style="font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Employer type</div>
+    ${typeRows}
+
+    <div style="font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin:13px 0 5px">Concept coverage &middot; ★ marks your stated focus</div>
+    ${conceptRows}
+
+    <div style="font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin:13px 0 5px">Title shape</div>
+    <div style="display:flex;flex-wrap:wrap">${titleRows}</div>
+
+    ${notes.length ? `<div style="margin-top:13px;padding:10px 12px;border-radius:7px;background:rgba(0,0,0,0.18);border:1px solid var(--brd)">
+      ${notes.map(n=>`<div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:6px">${n}</div>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+// ── WILDCARDS (v1_7_0) ───────────────────────────────────────────────────────
+// bdTriage() scores jobs that already passed your rules. It is a filter, so
+// the best it can do is agree with the boundary you drew. This asks the
+// opposite question of the jobs the rules THREW AWAY: make the strongest
+// honest case that the filter got this one wrong.
+//
+// The failure mode is obvious and worth designing against: a model asked to
+// argue for something will argue for everything. The prompt therefore states
+// that most rejections are correct, demands a kill reason alongside every
+// case, and the UI only shows 7+. If this ever starts surfacing half the
+// rejected pile, the scores have gone soft and the bar should move, not the
+// filter.
+
+function bdRuleRejected() {
+  return (state.bdJobs || []).filter(j => !state.bdHidden[j.id] && !bdMatchesRules(j));
+}
+
+function bdWildToggle() { state.bdWildOpen = !state.bdWildOpen; render('board'); }
+
+async function bdWildcards() {
+  const pool = bdRuleRejected();
+  if (!pool.length) { showToast('Nothing was filtered out — no wildcards to look for'); return; }
+  const slice = pool.slice(0, Math.min(25, pool.length));
+
+  const prof = getProfile() || {};
+  const bg = [
+    prof.background && `What they have actually done: ${String(prof.background).slice(0,1100)}`,
+    prof.specialties && `Specialties: ${String(prof.specialties).slice(0,500)}`,
+    prof.titles && `Titles they search for: ${prof.titles}`,
+    prof.focus && `Stated focus: ${prof.focus}`,
+    prof.yearsExp && `Years of experience: ${prof.yearsExp}`,
+    (prof.salaryMin || prof.salaryMax) && `Target comp: ${prof.salaryMin||'?'}-${prof.salaryMax||'?'}`,
+    prof.location && `Based in: ${prof.location}${prof.noReloc ? ' (will not relocate)' : ''}`,
+    prof.redFlagSignals && `Hard dealbreakers, never argue past these: ${prof.redFlagSignals}`,
+  ].filter(Boolean).join('\n');
+
+  const payload = slice.map(j => ({
+    id: j.id, company: j.company, role: j.role, location: j.location,
+    snippet: String(j.jdText || '').replace(/\s+/g,' ').slice(0, 1100),
+  }));
+
+  const prompt = `Every job below was REJECTED by this candidate's own search filters, which key on job title, industry and location. Those filters are a rough proxy for what the person can actually do, and a proxy misses things. Your job is to find the few the filter got wrong.
+
+For each job, reason from what the candidate has DONE, not from the title or the industry on the posting. A job is a wildcard when the underlying work is work they have already done somewhere else, under a different label or in a different sector. A job is NOT a wildcard merely because it is in healthcare, or because the seniority is right, or because they could learn it.
+
+CANDIDATE
+${bg || 'Senior product manager, digital health and medtech.'}
+
+JOBS
+${JSON.stringify(payload)}
+
+Score 1-10 for how much this person would regret never seeing this posting.
+- 8-10: the work is genuinely theirs under another name. Rare.
+- 5-7: real transferable overlap, but a serious gap too.
+- 1-4: the filter was right.
+
+Most rejected jobs are rejected correctly. If you score many of these 7 or above you have made the feature useless, so be hard to convince. Never argue past a stated dealbreaker; those stay at 1.
+
+Return ONLY a JSON array, no prose and no code fence. Each object exactly:
+{"id": <the id, unchanged>, "score": <integer 1-10>, "forIt": "<max 22 words: the strongest honest case, naming what they have already done that transfers>", "against": "<max 14 words: the single most likely reason this is wrong>"}`;
+
+  state.bdWilding = true; state.bdWildOpen = true; render('board');
+  const raw = await claudeStream(prompt, null, { onError: (m)=>showToast(m) });
+  state.bdWilding = false;
+  if (!raw) { render('board'); return; }
+
+  let out;
+  try {
+    const cleaned = raw.replace(/```json|```/gi, '').trim();
+    const a = cleaned.indexOf('['), b = cleaned.lastIndexOf(']');
+    if (a === -1 || b <= a) throw new Error('no array');
+    out = JSON.parse(cleaned.slice(a, b + 1));
+  } catch(e) {
+    showToast('AI returned an unexpected format — no wildcards applied');
+    render('board'); return;
+  }
+
+  const byId = new Map(out.filter(s => s && s.id).map(s => [String(s.id), s]));
+  let n = 0, hits = 0;
+  state.bdJobs = state.bdJobs.map(j => {
+    const s = byId.get(String(j.id));
+    if (!s) return j;
+    const score = Math.max(1, Math.min(10, Number(s.score) || 0));
+    if (!score) return j;
+    n++; if (score >= 7) hits++;
+    return { ...j, wild: { score, forIt: String(s.forIt||'').slice(0,200), against: String(s.against||'').slice(0,160) } };
+  });
+  showToast(hits ? `${hits} wildcard${hits===1?'':'s'} out of ${n} scored` : `Scored ${n} — the filter was right about all of them`);
+  render('board');
+}
+
+function renderWildcards() {
+  const pool = bdRuleRejected();
+  if (!state.bdSearched || state.bdLoading || !pool.length) return '';
+  const scored = pool.filter(j => j.wild);
+  const hits = scored.filter(j => j.wild.score >= 7).sort((a,b)=>b.wild.score-a.wild.score);
+
+  const header = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="min-width:0">
+        <span style="font-size:11.5px;font-weight:600;color:var(--purple)">🎲 Wildcards</span>
+        <span style="font-size:11px;color:var(--faint);margin-left:7px">${pool.length} posting${pool.length===1?'':'s'} your rules threw out${scored.length?` · ${scored.length} examined · ${hits.length} worth a look`:''}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${scored.length ? `<button onclick="bdWildToggle()" style="font-size:11px">${state.bdWildOpen?'Hide':'Show'}</button>` : ''}
+        <button onclick="bdWildcards()" ${state.bdWilding?'disabled':''} style="font-size:11px;color:var(--purple);border-color:var(--purple);background:rgba(139,124,195,0.10)">${state.bdWilding?'Looking…':`✦ Look for wildcards`}</button>
+      </div>
+    </div>`;
+
+  let body = '';
+  if (state.bdWildOpen && scored.length) {
+    body = hits.length
+      ? hits.map(j => `
+        <div style="border:1px solid var(--brd);border-left:2px solid var(--purple);border-radius:7px;padding:9px 11px;margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:600;color:var(--tx)">${esc(j.company||'')}</span>
+            <span class="pill" style="background:rgba(139,124,195,0.14);border-color:var(--purple);color:var(--purple)">${j.wild.score}/10</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted);margin:1px 0 5px">${esc(j.role||'')}${j.location?` · ${esc(j.location)}`:''}</div>
+          <div style="font-size:11.5px;color:var(--tx);line-height:1.55">${esc(j.wild.forIt)}</div>
+          <div style="font-size:11px;color:var(--faint);line-height:1.5;margin-top:3px">Against: ${esc(j.wild.against)}</div>
+          <div style="margin-top:6px"><button onclick="bdSaveJob('${esc(String(j.id))}')" style="font-size:10.5px">+ Add to tracker</button></div>
+        </div>`).join('')
+      : `<div style="font-size:11.5px;color:var(--faint);line-height:1.6;padding:4px 0">Nothing scored 7 or above. Your rules were right about all ${scored.length}. That is a useful answer too.</div>`;
+  }
+
+  return `<div style="margin-top:12px;padding-top:11px;border-top:1px solid var(--brd)">${header}${body}</div>`;
+}
+
 function renderBoardSearch() {
   const prof = getProfile() || {};
   const anySlugs = [prof.ghSlugs, prof.leverSlugs, prof.ashbySlugs].some(s => (s||'').trim());
@@ -3089,6 +3395,7 @@ function renderBoardSearch() {
       </div>` : ''}
 
       <div id="bd-results-host">${body}</div>
+      ${renderWildcards()}
       ${sourceLine}
     </div>
   `;
@@ -3125,7 +3432,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + renderWeekly() + renderBoardSearch() + `
+  el.innerHTML = setupBanner() + renderHQHero() + renderWeekly() + renderNegativeSpace() + renderBoardSearch() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
@@ -3517,8 +3824,18 @@ function renderTracker(el) {
     const netRel       = app.netRel&&app.netRel!=='—'?app.netRel:'';
     const STAGE_CSS_COL = {Saved:'var(--teal)',Applied:'var(--blue)','Coffee / Networking':'var(--green)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)'};
     const stageColor = STAGE_CSS_COL[app.stage] || 'var(--amber)';
-    const updatedLabel = app.updatedAt
-      ? `<span style="font-weight:600;color:var(--tx2)">${esc(app.stage)}</span> <span style="color:${stageColor}">${app.updatedAt.slice(0,10)}</span>`
+    // This line used to render the stage next to updatedAt with no label, so
+    // "Applied 2026-11-24" read as "applied on the 24th" when it actually
+    // meant "stage Applied, last touched the 24th". Show the real application
+    // date when there is one, and always say which date is which.
+    const appliedOn = (app.date && app.date !== '—') ? String(app.date).slice(0,10) : '';
+    const touchedOn = app.updatedAt ? String(app.updatedAt).slice(0,10) : '';
+    // The stage badge at the top of the card already names the stage, so
+    // repeating it here just produced "Applied applied 2026-11-11".
+    const updatedLabel = (appliedOn || touchedOn)
+      ? (appliedOn ? `<span style="color:var(--faint)">Applied</span> <span style="color:${stageColor};font-weight:600">${esc(appliedOn)}</span>` : '')
+        + (touchedOn && touchedOn !== appliedOn
+            ? `<span style="color:var(--faint)">${appliedOn ? ' · updated ' : 'Updated '}${esc(touchedOn)}</span>` : '')
       : '';
     const isHigh       = app.priority==='High';
 
@@ -3742,9 +4059,16 @@ function addApp() {
   const savedAt = now.slice(0,10);
   state.apps.push({
     id: Date.now(),
-    ...fields,
+    // savedAt and date default but must never overwrite what was typed.
+    // v1.6.0 put `date:` after the spread, so a Date Applied entered on the
+    // add form was silently replaced with today. A blank Date Applied is only
+    // filled in when the stage says an application actually went out; a card
+    // saved at Saved has no application date, and inventing one would put a
+    // date on the printed Update that nothing in the world backs up.
     savedAt,
-    date: now.slice(0,10),
+    ...fields,
+    date: fields.date || (WK_PROGRESS.indexOf(fields.stage) >= WK_PROGRESS.indexOf('Applied')
+                            ? now.slice(0,10) : ''),
     actLog: [{date: now.slice(0,10), note: 'Added to tracker'}],
     updatedAt: now
   });
@@ -5110,8 +5434,36 @@ const WK_RESURFACE_GAP = 21;   // days of silence before a return counts as a re
 const wkToday = () => new Date().toISOString().slice(0,10);
 const wkShift = (days) => new Date(Date.now() - days*86400000).toISOString().slice(0,10);
 const wkDays  = (from, to) => Math.round((new Date(to) - new Date(from)) / 86400000);
-const wkPretty = (iso) => { if(!iso) return ''; const d=new Date(iso+'T12:00:00');
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
+// Contacts and applications collect dates from imports, hand entry and the
+// board API, so not every value is YYYY-MM-DD. Blindly appending a time to a
+// full ISO timestamp or an 11/11/26 produces "Invalid Date" in the published
+// document. Normalise first, and if it still will not parse, show nothing
+// rather than printing the words Invalid Date on a page he hands to someone.
+// Round-trip through Date so 2026-13-45 is rejected rather than carried into
+// a comparison as if it were a real day.
+function wkValidYmd(ymd) {
+  const d = new Date(ymd + 'T12:00:00');
+  return (!isNaN(d) && d.toISOString().slice(0,10) === ymd) ? ymd : '';
+}
+function wkDateOnly(v) {
+  const t = String(v || '').trim();
+  if (!t) return '';
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);                       // ISO or ISO timestamp
+  if (m) return wkValidYmd(`${m[1]}-${m[2]}-${m[3]}`);
+  m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);       // M/D/YY or M/D/YYYY
+  if (m) {
+    const yr = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return wkValidYmd(`${yr}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`);
+  }
+  const d = new Date(t);
+  return isNaN(d) ? '' : d.toISOString().slice(0,10);
+}
+const wkPretty = (iso) => {
+  const ymd = wkDateOnly(iso);
+  if (!ymd) return '';
+  const d = new Date(ymd + 'T12:00:00');
+  return isNaN(d) ? '' : d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+};
 
 // Walks an app's actLog in order and returns its stage transitions.
 function wkTransitions(app) {
@@ -5178,11 +5530,14 @@ function wkStats(days) {
   const offers   = apps.filter(a => a.stage === 'Offer');
 
   // Networking
-  const touched = contacts.filter(c => inWin(c.last));
-  const overdue = contacts.filter(c => c.next && String(c.next).slice(0,10) < end);
-  const upcoming = contacts.filter(c => c.next && String(c.next).slice(0,10) >= end
-                                     && wkDays(end, String(c.next).slice(0,10)) <= 14)
-                           .sort((a,b)=>String(a.next).localeCompare(String(b.next)));
+  // Dates on contacts arrive from imports and hand entry, so they are not all
+  // YYYY-MM-DD. Comparing the raw strings dropped anything in another format
+  // out of both of these lists without a word.
+  const touched = contacts.filter(c => inWin(wkDateOnly(c.last)));
+  const overdue = contacts.filter(c => { const n = wkDateOnly(c.next); return n && n < end; });
+  const upcoming = contacts.filter(c => { const n = wkDateOnly(c.next);
+                                          return n && n >= end && wkDays(end, n) <= 14; })
+                           .sort((a,b)=>wkDateOnly(a.next).localeCompare(wkDateOnly(b.next)));
 
   // Hot to follow: active roles ranked on fit, how deep they are, whether you
   // know somebody there, and how long since anything happened.
@@ -5233,16 +5588,41 @@ function wkStats(days) {
 }
 
 // Compact facts for the model. Names and stages only, no notes or JD text.
+//
+// Two things here are defensive, both learned the hard way.
+//
+// First, every list is truncated so the prompt stays small, and a truncated
+// list next to a totals object is a trap: asked how many new leads there were,
+// a model counts the array it can see. It wrote "I added 8 new leads" in a
+// week with 38. Each list therefore carries its own total and says how many
+// of them are shown, so the number is never something that has to be counted.
+//
+// Second, the old flat `totals` mixed standing pipeline counts with things
+// that happened inside the window. A model handed {applied: 58} alongside a
+// seven-day period reasonably wrote "submitted 58 applications" — 58 is how
+// many are in flight, not how many went out. The two kinds of number now sit
+// in separate objects that say what they are.
 function wkFactsForAI(s) {
+  const t = s.totals;
+  const lst = (arr, n, fmt) => ({ total: arr.length, showing: Math.min(n, arr.length), items: arr.slice(0, n).map(fmt) });
   return JSON.stringify({
     period: `${s.start} to ${s.end}`,
-    totals: s.totals,
-    advanced: s.movedForward.slice(0,8).map(m=>`${m.app.company} ${m.app.role}: ${m.from} → ${m.to}`),
-    closed:   s.stumbled.slice(0,6).map(m=>`${m.app.company} ${m.app.role}: ${m.to}`),
-    newLeads:     s.newLeads.slice(0,8).map(a=>`${a.company} ${a.role}`),
-    resurfaced:   s.resurfaced.slice(0,5).map(r=>`${r.app.company} after ${r.quietDays}d quiet`),
-    contactsTouched: s.touched.slice(0,8).map(c=>`${c.name} (${c.company})`),
-    followUpsDue: s.upcoming.slice(0,5).map(c=>`${c.name} (${c.company}) on ${c.next}`),
+    pipelineRightNow_notActionsTakenThisPeriod: {
+      activeRoles: t.active, atAppliedOrBeyond: t.applied,
+      interviewing: t.interviewing, offers: t.offers,
+      totalTracked: t.all, contactsInNetwork: t.contacts,
+    },
+    happenedDuringThisPeriod: {
+      newLeadsAdded: t.newLeads, stagesAdvanced: s.movedForward.length,
+      rolesClosed: s.stumbled.length, contactsReachedOut: t.touched,
+      rolesReopened: s.resurfaced.length,
+    },
+    advanced: lst(s.movedForward, 8, m=>`${m.app.company} ${m.app.role}: ${m.from} → ${m.to}`),
+    closed:   lst(s.stumbled, 6, m=>`${m.app.company} ${m.app.role}: ${m.to}`),
+    newLeads: lst(s.newLeads, 8, a=>`${a.company} ${a.role}`),
+    resurfaced: lst(s.resurfaced, 5, r=>`${r.app.company} after ${r.quietDays}d quiet`),
+    contactsTouched: lst(s.touched, 8, c=>`${c.name} (${c.company})`),
+    followUpsDue: lst(s.upcoming, 5, c=>`${c.name} (${c.company}) on ${wkDateOnly(c.next) || 'a date not recorded'}`),
     hotToFollow:  s.hot.map(h=>`${h.app.company} ${h.app.role} — ${h.why.join(', ')}`),
     // Written by the candidate about things the tracker never recorded. Treat
     // as fact and weave in; these are often the most important items.
@@ -5264,6 +5644,11 @@ async function wkGenerateNarrative() {
 
 FACTS (the only source of truth — never state a number or a company that is not here):
 ${wkFactsForAI(s)}
+
+How to read those facts, and these rules override anything the numbers seem to suggest:
+- Everything under pipelineRightNow_notActionsTakenThisPeriod is a standing count of the whole tracker as it is today. It is NOT something that happened in this period. Never write that the candidate applied to, submitted, or did any of those numbers during the period. "58 at applied or beyond" means 58 applications are in flight, not that 58 went out this week.
+- Only the figures under happenedDuringThisPeriod describe what the candidate did in the period.
+- Every list is truncated. Take counts from "total" on each list, never from the number of items you can see. If a list shows 8 items and says total 38, the number is 38.
 
 Anything under addedByHand was written by the candidate about events the app never recorded. It is fact, it is usually the most significant thing in the period, and it should not be left out just because it has no numbers attached.
 
@@ -7183,7 +7568,35 @@ function importFieldsToNewCard(f, today, now) {
 // Matched card: every column present in the file overwrites the card (even
 // when blank, so the tracker mirrors the file). JobQuest-only fields stay.
 // Company, stage and priority are never blanked.
-function importMergeCard(existing, f, keysInFile, today, now, derived={}) {
+// True when moving from -> to would walk a card BACKWARDS down the ladder.
+// Merge uses this; Replace does not, because Replace is explicitly "the
+// tracker becomes this file". A file that says Saved for a role you already
+// took to Interview is a stale file, not a demotion you asked for.
+// Moves to Rejected or Ghosted are always allowed: those are real outcomes,
+// not regressions. A card already at Rejected or Ghosted is never resurrected
+// by an import, since a stale file should not quietly reopen a dead role.
+function stageRegresses(from, to) {
+  if (!to || to === from) return false;
+  if (WK_SETBACK.includes(to)) return false;
+  if (WK_SETBACK.includes(from)) return true;
+  const fi = WK_PROGRESS.indexOf(from), ti = WK_PROGRESS.indexOf(to);
+  if (fi === -1 || ti === -1) return false;
+  return ti < fi;
+}
+
+// Rows whose stage the merge would hold back, so the preview can say so
+// before anything is written.
+function importStageHeld(plan) {
+  let n = 0;
+  (plan.incoming || []).forEach(r => {
+    if (r.matchIdx === undefined) return;
+    const ex = state.apps[r.matchIdx];
+    if (ex && stageRegresses(ex.stage, r.fields.stage)) n++;
+  });
+  return n;
+}
+
+function importMergeCard(existing, f, keysInFile, today, now, derived={}, opts={}) {
   const merged = {...existing};
   keysInFile.forEach(k => {
     // An AI fit score from the analyzer is never replaced by an imported one.
@@ -7196,6 +7609,8 @@ function importMergeCard(existing, f, keysInFile, today, now, derived={}) {
     if (IMPORT_KEEP_FIELDS.includes(k) && !f[k]) return;
     if (['company','stage','priority'].includes(k) && !f[k]) return;
     if (k === 'priority' && !['High','Medium','Low'].includes(f[k])) return;
+    // Merge only. Hold a stage that would move the card backwards.
+    if (k === 'stage' && opts.noRegress && stageRegresses(existing.stage, f[k])) return;
     merged[k] = f[k] || '';
   });
   if (merged.stage !== existing.stage) {
@@ -7207,7 +7622,9 @@ function importMergeCard(existing, f, keysInFile, today, now, derived={}) {
 }
 
 function applyImport(plan, mode) {
-  const label = mode === 'replace' ? `Replace from ${plan.fileName||'CSV'}` : `Add new from ${plan.fileName||'CSV'}`;
+  const label = mode === 'replace' ? `Replace from ${plan.fileName||'CSV'}`
+              : mode === 'merge'   ? `Merge from ${plan.fileName||'CSV'}`
+              : `Add new from ${plan.fileName||'CSV'}`;
   if (!snapshotApps(label)) return;
   const now = new Date().toISOString(), today = now.slice(0,10);
   const keys = plan.keysInFile;
@@ -7215,14 +7632,31 @@ function applyImport(plan, mode) {
     state.apps = plan.incoming.map(r => r.matchIdx !== undefined
       ? importMergeCard(state.apps[r.matchIdx], r.fields, keys, today, now, r.derived)
       : importFieldsToNewCard(r.fields, today, now));
+  } else if (mode === 'merge') {
+    // Update the cards the file matched, add the ones it didn't, and leave
+    // every other card in the tracker exactly as it was. That last part is the
+    // whole difference from Replace, which drops anything not in the file.
+    // Only rows that actually differ are merged, so an unchanged match keeps
+    // its original updatedAt instead of being bumped to now.
+    const byIdx = new Map();
+    plan.incoming.forEach(r => { if (r.matchIdx !== undefined && r.changed) byIdx.set(r.matchIdx, r); });
+    const merged = state.apps.map((a, i) => byIdx.has(i)
+      ? importMergeCard(a, byIdx.get(i).fields, keys, today, now, byIdx.get(i).derived, {noRegress:true})
+      : a);
+    const added = plan.incoming.filter(r => r.matchIdx === undefined).map(r => importFieldsToNewCard(r.fields, today, now));
+    state.apps = [...merged, ...added];
   } else {
     const added = plan.incoming.filter(r => r.matchIdx === undefined).map(r => importFieldsToNewCard(r.fields, today, now));
     state.apps = [...state.apps, ...added];
   }
   save();
-  return mode === 'replace'
-    ? `Tracker now matches the file: ${state.apps.length} cards (${plan.newCount} new, ${plan.matchedCount} matched, ${plan.removedOnReplace.length} removed).`
-    : `Added ${plan.newCount} new cards. Existing cards untouched.`;
+  if (mode === 'replace') {
+    return `Tracker now matches the file: ${state.apps.length} cards (${plan.newCount} new, ${plan.matchedCount} matched, ${plan.removedOnReplace.length} removed).`;
+  }
+  if (mode === 'merge') {
+    return `Updated ${plan.changedCount} existing card${plan.changedCount===1?'':'s'}, added ${plan.newCount} new. Nothing removed.`;
+  }
+  return `Added ${plan.newCount} new cards. Existing cards untouched.`;
 }
 
 // ── UNDO SNAPSHOT (import + bulk delete) ──────────────────────────────────────
@@ -7289,9 +7723,15 @@ function renderImportPreview() {
     plan.unmapped.length ? `Not imported (no matching field): ${plan.unmapped.map(esc).join(', ')}` : '',
   ].filter(Boolean);
 
+  const MODE_ACCENT = {
+    add:     ['var(--sky-blue)', 'var(--sky-blue-pale)'],
+    merge:   ['var(--jade)',     'var(--jade-pale)'],
+    replace: ['var(--rose)',     'var(--rose-pale)'],
+  };
   const modeCard = (key, title, desc, warn) => {
     const on = mode === key;
-    return `<div onclick="setImportMode('${key}')" style="flex:1;min-width:220px;cursor:pointer;border-radius:9px;padding:12px 14px;border:1.5px solid ${on?(key==='replace'?'var(--rose)':'var(--sky-blue)'):'var(--brd2)'};background:${on?(key==='replace'?'var(--rose-pale)':'var(--sky-blue-pale)'):'transparent'}">
+    const [line, fill] = MODE_ACCENT[key] || MODE_ACCENT.add;
+    return `<div onclick="setImportMode('${key}')" style="flex:1;min-width:178px;cursor:pointer;border-radius:9px;padding:12px 14px;border:1.5px solid ${on?line:'var(--brd2)'};background:${on?fill:'transparent'}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
         <span style="width:14px;height:14px;border-radius:50%;border:1.5px solid ${on?'var(--tx)':'var(--faint)'};display:inline-flex;align-items:center;justify-content:center">${on?'<span style="width:7px;height:7px;border-radius:50%;background:var(--tx)"></span>':''}</span>
         <span style="font-size:13px;font-weight:600;color:var(--tx)">${title}</span>
@@ -7301,8 +7741,13 @@ function renderImportPreview() {
     </div>`;
   };
 
-  const applyLabel = mode === 'replace'
-    ? `Replace tracker with ${plan.incoming.length} cards`
+  const held = mode === 'merge' ? importStageHeld(plan) : 0;
+  const mergeTouches = plan.changedCount + plan.newCount;
+  const applyLabel =
+      mode === 'replace' ? `Replace tracker with ${plan.incoming.length} cards`
+    : mode === 'merge'   ? (mergeTouches
+        ? `Update ${plan.changedCount} and add ${plan.newCount}`
+        : 'Nothing to update or add')
     : (plan.newCount ? `Add ${plan.newCount} new cards` : 'Nothing new to add');
 
   m.innerHTML = `
@@ -7323,10 +7768,18 @@ function renderImportPreview() {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 12px">
         ${modeCard('add', 'Add net new',
           `Adds the ${plan.newCount} rows that don't match an existing card. Existing cards are not touched.`)}
+        ${modeCard('merge', 'Merge into tracker',
+          `Updates the ${plan.changedCount} matched card${plan.changedCount===1?'':'s'} that differ from the file, adds the ${plan.newCount} new one${plan.newCount===1?'':'s'}, and leaves every other card alone. Nothing is removed. A stage in the file never moves a card backwards.`)}
         ${modeCard('replace', 'Replace with this file',
           `The tracker becomes exactly this file. ${plan.matchedCount} matched cards are refreshed from the file and keep their fit scores, saved job descriptions, and activity history. ${plan.newCount} rows are added.`,
           removed.length ? `${removed.length} current cards are not in the file and will be removed.` : '')}
       </div>
+
+      ${mode === 'merge' && held ? `
+        <div style="border:1px solid var(--brd2);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:var(--muted);line-height:1.55">
+          <strong style="color:var(--tx)">${held} card${held===1?'':'s'} keep${held===1?'s':''} ${held===1?'its':'their'} current stage.</strong>
+          The file would move ${held===1?'it':'them'} backwards, so the stage is held and everything else on the card still updates.
+        </div>` : ''}
 
       ${mode === 'replace' && removed.length ? `
         <div style="border:1px solid var(--rose-border);border-radius:8px;padding:9px 12px;margin-bottom:12px">
@@ -7338,7 +7791,7 @@ function renderImportPreview() {
       <div style="font-size:11px;color:var(--faint);margin-bottom:14px;line-height:1.55">Rows are matched by Notion Page URL first, then Job Link, then company and role. An undo copy of your current tracker is saved before anything changes (Sync → Undo).</div>
 
       <div style="display:flex;gap:8px">
-        <button class="${mode==='replace'?'danger':'amber'}" onclick="confirmImportPreview()" ${mode==='add'&&!plan.newCount?'disabled':''} style="flex:1;padding:9px 0;font-size:13px;font-weight:600">${applyLabel}</button>
+        <button class="${mode==='replace'?'danger':'amber'}" onclick="confirmImportPreview()" ${(mode==='add'&&!plan.newCount)||(mode==='merge'&&!mergeTouches)?'disabled':''} style="flex:1;padding:9px 0;font-size:13px;font-weight:600">${applyLabel}</button>
         <button onclick="closeImportPreview()" style="font-size:12px">Cancel</button>
       </div>
     </div>`;
