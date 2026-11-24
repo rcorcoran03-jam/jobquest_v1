@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.8.0  (contacts export: flags + activity) ║
+║  JOBQUEST — Starter Edition  ·  v1.8.1  (high priority card fixes)         ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.8.1';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -3662,10 +3662,16 @@ function renderTracker(el) {
 
 
   // High priority: apps flagged with priority==='High' — cap at 10
-  const topPriority = state.apps
+  const allHigh = state.apps
     .filter(a => a.priority==='High' && !HIDDEN_STAGES.includes(a.stage))
-    .sort((a,b)=>(b.updatedAt||b.date||'').localeCompare(a.updatedAt||a.date||''))
-    .slice(0,10);
+    .sort((a,b)=>(b.updatedAt||b.date||'').localeCompare(a.updatedAt||a.date||''));
+  // The strip shows ten. With more than ten flagged, un-starring one pulls the
+  // next straight into the empty slot, so the strip looks identical and the
+  // click reads as broken — and clicking again demotes a DIFFERENT role. The
+  // header now states the overflow so the backfill is expected rather than
+  // baffling, and toggleHighPriority names what it just changed.
+  const topPriority = allHigh.slice(0,10);
+  const highOverflow = allHigh.length - topPriority.length;
 
   // View filter (appFilter) drives what shows BELOW the strip
   let list = [...state.apps].filter(a => !HIDDEN_STAGES.includes(a.stage) || state.appFilter==='archived');
@@ -3702,10 +3708,23 @@ function renderTracker(el) {
   const priorityStrip = (topPriority.length && state.appFilter!=='priority' && !state.appSelectMode) ? `
     <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--navy-border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-size:10px;color:var(--amber);letter-spacing:.09em;text-transform:uppercase;font-weight:600">⭐ High Priority (${topPriority.length}/10)</div>
-        ${topPriority.length>=10 ? `<span style="font-size:11px;color:var(--red);font-weight:500">⚑ At limit</span>` : ''}
+        <div style="font-size:10px;color:var(--amber);letter-spacing:.09em;text-transform:uppercase;font-weight:600">⭐ High Priority (${topPriority.length}/10)${highOverflow ? ` · ${highOverflow} more waiting` : ''}</div>
+        ${highOverflow
+          ? `<button onclick="setAppFilter('priority')" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:var(--amber-bg)">See all ${allHigh.length}</button>`
+          : (topPriority.length>=10 ? `<span style="font-size:11px;color:var(--red);font-weight:500">⚑ At limit</span>` : '')}
       </div>
       ${topPriority.map(a => {
+        if (state.appEditing === a.id) {
+          return `<div class="card" style="margin-bottom:8px;border-left:3px solid var(--amber)">
+            <div style="font-size:12px;font-weight:500;color:var(--amber);margin-bottom:10px">Editing: ${esc(a.company)}</div>
+            ${appFormHTML(`e-${a.id}`, a)}
+            <div class="row" style="margin-top:10px">
+              <button class="amber" onclick="saveEdit(${a.id})">Save changes</button>
+              <button onclick="state.appEditing=null;render('tracker')">Cancel</button>
+              <button class="danger" onclick="deleteAppPermanently(${a.id})" style="margin-left:auto">Delete permanently</button>
+            </div>
+          </div>`;
+        }
         const isExp = state.appExpanded && state.appExpanded['top_'+a.id];
         const borderCol = {Saved:'var(--teal)',Offer:'var(--green)',Rejected:'var(--red)',Ghosted:'var(--purple)','Coffee / Networking':'var(--green)',Applied:'var(--blue)','Phone Screen':'var(--amber)',Interview:'var(--amber)','Final Round':'var(--green)'}[a.stage]||'var(--amber)';
         const cardBg = STAGE_CARD_BG[a.stage]||'var(--card-default)';
@@ -4008,7 +4027,15 @@ function toggleHighPriority(id) {
     if(highCount>=10) { showToast('⚑ You have 10 high priority apps — review before adding more'); return; }
   }
   state.apps = state.apps.map(a=>a.id===id?{...a,priority:currentlyHigh?'Medium':'High',updatedAt:new Date().toISOString()}:a);
-  save(); render('tracker');
+  save();
+  // Say which role moved. Without this the strip backfills from the overflow
+  // and the click looks like it did nothing at all.
+  const waiting = state.apps.filter(a=>a.priority==='High' && !['Rejected','Ghosted'].includes(a.stage)).length;
+  const who = `${app.company}${app.role ? ' · ' + String(app.role).slice(0,36) : ''}`;
+  showToast(currentlyHigh
+    ? `${who} removed from High Priority${waiting > 10 ? ` — next of ${waiting - 10} waiting moved up` : ''}`
+    : `${who} set to High Priority`);
+  render('tracker');
 }
 
 function toggleExpand(id) {
