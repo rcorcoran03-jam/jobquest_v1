@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.5.1  (manual update entries)              ║
+║  JOBQUEST — Starter Edition  ·  v1.5.2  (sync error visibility)              ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -137,6 +137,20 @@
 ║          focus streak (🔥 day counter via localStorage), focus score label       ║
 ║          (Getting started → Steady → Strong day 🌟), and a Wellness strip       ║
 ║          (💧 Hydrate glass tracker + progress bar + 🤸 Move micro-tip rotator).║
+║  v1_5_2  Show WHY a sync failed. The full reason has been in                 ║
+║          state.cloudStatus all along, but the only thing rendered was a nav  ║
+║          pill reading 'sync failed -> Sync'. Clicking it landed on a tab     ║
+║          showing a green 'cloud connected' badge and no explanation, which   ║
+║          is the worst combination: you know it broke and not why, and the    ║
+║          badge actively misleads, since it only means a token and a Gist ID  ║
+║          are stored, never that a write succeeded. The connected cloud card  ║
+║          now renders the last failure above the payload meter, with the      ║
+║          message, a Test connection button wired to the same diagnoseGist()  ║
+║          used at setup, and a line making clear the data is safe locally     ║
+║          regardless. Verified separately that the write path itself is       ║
+║          sound: PATCH 200 writes, 403 and 401 surface their mapped remedies, ║
+║          and the size guard reads the payload correctly, so a failure here   ║
+║          is GitHub refusing rather than the app malfunctioning.              ║
 ║  v1_5_1  Manual events in the weekly update, for anything the tracker never  ║
 ║          saw: a referral someone promised, a conversation at an event, a     ║
 ║          recruiter call about no role in particular. Rather than a free-text ║
@@ -535,8 +549,8 @@
 ║    EXAMPLE_APPS / EXAMPLE_CONTACTS ........ sample data for "Load example"    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
-<meta name="jq-version" content="1.5.1">
-<meta name="jq-base" content="36">
+<meta name="jq-version" content="1.5.2">
+<meta name="jq-base" content="37">
 <meta name="jq-date" content="2026-11-23">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobQuest — Job Search OS</title>
@@ -1349,7 +1363,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -7318,6 +7332,7 @@ function renderSync(el) {
           ? `<div class="row" style="gap:6px"><button onclick="flushCloudSave()" style="font-size:11px;color:var(--sky-blue);border-color:var(--sky-blue-mid);background:var(--sky-blue-pale)">⟳ Sync now</button><button class="danger" onclick="disconnectCloud()" style="font-size:11px">Disconnect</button></div>`
           : ''}
       </div>
+      ${cloudConnected ? renderSyncError() : ''}
       ${cloudConnected ? renderPayloadMeter() : ''}
       ${cloudConnected ? `
         <p style="font-size:12px;color:var(--muted);line-height:1.6">Every change saves instantly on this device and syncs to GitHub Gist in batches (about every 30s, and whenever you close the tab). Hit <strong style="color:var(--tx)">Sync now</strong> to push immediately.</p>
@@ -7646,6 +7661,30 @@ function renderKbSettings() {
       ${on ? '' : `<div style="font-size:11px;color:var(--amber);margin-top:10px">Currently off. Esc still closes open panels.</div>`}
     </div>
   `;
+}
+
+// ── LAST SYNC ERROR (v1_5_2) ─────────────────────────────────────────────────
+// The full reason has always been in state.cloudStatus, but the only thing on
+// screen was a nav pill reading 'sync failed → Sync'. Clicking it landed you on
+// a tab showing 'cloud connected' and no explanation, which is the worst of
+// both: you know it broke and not why. Show the message where the pill sends
+// you, with the diagnostic one click away.
+
+function renderSyncError() {
+  if (!state.cloudError || !state.cloudStatus) return '';
+  const msg = String(state.cloudStatus).replace(/^[\u26a0\s]*sync failed\s*[—-]\s*/i, '').trim();
+  return `
+    <div style="margin:4px 0 12px;padding:11px 13px;border-radius:7px;background:var(--amber-bg);border:1px solid var(--amber-dim)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span style="font-size:11.5px;font-weight:600;color:var(--amber)">⚠ Last sync failed</span>
+        <button onclick="runGistDiagnostic()" style="font-size:11px;color:var(--amber);border-color:var(--amber-dim);background:rgba(0,0,0,0.14)">Test connection</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--tx);line-height:1.55">${esc(msg)}</div>
+      <div id="gist-diag" style="font-size:11.5px;margin-top:9px"></div>
+      <div style="font-size:10.5px;color:var(--faint);margin-top:8px;line-height:1.5">
+        Your data is safe on this device either way. Nothing is lost by a failed sync, it just has not reached the Gist yet.
+      </div>
+    </div>`;
 }
 
 // ── CLOUD PAYLOAD METER (v1_4_6) ─────────────────────────────────────────────
