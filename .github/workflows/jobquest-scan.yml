@@ -1,0 +1,43 @@
+name: JobQuest scan
+
+# Writes a Top-25 digest into the Gist each weekday morning.
+#
+# Cron is always UTC. 14:37 UTC is 8:37 am Central in winter (CST, UTC-6) and
+# 9:37 am Central in summer (CDT, UTC-5) — GitHub does not shift for DST. The
+# odd minute is deliberate: scheduled jobs on the hour queue behind everyone
+# else's and can run 10-20 minutes late.
+#
+# GitHub also disables scheduled workflows in repos with no activity for 60
+# days. If the digest goes quiet, check the Actions tab before the code.
+
+on:
+  schedule:
+    - cron: '37 14 * * 1-5'
+  workflow_dispatch:
+
+# contents:read and nothing else. actions/checkout authenticates with
+# GITHUB_TOKEN, so permissions:{} would fail the clone on a private repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: jobquest-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scan and write digest
+        env:
+          JQ_GIST_TOKEN: ${{ secrets.JQ_GIST_TOKEN }}
+          JQ_GIST_ID: ${{ secrets.JQ_GIST_ID }}
+          JQ_SITE: ${{ vars.JQ_SITE }}
+        run: node scripts/jobquest-scan.mjs
