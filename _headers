@@ -1,0 +1,49 @@
+# Cloudflare Pages response headers for JobQuest.
+#
+# This file is configuration, not a served asset — Pages reads it at build time
+# and applies these headers to matching responses.
+#
+# DESIGN NOTE — why script-src still allows 'unsafe-inline':
+# JobQuest is a single-file app with ~236 inline event handlers and one inline
+# <script>. A CSP that forbids inline script would require moving every handler
+# to a delegated listener, which is a large refactor with real regression risk
+# and no user-visible benefit. That refactor is deliberately deferred.
+#
+# What this CSP buys WITHOUT that refactor is the protection that actually
+# matters here: connect-src. JobQuest holds a GitHub PAT with Gist scope in
+# localStorage, so the real risk is not script execution in the abstract, it is
+# that token leaving for somewhere it shouldn't. connect-src pins outbound
+# requests to this origin and api.github.com, so injected script cannot POST
+# the token to an attacker's host. frame-ancestors, object-src, base-uri and
+# form-action close the cheap remaining gaps and cost nothing, because the app
+# has no forms, iframes or objects at all.
+#
+# ALLOWLIST, derived from the file rather than assumed:
+#   script  cdnjs.cloudflare.com ....... SheetJS (XLSX export)
+#   style   fonts.googleapis.com ....... DM Mono + DM Serif Display stylesheets
+#   font    fonts.gstatic.com .......... the font files those stylesheets name
+#   img     data: ...................... inline SVG favicon
+#   connect self ....................... /api/claude and /api/jobs
+#   connect api.github.com ............. Gist read/write (GIST_API)
+#   connect gist.githubusercontent.com . the raw_url fallback in ghRead(), used
+#                                        when a Gist is too large for the API to
+#                                        return inline. Different host from the
+#                                        API, so it needs its own entry: without
+#                                        it the fallback is blocked by this very
+#                                        policy and sync fails with no way back.
+#
+# If you add an external call, add its origin to connect-src or it will be
+# blocked silently except for a console error.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com https://gist.githubusercontent.com; form-action 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+# The AI and board proxies must never be cached by an intermediary: one holds
+# your Anthropic-backed responses, the other is per-user board configuration.
+/api/*
+  Cache-Control: no-store

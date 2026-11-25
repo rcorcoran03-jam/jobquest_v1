@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.8.1  (high priority card fixes)         ║
+║  JOBQUEST — Starter Edition  ·  v1.11.0 (scan engine server-side)            ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1169,7 +1169,7 @@ const EMPTY_PROFILE = {
   // v1_4_0 — public ATS board slugs for the /api/jobs aggregator. Kept on the
   // profile (not in `state`) so they ride the existing debounced Gist prefs
   // sync and follow you to another device along with everything else.
-  ghSlugs:'', leverSlugs:'', ashbySlugs:'',
+  ghSlugs:'', leverSlugs:'', ashbySlugs:'', srSlugs:'', workableSlugs:'', recruiteeSlugs:'',
   // Saved board-search rule sets. Each: {id,name,include,exclude,locations,
   // remoteOnly,minFit,maxAgeDays,minSalaryK}
   boardPresets:[],
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.11.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -1419,6 +1419,7 @@ let state = {
   bdRules: null,
   bdShowRules: false, bdPreview: null, bdTriaging: false, bdHidden: {},
   bdProbeQ: '', bdProbeHits: null, bdProbeLoading: false, bdProbeNote: '',
+  scanResult: null, scanLoading: false, scanError: '', scanSources: [],
   bdSourceFilter: '',   // '' = all boards; otherwise 'Greenhouse:lirio' style key
   bdCursor: null,       // index into bdVisible() for j/k navigation
   nsOpen: false,        // Pipeline lens panel (negative space)
@@ -2157,6 +2158,9 @@ async function runBoardSearch() {
   const gh = (prof.ghSlugs || '').trim();
   const lever = (prof.leverSlugs || '').trim();
   const ashby = (prof.ashbySlugs || '').trim();
+  const sr = (prof.srSlugs || '').trim();
+  const workable = (prof.workableSlugs || '').trim();
+  const recruitee = (prof.recruiteeSlugs || '').trim();
 
   state.bdLoading = true; state.bdError = ''; state.bdPreview = null;
   state.bdHidden = {};
@@ -2170,6 +2174,9 @@ async function runBoardSearch() {
     if (gh) params.gh = gh;
     if (lever) params.lever = lever;
     if (ashby) params.ashby = ashby;
+    if (sr) params.sr = sr;
+    if (workable) params.workable = workable;
+    if (recruitee) params.recruitee = recruitee;
     // Everything below is a saved setting, not a constant in the code.
     if (!o.useRemotive) params.remotive = '0';
     params.limit = o.maxResults;
@@ -2429,7 +2436,33 @@ async function bdProbe() {
   render('sync');
 }
 
-const BD_SLUG_FIELD = { greenhouse:'ghSlugs', lever:'leverSlugs', ashby:'ashbySlugs' };
+const BD_SLUG_FIELD = { greenhouse:'ghSlugs', lever:'leverSlugs', ashby:'ashbySlugs',
+                        smartrecruiters:'srSlugs', workable:'workableSlugs', recruitee:'recruiteeSlugs' };
+
+// Verified against the live boards on 2026-11-25. Seeding beats starting from
+// an empty box: a slug list is only useful once it is long enough to be worth
+// running, and the first dozen are the hardest to find.
+const BD_SEED_SLUGS = {
+  ghSlugs:        ['garnerhealth','omadahealth','talkspace','hs','eleoshealth','truveta',
+                   'jamf','sezzle','neuehealth','smarterdx','qventus','charliehealth'],
+  leverSlugs:     ['seven-starling','perforce','lwolf','bold-orange'],
+  ashbySlugs:     ['laurel','tennr','openevidence','abridge','ambiencehealthcare'],
+  srSlugs:        [], workableSlugs: [], recruiteeSlugs: [],
+};
+
+function bdSeedSlugs() {
+  const prof = getProfile() || {...EMPTY_PROFILE};
+  let added = 0;
+  Object.entries(BD_SEED_SLUGS).forEach(([field, seeds]) => {
+    const have = bdParseCsv(prof[field]);
+    seeds.forEach(sl => { if (!have.includes(sl)) { have.push(sl); added++; } });
+    prof[field] = have.join(', ');
+  });
+  if (!added) { showToast('All seed slugs are already in your lists'); return; }
+  saveProfile(prof);
+  showToast(`Added ${added} verified slug${added===1?'':'s'}`);
+  render('sync');
+}
 
 function bdAddSlug(ats, slug) {
   const field = BD_SLUG_FIELD[ats];
@@ -2449,6 +2482,9 @@ function bdSaveSlugs() {
   prof.ghSlugs    = bdParseCsv(document.getElementById('bd-gh')?.value).join(', ');
   prof.leverSlugs = bdParseCsv(document.getElementById('bd-lever')?.value).join(', ');
   prof.ashbySlugs = bdParseCsv(document.getElementById('bd-ashby')?.value).join(', ');
+  prof.srSlugs        = bdParseCsv(document.getElementById('bd-sr')?.value).join(', ');
+  prof.workableSlugs  = bdParseCsv(document.getElementById('bd-workable')?.value).join(', ');
+  prof.recruiteeSlugs = bdParseCsv(document.getElementById('bd-recruitee')?.value).join(', ');
   saveProfile(prof);
   showToast('Boards saved ✓');
   render('sync');
@@ -3287,6 +3323,109 @@ function renderWildcards() {
   return `<div style="margin-top:12px;padding-top:11px;border-top:1px solid var(--brd)">${header}${body}</div>`;
 }
 
+async function runScan() {
+  const prof = getProfile() || {};
+  const slugs = {
+    gh: (prof.ghSlugs||'').trim(), lever: (prof.leverSlugs||'').trim(),
+    ashby: (prof.ashbySlugs||'').trim(), sr: (prof.srSlugs||'').trim(),
+    workable: (prof.workableSlugs||'').trim(), recruitee: (prof.recruiteeSlugs||'').trim(),
+  };
+  if (!Object.values(slugs).some(Boolean)) {
+    showToast('Add some company boards in Sync first'); return;
+  }
+  state.scanLoading = true; state.scanError = ''; state.scanResult = null; render('board');
+  try {
+    const o = getBoardOpts();
+    // No query: the segments do the filtering, and a keyword here would cut
+    // the pool before the quotas ever see it.
+    const params = { limit: Math.max(o.maxResults, 200), jd: o.jdChars, timeout: o.timeoutMs };
+    Object.entries(slugs).forEach(([k,v]) => { if (v) params[k] = v; });
+    if (!o.useRemotive) params.remotive = '0';
+    // /api/scan runs the segment rules server-side, so the morning digest and
+    // this panel can never disagree about what qualified.
+    const p = new URLSearchParams(params);
+    const resp = await fetch(`${JOBS_URL.replace(/\/jobs$/, '/scan')}?${p}`);
+    if (!resp.ok) throw new Error(resp.status === 404
+      ? '/api/scan is not deployed yet. Push functions/api/scan.js and redeploy.'
+      : `Scan failed (${resp.status}).`);
+    const data = await resp.json();
+    // Drop anything already tracked, then re-count so the slot tallies stay true.
+    if (getBoardOpts().hideTracked && data.result) {
+      data.result.forEach(r => {
+        const before = r.picked.length;
+        r.picked = r.picked.filter(j => !bdAlreadyTracked(j));
+        r.short += before - r.picked.length;
+      });
+      data.total = data.result.reduce((n,r)=>n+r.picked.length, 0);
+    }
+    state.scanResult = data;
+    state.scanSources = data.sources || [];
+  } catch(e) {
+    state.scanError = e.message;
+  }
+  state.scanLoading = false; render('board');
+}
+
+function renderScanPanel() {
+  const r = state.scanResult;
+  const head = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <div style="min-width:0">
+        <span style="font-size:13px;font-weight:500;color:var(--tx)">🎯 Segmented scan</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">Quotas by segment, so one source cannot crowd out the rest</span>
+      </div>
+      <button onclick="runScan()" ${state.scanLoading?'disabled':''} style="font-size:11px;color:var(--gold);border-color:var(--gold-border);background:var(--gold-pale);font-weight:600;flex-shrink:0">${state.scanLoading?'Scanning…':'✦ Run scan'}</button>
+    </div>`;
+
+  if (state.scanError) return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--red)">${head}
+    <div style="font-size:11.5px;color:var(--red);line-height:1.6">${esc(state.scanError)}</div></div>`;
+  if (!r) return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--gold)">${head}
+    <div style="font-size:11.5px;color:var(--faint);line-height:1.6">Reads every board you have saved, sorts the results into four segments and fills each to its own quota. Nothing is added to the tracker until you add it.</div></div>`;
+
+  const seg = (row) => {
+    const { seg: g, picked, pool, short } = row;
+    const shortfall = short > 0 && !g.rollover ? `
+      <div style="font-size:11px;color:var(--amber);line-height:1.6;padding:7px 9px;border-radius:6px;background:var(--amber-bg);border:1px solid var(--amber-dim);margin-bottom:6px">
+        <strong>${picked.length} of ${g.slots} slots filled.</strong>
+        These slots stay empty on purpose rather than rolling to another segment — ${pool === 0
+          ? 'nothing on your saved boards matched. Add more Twin Cities companies in Sync.'
+          : `only ${pool} posting${pool===1?'':'s'} matched, and the one-per-company cap allows ${Math.min(pool, g.slots)}.`}
+      </div>` : '';
+    const rows = picked.length ? picked.map(j => {
+      const sig = Number(j.signals) || 0;
+      return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:9px;padding:7px 9px;border-radius:6px;border:1px solid var(--brd);margin-bottom:5px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:12px;font-weight:600;color:var(--tx)">${esc(j.company||'')}</div>
+          <div style="font-size:11.5px;color:var(--muted)">${esc(j.role||'')}</div>
+          <div style="font-size:10.5px;color:var(--faint);margin-top:2px">${esc(j.location||'')}${j.salary?` · ${esc(j.salary)}`:''}${sig?` · ${sig} product signal${sig===1?'':'s'}`:''}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          ${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener" style="font-size:10.5px;color:var(--sky-blue)">Open</a>`:''}
+          <button onclick="bdSaveJob('${esc(String(j.id))}')" style="font-size:10.5px">+ Add</button>
+        </div>
+      </div>`;
+    }).join('') : '';
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px">
+        <span style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);font-weight:600">${esc(g.key)} · ${esc(g.name)}</span>
+        <span style="font-size:10.5px;color:var(--faint)">${picked.length}/${g.slots}${row.rolled?` · ${row.rolled} rolled in`:''} · ${pool} matched</span>
+      </div>
+      ${shortfall}${rows}
+    </div>`;
+  };
+
+  const dead = (state.scanSources||[]).filter(x => !x.ok);
+  return `
+  <div class="card" style="margin-bottom:14px;border-left:3px solid var(--gold)">
+    ${head}
+    <div style="font-size:11px;color:var(--faint);line-height:1.6;margin-bottom:11px">
+      ${r.scanned} posting${r.scanned===1?'':'s'} read · ${r.classified} matched a segment · <strong style="color:var(--tx)">${r.total} of ${r.cfg.topN}</strong> slots filled
+      ${dead.length?` · <span style="color:var(--amber)">${dead.length} board${dead.length===1?'':'s'} did not respond</span>`:''}
+    </div>
+    ${r.result.map(seg).join('')}
+  </div>`;
+}
+
 function renderBoardSearch() {
   const prof = getProfile() || {};
   const anySlugs = [prof.ghSlugs, prof.leverSlugs, prof.ashbySlugs].some(s => (s||'').trim());
@@ -3432,7 +3571,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + renderWeekly() + renderNegativeSpace() + renderBoardSearch() + `
+  el.innerHTML = setupBanner() + renderHQHero() + renderWeekly() + renderNegativeSpace() + renderScanPanel() + renderBoardSearch() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
@@ -8562,8 +8701,11 @@ function renderBoardSlugs() {
     gh: bdParseCsv(prof.ghSlugs).length,
     lever: bdParseCsv(prof.leverSlugs).length,
     ashby: bdParseCsv(prof.ashbySlugs).length,
+    sr: bdParseCsv(prof.srSlugs).length,
+    workable: bdParseCsv(prof.workableSlugs).length,
+    recruitee: bdParseCsv(prof.recruiteeSlugs).length,
   };
-  const total = counts.gh + counts.lever + counts.ashby;
+  const total = counts.gh + counts.lever + counts.ashby + counts.sr + counts.workable + counts.recruitee;
 
   const probeBlock = (() => {
     if (state.bdProbeLoading) return `<div style="font-size:11.5px;color:var(--muted);padding:8px 0">Checking Greenhouse, Lever and Ashby for “${esc(state.bdProbeQ)}”…</div>`;
@@ -8581,6 +8723,7 @@ function renderBoardSlugs() {
               <strong style="color:var(--jade)">${esc(h.ats)}</strong> ·
               <code style="font-size:11px;background:var(--surf2);padding:1px 5px;border-radius:3px">${esc(h.slug)}</code>
               <span style="color:var(--muted)"> · ${Number(h.openings)||0} opening${Number(h.openings)===1?'':'s'}</span>
+              ${h.company ? `<div style="font-size:10.5px;color:var(--faint);margin-top:2px">Board belongs to <strong style="color:var(--muted)">${esc(h.company)}</strong> — check this is who you meant</div>` : ''}
             </div>
             <button onclick="bdAddSlug('${esc(h.ats)}','${esc(h.slug)}')" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:rgba(0,0,0,0.14);white-space:nowrap">+ Add</button>
           </div>`).join('')}
@@ -8597,8 +8740,18 @@ function renderBoardSlugs() {
         Powers <strong style="color:var(--tx)">Live Board Search</strong> on the board tab. Each company publishes under a slug on its
         applicant tracking system, and the slug is rarely the company name — Headspace is
         <code style="background:var(--surf2);padding:1px 5px;border-radius:3px;font-size:11px">hs</code>.
-        Look a company up below rather than guessing.
+        Look a company up below rather than guessing. Six boards are checked: Greenhouse, Lever, Ashby,
+        SmartRecruiters, Workable and Recruitee.
       </p>
+
+      ${total === 0 ? `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:7px;background:var(--jade-pale);border:1px solid var(--jade-border);margin-bottom:14px">
+        <div style="flex:1;min-width:200px;font-size:11.5px;color:var(--muted);line-height:1.6">
+          <strong style="color:var(--tx)">Start with 21 verified boards.</strong>
+          Behavioural health, care navigation, AI-native health and Twin Cities mid-market, each one checked live.
+        </div>
+        <button onclick="bdSeedSlugs()" style="font-size:11px;color:var(--jade);border-color:var(--jade-border);background:rgba(0,0,0,0.14);white-space:nowrap;flex-shrink:0">Add the 21</button>
+      </div>` : ''}
 
       <div style="padding:11px 13px;border-radius:7px;background:rgba(0,0,0,0.20);border:1px solid var(--brd);margin-bottom:14px">
         ${lbl('Find a company\'s board')}
@@ -8614,6 +8767,9 @@ function renderBoardSlugs() {
         <div>${lbl(`Greenhouse slugs${counts.gh?` (${counts.gh})`:''}`)}<input id="bd-gh" value="${esc(prof.ghSlugs||'')}" placeholder="lirio, hs, daybreakhealth" style="width:100%"></div>
         <div>${lbl(`Lever slugs${counts.lever?` (${counts.lever})`:''}`)}<input id="bd-lever" value="${esc(prof.leverSlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
         <div>${lbl(`Ashby slugs${counts.ashby?` (${counts.ashby})`:''}`)}<input id="bd-ashby" value="${esc(prof.ashbySlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
+        <div>${lbl(`SmartRecruiters${counts.sr?` (${counts.sr})`:''}`)}<input id="bd-sr" value="${esc(prof.srSlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
+        <div>${lbl(`Workable${counts.workable?` (${counts.workable})`:''}`)}<input id="bd-workable" value="${esc(prof.workableSlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
+        <div>${lbl(`Recruitee${counts.recruitee?` (${counts.recruitee})`:''}`)}<input id="bd-recruitee" value="${esc(prof.recruiteeSlugs||'')}" placeholder="comma-separated" style="width:100%"></div>
       </div>
 
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
