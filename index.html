@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.13.0 (contact column reorder)             ║
+║  JOBQUEST — Starter Edition  ·  v1.14.0 (cadence + contact repairs)          ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.14.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -3571,7 +3571,7 @@ function renderBoard(el) {
   const moreBoardBtns = TARGET_CAREER_PAGES.map(b =>
     `<button onclick="window.open('${esc(b.url)}','_blank')" style="font-size:11px">${esc(b.name)} ↗</button>`).join('');
 
-  el.innerHTML = setupBanner() + renderHQHero() + renderWeekly() + renderNegativeSpace() + renderScanPanel() + renderBoardSearch() + `
+  el.innerHTML = setupBanner() + renderHQHero() + renderCadence() + renderWeekly() + renderNegativeSpace() + renderScanPanel() + renderBoardSearch() + `
 
     <!-- ── Board Launcher section ── -->
     <div style="display:flex;align-items:center;gap:12px;margin:24px 0 16px">
@@ -6124,6 +6124,85 @@ function wkPublish() {
 }
 function wkUnpublish() { state.wkPublished = false; render('board'); }
 
+// ── OUTREACH CADENCE (v1_14) ─────────────────────────────────────────────────
+// Every other activity view in here answers "what is due on this contact".
+// None answered "am I working the network at all", so a ten-week silence
+// (weeks 34-44 of 2026) was only visible to someone who already knew to look.
+// Throughput over time is one bar chart and the data was already stored.
+
+function cadenceMonday(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  if (isNaN(d)) return '';
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // ISO weeks, Monday start
+  return d.toISOString().slice(0, 10);
+}
+
+function cadenceWeeks(n = 16) {
+  const counts = {};
+  (state.contacts || []).forEach(c => (c.activityLog || []).forEach(e => {
+    const d = wkDateOnly(e.date);
+    if (!d) return;
+    const k = cadenceMonday(d);
+    if (k) counts[k] = (counts[k] || 0) + 1;
+  }));
+
+  const weeks = [];
+  const cur = new Date(cadenceMonday(localISODate()) + 'T12:00:00');
+  for (let i = 0; i < n; i++) {
+    const k = cur.toISOString().slice(0, 10);
+    weeks.unshift({ week: k, n: counts[k] || 0 });
+    cur.setDate(cur.getDate() - 7);
+  }
+
+  // Longest run of silent weeks, and whether we are in one right now.
+  let best = 0, bestEnd = -1, run = 0;
+  weeks.forEach((w, i) => {
+    if (w.n === 0) { run++; if (run > best) { best = run; bestEnd = i; } }
+    else run = 0;
+  });
+  let current = 0;
+  for (let i = weeks.length - 1; i >= 0 && weeks[i].n === 0; i--) current++;
+
+  return { weeks, total: weeks.reduce((a, w) => a + w.n, 0),
+           peak: Math.max(1, ...weeks.map(w => w.n)),
+           longestGap: best, gapEnd: bestEnd, currentGap: current };
+}
+
+function renderCadence() {
+  const c = cadenceWeeks(16);
+  if (!c.total) return '';
+  const short = (iso) => { const d = new Date(iso + 'T12:00:00');
+    return `${d.getMonth() + 1}/${d.getDate()}`; };
+
+  const bars = c.weeks.map(w => {
+    const h = w.n ? Math.max(4, Math.round((w.n / c.peak) * 34)) : 2;
+    const col = w.n ? 'var(--teal)' : 'var(--brd)';
+    return `<div title="Week of ${short(w.week)} \u00b7 ${w.n} touch${w.n===1?'':'es'}"
+      style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:36px;cursor:help">
+      <div style="height:${h}px;background:${col};border-radius:2px 2px 0 0"></div></div>`;
+  }).join('');
+
+  const gapNote = c.currentGap >= 2
+    ? `<span style="color:var(--amber)">${c.currentGap} quiet weeks running.</span>`
+    : c.longestGap >= 3
+      ? `Longest quiet stretch here: ${c.longestGap} weeks, ending ${short(c.weeks[c.gapEnd].week)}.`
+      : 'No gap longer than two weeks.';
+
+  return `
+  <div class="card" style="margin-bottom:16px;border-color:var(--brd2);border-left:3px solid var(--teal)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:500;color:var(--tx)">\u3030 Outreach cadence</div>
+      <span style="font-size:10.5px;color:var(--muted)">${c.total} touch${c.total===1?'':'es'} \u00b7 last 16 weeks</span>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:3px;margin-bottom:6px">${bars}</div>
+    <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--faint);margin-bottom:7px">
+      <span>${short(c.weeks[0].week)}</span><span>${short(c.weeks[c.weeks.length-1].week)}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6">${gapNote}
+      Counted from logged activity, so it only knows what you recorded.</div>
+  </div>`;
+}
+
 function renderWeekly() {
   const s = wkStats(state.wkDays);
   const opts = [7,14,30].map(d =>
@@ -6379,8 +6458,91 @@ function contactHealth() {
   //    "Carlson".
   const frag = importFragments(cs);
 
-  return { total: cs.length, odd, stale, noYear, phantom,
+  // 6. A touch type holding something that is not one of its defined keys.
+  //    Invisible in the UI, because nextTypeMeta falls back to "none", but it
+  //    reaches exports verbatim and reads as truthy wherever code asks whether
+  //    a next action exists.
+  const badType = cs.filter(c => !typeKeyOk(NEXT_TYPES, c.nextType)
+                              || !typeKeyOk(ACTIVITY_TYPES, c.lastActivityType));
+
+  return { total: cs.length, odd, stale, noYear, phantom, badType,
            frag: frag.safe, fragOrphan: frag.orphan };
+}
+
+// "5/29" cannot be resolved in isolation, which is why this used to be
+// reported and left alone. But a NEXT touch is not in isolation: it follows a
+// conversation, and a follow-up cannot precede the conversation it follows.
+// That single constraint pins the year in every real case, and where it does
+// not the record is left for you rather than guessed at.
+function noYearPlan() {
+  const two = (n) => String(n).padStart(2, '0');
+  const today = localISODate();
+  const out = [];
+
+  (state.contacts || []).forEach(c => {
+    ['last', 'next'].forEach(key => {
+      const raw = String(c[key] || '').trim();
+      const m = raw.match(/^(\d{1,2})[\/.-](\d{1,2})$/);
+      if (!m) return;
+      const mo = +m[1], da = +m[2];
+      if (mo < 1 || mo > 12 || da < 1 || da > 31) return;
+      const at = (y) => `${y}-${two(mo)}-${two(da)}`;
+
+      let iso = '', why = '';
+      const anchor = key === 'next' ? wkDateOnly(c.last) : '';
+      if (anchor) {
+        const y0 = +anchor.slice(0, 4);
+        for (let y = y0; y <= y0 + 2 && !iso; y++) {
+          if (at(y) >= anchor) { iso = at(y); why = `first ${two(mo)}/${two(da)} after the ${anchor} touch`; }
+        }
+      } else {
+        // No anchor: the nearest reading of that day to today. A last touch
+        // can only be in the past; a next touch may be either.
+        const ty = +today.slice(0, 4);
+        const cands = [ty - 1, ty, ty + 1].map(at)
+          .filter(d => key !== 'last' || d <= today);
+        let best = '', bd = Infinity;
+        cands.forEach(d => {
+          const diff = Math.abs(Date.parse(d + 'T12:00:00') - Date.parse(today + 'T12:00:00'));
+          if (diff < bd) { bd = diff; best = d; }
+        });
+        if (best) { iso = best; why = 'nearest reading of that day to today'; }
+      }
+      if (iso) out.push({ c, key, raw, iso, why });
+    });
+  });
+  return out;
+}
+
+function fixNoYearDates() {
+  const plan = noYearPlan();
+  if (!plan.length) return;
+  const lines = plan.map(p =>
+    `\u00b7 ${p.c.name}  ${p.key === 'next' ? 'next' : 'last'}  ${p.raw}  \u2192  ${p.iso}\n    (${p.why})`).join('\n');
+  if (!confirm(`Set a year on ${plan.length} date${plan.length===1?'':'s'}?\n\n${lines}\n\nCheck each one. Anything wrong is quicker to correct on the card than to leave invisible.`)) return;
+
+  const by = new Map();
+  plan.forEach(p => { if (!by.has(p.c.id)) by.set(p.c.id, {}); by.get(p.c.id)[p.key] = p.iso; });
+  state.contacts = state.contacts.map(c => by.has(c.id) ? { ...c, ...by.get(c.id) } : c);
+  save();
+  showToast(`Dated ${plan.length} record${plan.length===1?'':'s'}.`);
+  render('sync');
+}
+
+function fixContactTypes() {
+  const h = contactHealth();
+  if (!h.badType.length) return;
+  const ids = new Set(h.badType.map(c => c.id));
+  state.contacts = state.contacts.map(c => {
+    if (!ids.has(c.id)) return c;
+    const out = { ...c };
+    if (!typeKeyOk(NEXT_TYPES, out.nextType)) out.nextType = '';
+    if (!typeKeyOk(ACTIVITY_TYPES, out.lastActivityType)) out.lastActivityType = '';
+    return out;
+  });
+  save();
+  showToast(`Reset ${ids.size} unreadable touch type${ids.size===1?'':'s'}.`);
+  render('sync');
 }
 
 // A record is a fragment only when every piece of its text is ALREADY stored
@@ -6497,7 +6659,7 @@ function renderContactHealth() {
   const h = contactHealth();
   if (!h.total) return '';
   const issues = h.odd.length + h.stale.length + h.noYear.length + h.phantom.length
-               + h.frag.length + h.fragOrphan.length;
+               + h.frag.length + h.fragOrphan.length + h.badType.length;
   if (!issues) return '';
 
   const row = (n, text, btn) => n ? `
@@ -6519,9 +6681,9 @@ function renderContactHealth() {
       `<strong style="color:var(--tx)">${h.stale.length} next-touch date${h.stale.length===1?' is':'s are'} earlier than ${h.stale.length===1?'its':'their'} own last touch.</strong> The follow-up was never rescheduled after the last conversation. Names: ${h.stale.slice(0,4).map(c=>esc(c.name||'?')).join(', ')}${h.stale.length>4?` +${h.stale.length-4}`:''}.`,
       `<button onclick="clearStaleNextDates()" style="font-size:11px;flex-shrink:0">Clear those dates</button>`)}
 
-    ${row(h.noYear.length,
-      `<strong style="color:var(--tx)">${h.noYear.length} date${h.noYear.length===1?' has':'s have'} no year</strong> (${h.noYear.slice(0,3).map(c=>esc(c.name||'?')).join(', ')}${h.noYear.length>3?` +${h.noYear.length-3}`:''}). The year cannot be guessed, so these need setting by hand on the card. Until then they are invisible to every date calculation.`,
-      '')}
+    ${(() => { const plan = noYearPlan(); return row(h.noYear.length,
+      `<strong style="color:var(--tx)">${h.noYear.length} date${h.noYear.length===1?' has':'s have'} no year</strong> (${h.noYear.slice(0,3).map(c=>esc(c.name||'?')).join(', ')}${h.noYear.length>3?` +${h.noYear.length-3}`:''}), so ${h.noYear.length===1?'it is':'they are'} invisible to every date calculation. A follow-up cannot fall before the conversation it follows, which fixes the year in ${plan.length===h.noYear.length?'every case':`${plan.length} of them`}. You see each proposal before anything is written.`,
+      plan.length ? `<button onclick="fixNoYearDates()" style="font-size:11px;flex-shrink:0">Propose years</button>` : ''); })()}
 
     ${row(h.phantom.length,
       `<strong style="color:var(--tx)">${h.phantom.length} record${h.phantom.length===1?' looks':'s look'} like note text saved as a person.</strong> The name reads as prose and already appears in another contact's notes, which is what a sync writing the notes field back as a new contact produces. Check a few before deleting, and export first.`,
@@ -6530,6 +6692,10 @@ function renderContactHealth() {
     ${row(h.frag.length,
       `<strong style="color:var(--tx)">${h.frag.length} record${h.frag.length===1?' is a fragment':'s are fragments'} of another contact's notes.</strong> A CSV import did not split its columns, so one Notion row's comma-separated parts became a contact apiece, carrying the page URL and export timestamp. Each one's text is already stored on the contact it came from (${h.frag.slice(0,3).map(x=>esc(x.owner.name||'?')).join(', ')}${h.frag.length>3?`, +${h.frag.length-3} more`:''}), so deleting them loses nothing. A CSV of the removed records downloads first.`,
       `<button class="danger" onclick="removeImportFragments()" style="font-size:11px;flex-shrink:0">Review and delete</button>`)}
+
+    ${row(h.badType.length,
+      `<strong style="color:var(--tx)">${h.badType.length} contact${h.badType.length===1?' has an':'s have'} unreadable touch type${h.badType.length===1?'':'s'}.</strong> Something stored an object where a key belongs. The card hides it by falling back to "none", but it exports as <code style="font-size:10px">[object Object]</code> and reads as truthy, so ${h.badType.length===1?'that contact counts':'those contacts count'} as having a planned next action when ${h.badType.length===1?'it has':'they have'} none. Resetting clears the type only \u2014 dates, notes and names are untouched.`,
+      `<button onclick="fixContactTypes()" style="font-size:11px;flex-shrink:0">Reset ${h.badType.length}</button>`)}
 
     ${row(h.fragOrphan.length,
       `<strong style="color:var(--tx)">${h.fragOrphan.length} record${h.fragOrphan.length===1?' carries':'s carry'} an import URL but no traceable source.</strong> These look like the same bad import, but their text was not found in any other contact's notes, so they may be the only copy. They are left alone deliberately \u2014 open and check them by hand: ${h.fragOrphan.slice(0,3).map(x=>esc((x.frags[0]||'?').slice(0,40))).join(' \u00b7 ')}.`,
@@ -6880,7 +7046,10 @@ function renderNetwork(el) {
     const nextDays = c.next ? daysAgo(c.next) : null; // >0 means past due
     const nextOverdue = nextDays !== null && nextDays > 0;
     const nextSoon = nextDays !== null && nextDays <= 0 && nextDays >= -3;
-    const hasNext = !!(c.next || (c.nextType && c.nextType!==''));
+    // Validate rather than test for truthiness: an object is truthy and !== '',
+    // so a corrupt nextType made a contact with no planned action look like it
+    // had one, inflating every follow-up count that reads this.
+    const hasNext = !!(c.next || (typeKeyOk(NEXT_TYPES, c.nextType) && c.nextType));
     const nextCol = `<div class="net-col-next" style="flex:0 0 118px;padding:0 10px;display:flex;flex-direction:column;gap:2px;justify-content:center;border-right:1px solid var(--brd)" onclick="event.stopPropagation()">
       <div style="font-size:9px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px">Next</div>
       ${hasNext ? `
@@ -7585,7 +7754,18 @@ const NET_KEYS  = ['name','company','role','rel','last','next','notes','temperat
 const ACT_COLS = ['Contact','Company','Date','Type','Detail'];
 
 const yesNo = v => v ? 'yes' : '';
-const typeLabel = (list, key) => (list.find(t => t.key === key) || {}).label || (key || '');
+// Only a string can be a key. An object here — written by some earlier code
+// path — used to fall through to the `key` fallback and land in exports as
+// "[object Object]", which is how 25 of 83 contacts came to carry one.
+const typeKeyOk = (list, v) =>
+  v === undefined || v === null || v === '' ||
+  (typeof v === 'string' && list.some(t => t.key === v));
+
+const typeLabel = (list, key) => {
+  if (!typeKeyOk(list, key)) return '';
+  if (typeof key !== 'string' || !key) return '';
+  return (list.find(t => t.key === key) || {}).label || key;
+};
 
 // One projection, used by the CSV and the XLSX paths, so the two can never
 // drift apart again.
