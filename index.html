@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.14.0 (cadence + contact repairs)          ║
+║  JOBQUEST — Starter Edition  ·  v1.15.0 (activity backfill)                  ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.14.0';
+const APP_VERSION = '1.15.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -6529,6 +6529,46 @@ function fixNoYearDates() {
   render('sync');
 }
 
+// A contact can carry a Last Touch date and no activity entry, because the
+// date field predates the activity log. 42 of 83 records are in that state.
+// The date is a touch you recorded; it is just not where anything can count
+// it, so the cadence chart reads low and the history looks emptier than it is.
+// This promotes the date into the log. It invents no detail: the note stays
+// empty, because none was ever written.
+function unloggedTouches() {
+  return (state.contacts || []).filter(c => {
+    const d = wkDateOnly(c.last);
+    if (!d) return false;
+    return !(c.activityLog || []).some(e => wkDateOnly(e.date) === d);
+  });
+}
+
+function logLastTouches() {
+  const list = unloggedTouches();
+  if (!list.length) return;
+  const typed = list.filter(c => typeKeyOk(ACTIVITY_TYPES, c.lastActivityType) && c.lastActivityType).length;
+  if (!confirm(
+    `Add ${list.length} activity entr${list.length===1?'y':'ies'} from Last Touch dates?\n\n` +
+    `These contacts have a date but nothing in their log, so the date counts nowhere. ` +
+    `Each becomes one entry on that date with no note, because no note was ever recorded.\n\n` +
+    `${typed} carr${typed===1?'ies':'y'} a recorded type; the other ${list.length-typed} are logged as ` +
+    `"Sent message", the same default the CSV importer uses.`)) return;
+
+  const ids = new Set(list.map(c => c.id));
+  state.contacts = state.contacts.map(c => {
+    if (!ids.has(c.id)) return c;
+    const log = [...(c.activityLog || [])];
+    log.push({ date: wkDateOnly(c.last),
+               type: (typeKeyOk(ACTIVITY_TYPES, c.lastActivityType) && c.lastActivityType) || 'message',
+               note: '' });
+    log.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    return { ...c, activityLog: log };
+  });
+  save();
+  showToast(`Logged ${list.length} touch${list.length===1?'':'es'} from Last Touch dates.`);
+  render('sync');
+}
+
 function fixContactTypes() {
   const h = contactHealth();
   if (!h.badType.length) return;
@@ -6658,8 +6698,9 @@ function removePhantomContacts() {
 function renderContactHealth() {
   const h = contactHealth();
   if (!h.total) return '';
+  const unlogged = unloggedTouches();
   const issues = h.odd.length + h.stale.length + h.noYear.length + h.phantom.length
-               + h.frag.length + h.fragOrphan.length + h.badType.length;
+               + h.frag.length + h.fragOrphan.length + h.badType.length + unlogged.length;
   if (!issues) return '';
 
   const row = (n, text, btn) => n ? `
@@ -6692,6 +6733,10 @@ function renderContactHealth() {
     ${row(h.frag.length,
       `<strong style="color:var(--tx)">${h.frag.length} record${h.frag.length===1?' is a fragment':'s are fragments'} of another contact's notes.</strong> A CSV import did not split its columns, so one Notion row's comma-separated parts became a contact apiece, carrying the page URL and export timestamp. Each one's text is already stored on the contact it came from (${h.frag.slice(0,3).map(x=>esc(x.owner.name||'?')).join(', ')}${h.frag.length>3?`, +${h.frag.length-3} more`:''}), so deleting them loses nothing. A CSV of the removed records downloads first.`,
       `<button class="danger" onclick="removeImportFragments()" style="font-size:11px;flex-shrink:0">Review and delete</button>`)}
+
+    ${row(unlogged.length,
+      `<strong style="color:var(--tx)">${unlogged.length} contact${unlogged.length===1?' has a':'s have'} Last Touch date with nothing in ${unlogged.length===1?'its':'their'} activity log.</strong> The date field predates the log, so these touches are real but count nowhere \u2014 outreach cadence reads low and the history looks emptier than it was. Logging them adds one entry per contact on that date with no note, since none was recorded. Nothing is invented and no date changes.`,
+      `<button onclick="logLastTouches()" style="font-size:11px;flex-shrink:0">Log ${unlogged.length}</button>`)}
 
     ${row(h.badType.length,
       `<strong style="color:var(--tx)">${h.badType.length} contact${h.badType.length===1?' has an':'s have'} unreadable touch type${h.badType.length===1?'':'s'}.</strong> Something stored an object where a key belongs. The card hides it by falling back to "none", but it exports as <code style="font-size:10px">[object Object]</code> and reads as truthy, so ${h.badType.length===1?'that contact counts':'those contacts count'} as having a planned next action when ${h.badType.length===1?'it has':'they have'} none. Resetting clears the type only \u2014 dates, notes and names are untouched.`,
@@ -8617,9 +8662,26 @@ function importActivityCSV(rows) {
     log.sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
     added++;
   });
+  // Backfilled history has to move the Last Touch with it. Without this an
+  // import of real past outreach lands in the log while the card still shows
+  // "—", the contact still reads as never contacted, and every heat and
+  // follow-up calculation keeps using the stale date.
+  let touched = 0;
+  state.contacts.forEach(c => {
+    const newest = (c.activityLog || [])
+      .map(e => wkDateOnly(e.date)).filter(Boolean).sort().pop();
+    if (!newest) return;
+    if (!wkDateOnly(c.last) || newest > wkDateOnly(c.last)) {
+      const e = (c.activityLog || []).find(x => wkDateOnly(x.date) === newest);
+      c.last = newest;
+      if (e && typeKeyOk(ACTIVITY_TYPES, e.type)) c.lastActivityType = e.type;
+      touched++;
+    }
+  });
+
   save();
   return {count:added, skipped:dupe+orphan,
-          msg:`Done — ${added} activity entries added${dupe?`, ${dupe} already present`:''}${orphan?`, ${orphan} with no matching contact`:''}.`};
+          msg:`Done — ${added} activity entries added${dupe?`, ${dupe} already present`:''}${orphan?`, ${orphan} with no matching contact`:''}${touched?`, ${touched} last-touch date${touched===1?'':'s'} moved forward`:''}.`};
 }
 
 function importContactsCSV(text) {
