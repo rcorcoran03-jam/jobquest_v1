@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.11.0 (scan engine server-side)            ║
+║  JOBQUEST — Starter Edition  ·  v1.12.0 (import-fragment cleanup)            ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.12.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -6370,7 +6370,89 @@ function contactHealth() {
     });
   });
 
-  return { total: cs.length, odd, stale, noYear, phantom };
+  // 5. Fragments of one contact's notes saved as separate contacts. A CSV
+  //    import that failed to split its columns scatters a Notion row's
+  //    comma-separated parts across name, company and role, dragging the page
+  //    URL and export timestamp along. The phantom rule above misses these
+  //    entirely: it reads only the name, and demands four long words, while
+  //    most of the text lands in company/role under names as short as
+  //    "Carlson".
+  const frag = importFragments(cs);
+
+  return { total: cs.length, odd, stale, noYear, phantom,
+           frag: frag.safe, fragOrphan: frag.orphan };
+}
+
+// A record is a fragment only when every piece of its text is ALREADY stored
+// in some other contact's notes. That is what makes deletion non-destructive,
+// and it is the condition, not the URL, that decides. A row carrying a URL but
+// no traceable owner is reported separately and never auto-deleted, because
+// it might be the only copy of something.
+const CH_URL_IN_FIELD = /https?:\/\/\S+/i;
+
+function importFragments(cs) {
+  const strip = (x) => String(x || '')
+    // [^\s,]+ not \S+ : the URL is followed by ",2026-09-21 14:26:54Z" with no
+    // space, so a greedy \S+ eats the comma and the date with it and leaves
+    // "14:26:54Z" welded to the text, which then matches no owner at all.
+    .replace(/,?\s*https?:\/\/[^\s,]+/gi, '')
+    .replace(/,?\s*\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}Z?/g, '')
+    .replace(/^[\s,]+|[\s,]+$/g, '')
+    .trim();
+
+  const owners = cs.filter((c) => String(c.notes || '').trim());
+  const safe = [], orphan = [];
+
+  cs.forEach((c) => {
+    const fields = [c.name, c.company, c.role].map((x) => String(x || '').trim());
+    const hasUrl = fields.some((x) => CH_URL_IN_FIELD.test(x));
+    // A real contact carries at least one of its own notes or dates. A
+    // fragment carries none — which is what keeps the genuine records added
+    // by hand on the same day out of this list.
+    const bare = !String(c.notes || '').trim()
+              && !String(c.last  || '').trim()
+              && !String(c.next  || '').trim();
+    if (!hasUrl && !bare) return;
+
+    const frags = fields.map(strip).filter((p) => p.length > 3);
+    if (!frags.length) return;
+
+    const owner = owners.find((o) => o !== c &&
+      frags.every((p) => String(o.notes).toLowerCase().includes(p.toLowerCase())));
+
+    if (owner) safe.push({ c, owner, frags });
+    else if (hasUrl) orphan.push({ c, frags });
+  });
+
+  return { safe, orphan };
+}
+
+// Downloads exactly the records it is about to delete, then deletes them.
+// The backup is automatic rather than advised, because "export first" is the
+// step people skip and this is the one that cannot be undone.
+function removeImportFragments() {
+  const h = contactHealth();
+  if (!h.frag.length) return;
+  const doomed = h.frag.map(x => x.c);
+  const preview = h.frag.slice(0, 6)
+    .map(x => `\u00b7 ${x.frags.join(' | ').slice(0, 58)}  \u2192 already in ${x.owner.name}'s notes`)
+    .join('\n');
+  if (!confirm(
+    `Delete ${doomed.length} import fragment${doomed.length===1?'':'s'}?\n\n${preview}` +
+    `${h.frag.length>6?`\n\u00b7 \u2026and ${h.frag.length-6} more`:''}\n\n` +
+    `Every one of these is text already stored on another contact, so nothing is lost. ` +
+    `A CSV of the deleted records downloads first.`)) return;
+
+  downloadCSV(
+    [NET_COLS.join(','), ...doomed.map(c => contactRow(c).map(csvEscape).join(','))].join('\n'),
+    `contacts-removed-fragments_${new Date().toISOString().slice(0,10)}.csv`);
+
+  const ids = new Set(doomed.map(c => c.id));
+  const before = state.contacts.length;
+  state.contacts = state.contacts.filter(c => !ids.has(c.id));
+  save();
+  showToast(`Removed ${before - state.contacts.length} fragment${before-state.contacts.length===1?'':'s'}. ${state.contacts.length} contacts remain.`);
+  render('sync');
 }
 
 function fixContactDates() {
@@ -6414,7 +6496,8 @@ function removePhantomContacts() {
 function renderContactHealth() {
   const h = contactHealth();
   if (!h.total) return '';
-  const issues = h.odd.length + h.stale.length + h.noYear.length + h.phantom.length;
+  const issues = h.odd.length + h.stale.length + h.noYear.length + h.phantom.length
+               + h.frag.length + h.fragOrphan.length;
   if (!issues) return '';
 
   const row = (n, text, btn) => n ? `
@@ -6443,6 +6526,14 @@ function renderContactHealth() {
     ${row(h.phantom.length,
       `<strong style="color:var(--tx)">${h.phantom.length} record${h.phantom.length===1?' looks':'s look'} like note text saved as a person.</strong> The name reads as prose and already appears in another contact's notes, which is what a sync writing the notes field back as a new contact produces. Check a few before deleting, and export first.`,
       `<button class="danger" onclick="removePhantomContacts()" style="font-size:11px;flex-shrink:0">Review and delete</button>`)}
+
+    ${row(h.frag.length,
+      `<strong style="color:var(--tx)">${h.frag.length} record${h.frag.length===1?' is a fragment':'s are fragments'} of another contact's notes.</strong> A CSV import did not split its columns, so one Notion row's comma-separated parts became a contact apiece, carrying the page URL and export timestamp. Each one's text is already stored on the contact it came from (${h.frag.slice(0,3).map(x=>esc(x.owner.name||'?')).join(', ')}${h.frag.length>3?`, +${h.frag.length-3} more`:''}), so deleting them loses nothing. A CSV of the removed records downloads first.`,
+      `<button class="danger" onclick="removeImportFragments()" style="font-size:11px;flex-shrink:0">Review and delete</button>`)}
+
+    ${row(h.fragOrphan.length,
+      `<strong style="color:var(--tx)">${h.fragOrphan.length} record${h.fragOrphan.length===1?' carries':'s carry'} an import URL but no traceable source.</strong> These look like the same bad import, but their text was not found in any other contact's notes, so they may be the only copy. They are left alone deliberately \u2014 open and check them by hand: ${h.fragOrphan.slice(0,3).map(x=>esc((x.frags[0]||'?').slice(0,40))).join(' \u00b7 ')}.`,
+      '')}
   </div>`;
 }
 
