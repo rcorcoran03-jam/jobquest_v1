@@ -51,10 +51,15 @@ const DEFAULT_CFG = {
       companies: 'target, unitedhealth, optum, best buy, u.s. bank, us bank, 3m, solventum, ecolab, thrivent, securian, general mills, cargill, ameriprise',
       titles: TITLES, excludes: EXCLUDES, locations: TC_METRO, allowRemote: true,
       minSalaryK: 120, maxAgeDays: 30 },
+    // salaryFloorIfStated, NOT minSalaryK. Salary is regex-scraped from jdText,
+    // which is truncated at jdChars (6000 by default), and pay-transparency
+    // statements sit at the bottom of a JD — so a strict floor rejects roles
+    // for having no *detected* pay rather than for paying too little. That
+    // emptied this segment completely: 527 postings read, 0 matched.
     { key: 'C', name: 'Domain & AI-native', slots: 5, perCompany: 2, rollover: true,
       titles: `${TITLES}, ${C2_TITLES}`, excludes: EXCLUDES,
       jdAny: `${C1}, ${C2}`, allowRemote: true,
-      minSalaryK: 120, maxAgeDays: 30 },
+      salaryFloorIfStated: 120, maxAgeDays: 30 },
     // rollover:false on purpose. This is the hardest segment to fill and the
     // easiest to lose. If its empty slots quietly went to A and B, the scan
     // would revert to a medtech feed within a month and nothing would say so.
@@ -112,42 +117,47 @@ function maxSalaryK(text) {
   return nums.length ? Math.max(...nums) : 0;
 }
 
-function matches(j, seg, cfg) {
+// tally is optional. When present, every rejection is counted under the gate
+// that caused it, which is the difference between "the scan found nothing" and
+// "the salary gate ate 412 of them".
+function matches(j, seg, cfg, tally) {
   const deep = deepOf(j);
   const titleCo = titleCoOf(j);
   const loc = String(j.location || '').toLowerCase();
+  const no = (gate) => { if (tally) tally[gate] = (tally[gate] || 0) + 1; return false; };
 
-  if (anyTerm(deep, EXCLUDES_CLINICAL)) return false;
-  if (seg.excludes && anyTerm(deep, seg.excludes)) return false;
-  if (seg.companies && !anyTerm(titleCo, seg.companies)) return false;
+  if (anyTerm(deep, EXCLUDES_CLINICAL)) return no('clinicalLicence');
+  if (seg.excludes && anyTerm(deep, seg.excludes)) return no('excludedTitle');
+  if (seg.companies && !anyTerm(titleCo, seg.companies)) return no('companyNotInList');
 
   if (seg.excludeSegmentCompanies) {
     const banned = seg.excludeSegmentCompanies
       .flatMap((k) => csv((cfg.segments.find((x) => x.key === k) || {}).companies || ''));
-    if (banned.some((c) => termHit(titleCo, c))) return false;
+    if (banned.some((c) => termHit(titleCo, c))) return no('ownedByAnotherSegment');
   }
 
-  if (!seg.titleBlind && seg.titles && !anyTerm(titleCo, seg.titles)) return false;
-  if (seg.jdAny && !anyTerm(deep, seg.jdAny)) return false;
-  if (seg.jdSignals && countTerms(deep, seg.jdSignals) < (seg.jdMin || 1)) return false;
+  if (!seg.titleBlind && seg.titles && !anyTerm(titleCo, seg.titles)) return no('titleNoMatch');
+  if (seg.jdAny && !anyTerm(deep, seg.jdAny)) return no('jdNoDomainTerm');
+  if (seg.jdSignals && countTerms(deep, seg.jdSignals) < (seg.jdMin || 1)) return no('tooFewProductSignals');
 
   const remote = isRemote(j);
-  if (seg.noRemote && remote) return false;
+  if (seg.noRemote && remote) return no('remoteNotAllowed');
   if (seg.locations) {
     const inMetro = anyTerm(loc, seg.locations);
-    if (!inMetro && !(seg.allowRemote && remote)) return false;
+    if (!inMetro && !(seg.allowRemote && remote)) return no('outsideMetro');
   }
 
   const age = ageDays(j.updatedAt);
-  if (seg.maxAgeDays && age !== null && age > seg.maxAgeDays) return false;
+  if (seg.maxAgeDays && age !== null && age > seg.maxAgeDays) return no('tooOld');
 
   // Two different salary rules. A floor needs a stated band at or above it.
   // A floor-if-stated rejects only a band that is demonstrably too low,
   // because most mid-market postings state nothing and treating silence as
   // failure would empty that segment before it started.
   const maxK = maxSalaryK(j.salary);
-  if (seg.minSalaryK && (!maxK || maxK < seg.minSalaryK)) return false;
-  if (seg.salaryFloorIfStated && maxK && maxK < seg.salaryFloorIfStated) return false;
+  if (seg.minSalaryK && !maxK) return no('noSalaryDetected');
+  if (seg.minSalaryK && maxK < seg.minSalaryK) return no('salaryBelowFloor');
+  if (seg.salaryFloorIfStated && maxK && maxK < seg.salaryFloorIfStated) return no('salaryBelowFloor');
 
   return true;
 }
@@ -234,13 +244,28 @@ export function buildScan(jobs, cfg = DEFAULT_CFG) {
     }
   }
 
-  return {
+  const out = {
     cfg: { topN: cfg.topN },
     result,
     total: result.reduce((n, r) => n + r.picked.length, 0),
     classified: assigned.size,
     scanned: jobs.length,
   };
+
+  // Run every job against every segment, ignoring precedence, so the counts
+  // answer "why did segment C get nothing" rather than "what won the race".
+  if (cfg.debug) {
+    out.debug = cfg.segments.map((seg) => {
+      const tally = {};
+      let passed = 0;
+      jobs.forEach((j) => { if (matches(j, seg, cfg, tally)) passed += 1; });
+      const rejected = Object.entries(tally).sort((a, b) => b[1] - a[1])
+        .map(([gate, n]) => ({ gate, n }));
+      return { key: seg.key, name: seg.name, wouldPass: passed, rejectedBy: rejected };
+    });
+  }
+
+  return out;
 }
 
 // Quota overrides as A:8,B:4,C:5,D:8 so the Action and the app can share one
@@ -280,7 +305,8 @@ export async function onRequestGet(context) {
     cfg,
   });
 
-  const scan = buildScan(jobs, applySlotOverrides(DEFAULT_CFG, searchParams.get('slots')));
+  const base = applySlotOverrides(DEFAULT_CFG, searchParams.get('slots'));
+  const scan = buildScan(jobs, { ...base, debug: searchParams.get('debug') === '1' });
 
   return new Response(JSON.stringify({ ...scan, sources, generatedAt: new Date().toISOString() }), {
     headers: {
