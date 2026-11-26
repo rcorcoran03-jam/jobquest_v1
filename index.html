@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  JOBQUEST — Starter Edition  ·  v1.12.0 (import-fragment cleanup)            ║
+║  JOBQUEST — Starter Edition  ·  v1.13.0 (contact column reorder)             ║
 ║                                                                              ║
 ║  A single-file job-search OS: JD fit analyzer, application tracker,          ║
 ║  networking CRM, focus timer, job-board launcher, GitHub Gist backup.        ║
@@ -1382,7 +1382,7 @@ const EXAMPLE_CONTACTS = [
 ];
 
 // ── VERSION ───────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.12.0';
+const APP_VERSION = '1.13.0';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -7571,8 +7571,16 @@ const APP_KEYS  = ['company','role','salary','location','date','stage','priority
 // contact card and was missing from the file — the flags, the kind of the last
 // and next touch, and the heat pill. Temperature is derived by contactHeat()
 // rather than stored, so it is computed at export time.
-const NET_COLS  = ['Company','Role','Alumni Contact','Relationship','Last Touch','Next Touch','Notes','Temperature','Champion','Starred','Last Touch Type','Next Touch Type','Next Label'];
-const NET_KEYS  = ['company','role','name','rel','last','next','notes','temperature','champion','star','lastActivityType','nextType','nextNote'];
+// Contact first, and called "Contact". It used to be third and headed
+// "Alumni Contact", a leftover from when this list was Carlson alumni and not
+// mostly recruiters and medtech PMs. Third place meant any contact with no
+// company or role opened as two blank cells before the name, which reads as a
+// broken row in a spreadsheet.
+// These two arrays are positional with respect to EACH OTHER and nothing else:
+// contactRow() maps NET_KEYS, exports join NET_COLS, and the importer matches
+// on header text, so reordering is safe as long as both move together.
+const NET_COLS  = ['Contact','Company','Role','Relationship','Last Touch','Next Touch','Notes','Temperature','Champion','Starred','Last Touch Type','Next Touch Type','Next Label'];
+const NET_KEYS  = ['name','company','role','rel','last','next','notes','temperature','champion','star','lastActivityType','nextType','nextNote'];
 
 const ACT_COLS = ['Contact','Company','Date','Type','Detail'];
 
@@ -8442,7 +8450,9 @@ function importContactsCSV(text) {
   let added=0, skipped=0;
   const existingNames = state.contacts.map(c=>String(c.name||'').toLowerCase().trim());
   rows.forEach(row => {
-    const name = String(pick(row,'Alumni Contact','Name','name','Contact')).trim();
+    // 'Alumni Contact' is the pre-v1.13 header. Kept so exports taken before
+    // the rename still import.
+    const name = String(pick(row,'Contact','Alumni Contact','Name','name')).trim();
     if(!name){skipped++;return;}
     if(existingNames.includes(name.toLowerCase())){skipped++;return;}
     // Every field the card holds, not just the seven this used to read. A
